@@ -1,0 +1,80 @@
+tfidf:
+  max_features: 50000
+  ngram_range: [1, 2]
+  sublinear_tf: true
+  min_df: 3
+  max_df: 0.95
+
+ml_models:
+  logistic_regression:
+    max_iter: 1000
+    class_weight: balanced
+    C: 1.0
+    solver: lbfgs
+
+  svm:
+    max_iter: 5000
+    class_weight: balanced
+    C: 1.0
+
+  naive_bayes:
+    alpha: 1.0
+
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.1
+    eval_metric: mlogloss
+
+  random_forest:
+    n_estimators: 300
+    class_weight: balanced
+
+grid_search:
+  cv: 5
+  n_jobs: -1
+  scoring: f1_macro
+  param_grid:
+    logistic_regression:
+      clf__C: [0.01, 0.1, 1.0, 10.0]
+    svm:
+      clf__C: [0.01, 0.1, 1.0, 10.0]
+    naive_bayes:
+      clf__alpha: [0.1, 0.5, 1.0, 2.0]
+    xgboost:
+      clf__n_estimators: [100, 300]
+      clf__max_depth: [4, 6, 8]
+      clf__learning_rate: [0.05, 0.1]
+    random_forest:
+      clf__n_estimators: [100, 300, 500]
+      clf__max_depth: [null, 20, 50]
+
+transformer:
+  distilbert:
+    model_name: distilbert-base-uncased
+    max_length: 512
+    batch_size: 32
+    learning_rate: 2.0e-5
+    weight_decay: 0.01
+    num_epochs: 10
+    warmup_ratio: 0.1
+    lr_scheduler: linear
+    early_stopping_patience: 3
+    fp16: true
+    gradient_accumulation_steps: 1
+
+  roberta:
+    model_name: roberta-base
+    max_length: 512
+    batch_size: 16
+    learning_rate: 1.0e-5
+    weight_decay: 0.01
+    num_epochs: 8
+    warmup_ratio: 0.1
+    lr_scheduler: linear
+    early_stopping_patience: 3
+    fp16: true
+    gradient_accumulation_steps: 2
+
+output_dir: outputs/models/
+seed: 42

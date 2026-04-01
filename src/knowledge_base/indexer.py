@@ -1,0 +1,125 @@
+"""Index KB chunks into Qdrant."""
+import json
+from pathlib import Path
+from uuid import uuid4
+
+import numpy as np
+from loguru import logger
+
+from src.knowledge_base.builder import KBChunk
+
+QDRANT_CONFIG = {
+    "collection_name": "psych_kb",
+    "vector_size": 768,
+    "distance": "Cosine",
+    "on_disk": False,
+    "hnsw_config": {
+        "m": 16,
+        "ef_construct": 100,
+    },
+}
+
+
+class KBIndexer:
+    """Indexes KB chunk embeddings into Qdrant."""
+
+    def __init__(self, config: dict | None = None):
+        self.config = {**QDRANT_CONFIG, **(config or {})}
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            from qdrant_client import QdrantClient
+            url = self.config.get("url", "http://localhost:6333")
+            logger.info(f"Connecting to Qdrant at {url}")
+            self._client = QdrantClient(url=url)
+        return self._client
+
+    def create_collection(self, recreate: bool = False) -> None:
+        """Create Qdrant collection."""
+        from qdrant_client.models import Distance, HnswConfigDiff, VectorParams
+        collection_name = self.config["collection_name"]
+        distance_map = {
+            "Cosine": Distance.COSINE,
+            "Dot": Distance.DOT,
+            "Euclid": Distance.EUCLID,
+        }
+        distance = distance_map.get(self.config["distance"], Distance.COSINE)
+
+        existing = [c.name for c in self.client.get_collections().collections]
+        if collection_name in existing:
+            if recreate:
+                logger.info(f"Deleting existing collection: {collection_name}")
+                self.client.delete_collection(collection_name)
+            else:
+                logger.info(f"Collection '{collection_name}' already exists, skipping creation")
+                return
+
+        hnsw = self.config.get("hnsw_config", {})
+        self.client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(
+                size=self.config["vector_size"],
+                distance=distance,
+                on_disk=self.config.get("on_disk", False),
+            ),
+            hnsw_config=HnswConfigDiff(
+                m=hnsw.get("m", 16),
+                ef_construct=hnsw.get("ef_construct", 100),
+            ),
+        )
+        logger.info(f"Created collection '{collection_name}'")
+
+    def index_chunks(
+        self,
+        chunks: list[KBChunk],
+        embeddings: np.ndarray,
+        batch_size: int = 100,
+    ) -> None:
+        """Upload chunk embeddings + payloads to Qdrant."""
+        from qdrant_client.models import PointStruct
+        collection_name = self.config["collection_name"]
+        total = len(chunks)
+        logger.info(f"Indexing {total} chunks into '{collection_name}'")
+
+        for start in range(0, total, batch_size):
+            end = min(start + batch_size, total)
+            batch_chunks = chunks[start:end]
+            batch_embeddings = embeddings[start:end]
+
+            points = [
+                PointStruct(
+                    id=str(uuid4()),
+                    vector=emb.tolist(),
+                    payload={
+                        "chunk_id": chunk.chunk_id,
+                        "text": chunk.text,
+                        **chunk.metadata,
+                    },
+                )
+                for chunk, emb in zip(batch_chunks, batch_embeddings)
+            ]
+            self.client.upsert(collection_name=collection_name, points=points)
+            logger.debug(f"Indexed chunks {start}-{end}/{total}")
+
+        logger.info(f"Indexed {total} chunks successfully")
+
+    def get_collection_info(self) -> dict:
+        """Get info about the current collection."""
+        collection_name = self.config["collection_name"]
+        info = self.client.get_collection(collection_name)
+        return {
+            "name": collection_name,
+            "vectors_count": info.vectors_count,
+            "points_count": info.points_count,
+        }
+
+    def sample_query(self, query_vector: np.ndarray, top_k: int = 3) -> list[dict]:
+        """Run a sample query to verify the index."""
+        results = self.client.search(
+            collection_name=self.config["collection_name"],
+            query_vector=query_vector.tolist(),
+            limit=top_k,
+        )
+        return [{"score": r.score, "text": r.payload.get("text", ""), "chunk_id": r.payload.get("chunk_id", "")} for r in results]

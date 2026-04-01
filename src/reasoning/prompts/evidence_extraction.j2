@@ -1,0 +1,31 @@
+You are an expert psychologist analyzing text for personality indicators.
+
+## Task
+Given the following text, identify specific behavioral evidence that reveals personality traits. Extract ONLY direct quotes or paraphrases of observable behaviors from the text. Do NOT infer or fabricate evidence.
+
+## Input Text
+{{ input_text }}
+
+## Pre-selected Candidate Sentences
+{% for sent in candidate_sentences %}
+[{{ loop.index }}] {{ sent.text }} (relevance_score: {{ "%.2f"|format(sent.score) }})
+{% endfor %}
+
+## Output Format (JSON)
+Return a JSON array of evidence items:
+```json
+[
+  {
+    "quote": "exact text from input",
+    "sentence_idx": 3,
+    "behavior_type": "social_behavior|cognitive_pattern|emotional_expression|decision_making|lifestyle_preference",
+    "description": "brief factual description of the behavior"
+  }
+]
+```
+
+## Rules
+- Extract 3-{{ max_evidence }} evidence items
+- Every quote MUST be traceable to the input text
+- DO NOT add interpretation yet — only describe observable behaviors
+- If the text lacks personality-relevant content, return an empty array []

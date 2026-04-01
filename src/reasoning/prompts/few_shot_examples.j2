@@ -1,0 +1,22 @@
+{% for example in examples %}
+## Example {{ loop.index }}
+
+**Input Text Snippet:**
+"{{ example.text_snippet }}"
+
+**Step 1 — Evidence Extracted:**
+{% for ev in example.evidence %}
+- [{{ ev.behavior_type }}] "{{ ev.quote }}" → {{ ev.description }}
+{% endfor %}
+
+**Step 2 — States Identified:**
+{% for state in example.states %}
+- {{ state.state_label }} (conf: {{ state.confidence }}) from "{{ state.quote }}"
+{% endfor %}
+
+**Step 3 — Trait Inferred:**
+- Prediction: {{ example.prediction }}
+- Explanation: {{ example.explanation }}
+
+---
+{% endfor %}

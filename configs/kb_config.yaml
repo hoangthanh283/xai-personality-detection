@@ -1,0 +1,39 @@
+sources:
+  - name: mbti_type_descriptions
+    path: data/knowledge_base/mbti_definitions.jsonl
+    framework: mbti
+    category: type_description
+
+  - name: ocean_trait_definitions
+    path: data/knowledge_base/ocean_definitions.jsonl
+    framework: ocean
+    category: trait_definition
+
+  - name: few_shot_examples
+    path: data/knowledge_base/few_shot_examples.jsonl
+    framework: both
+    category: few_shot_example
+
+chunking:
+  chunk_size: 512          # tokens
+  chunk_overlap: 64        # token overlap
+  tokenizer: cl100k_base   # tiktoken
+  split_on: ["\n\n", "\n", ". "]
+  min_chunk_size: 50
+
+embedding:
+  model: BAAI/bge-base-en-v1.5
+  batch_size: 64
+  normalize: true
+
+qdrant:
+  url: http://localhost:6333
+  collection_name: psych_kb
+  vector_size: 768
+  distance: Cosine
+  on_disk: false
+  hnsw_config:
+    m: 16
+    ef_construct: 100
+
+output_dir: data/knowledge_base/

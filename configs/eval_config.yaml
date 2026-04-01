@@ -1,0 +1,20 @@
+evaluation:
+  split: test
+  metrics: [accuracy, f1_macro, f1_weighted, per_class_f1, kappa]
+
+xai_metrics:
+  evidence_grounding: true
+  faithfulness: true
+  faithfulness_n_samples: 100
+  explanation_consistency: true
+
+human_eval:
+  n_samples: 50
+  criteria: [relevance, correctness, coverage, faithfulness, usefulness]
+
+statistical_tests:
+  n_bootstrap: 1000
+  confidence_interval: 0.95
+  significance_level: 0.05
+
+output_dir: outputs/reports/

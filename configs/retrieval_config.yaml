@@ -1,0 +1,19 @@
+embedding:
+  model: BAAI/bge-base-en-v1.5
+  batch_size: 64
+  normalize: true
+  device: auto   # auto-detect cuda/cpu
+
+qdrant:
+  url: http://localhost:6333
+  collection_name: psych_kb
+  top_k: 5
+
+hybrid:
+  alpha: 0.7     # weight for semantic score in hybrid search
+  bm25_top_k: 50 # candidates from BM25 before reranking
+
+evidence_retrieval:
+  method: hybrid    # semantic | keyword | hybrid
+  pre_filter: true
+  top_k: 10

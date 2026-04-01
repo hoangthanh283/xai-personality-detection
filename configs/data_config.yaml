@@ -1,0 +1,29 @@
+datasets:
+  mbti:
+    raw_path: data/raw/mbti/mbti_1.csv
+    output_dir: data/processed/mbti
+    max_tokens: 512
+    min_words: 10
+    remove_type_mentions: true
+    split_ratio: [0.70, 0.15, 0.15]
+    seed: 42
+
+  pandora:
+    raw_path: data/raw/pandora/
+    output_dir: data/processed/pandora
+    max_comments_per_user: 100
+    ocean_threshold: 3.0
+    split_ratio: [0.70, 0.15, 0.15]
+    seed: 42
+
+  essays:
+    raw_path: data/raw/essays/essays.csv
+    output_dir: data/processed/essays
+    encoding: latin-1
+    split_ratio: [0.70, 0.15, 0.15]
+    seed: 42
+
+  personality_evd:
+    raw_path: data/raw/personality_evd/
+    output_dir: data/processed/personality_evd
+    use_original_split: true

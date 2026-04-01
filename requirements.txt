@@ -1,0 +1,40 @@
+# Core ML
+torch>=2.1.0
+transformers>=4.40.0
+sentence-transformers>=3.0.0
+datasets>=2.19.0
+scikit-learn>=1.4.0
+xgboost>=2.0.0
+
+# RAG
+langchain>=0.2.0
+langchain-community>=0.2.0
+qdrant-client>=1.9.0
+openai>=1.30.0
+
+# Experiment tracking
+wandb>=0.17.0
+
+# Prompt engineering
+jinja2>=3.1.0
+
+# Demo
+streamlit>=1.35.0
+
+# Evaluation
+scipy>=1.13.0
+statsmodels>=0.14.0
+shap>=0.45.0
+
+# NLP utilities
+spacy>=3.7.0
+rank-bm25>=0.2.2
+tiktoken>=0.7.0
+
+# Utilities
+pyyaml>=6.0
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+pandas>=2.2.0
+loguru>=0.7.0
+numpy>=1.26.0
