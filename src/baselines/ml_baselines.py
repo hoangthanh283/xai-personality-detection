@@ -19,6 +19,7 @@ from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 
 try:
@@ -97,11 +98,15 @@ class MLBaselineTrainer:
     def __init__(self, model_name: str = "logistic_regression", config: dict | None = None):
         self.model_name = model_name
         self.config = config or {}
-        tfidf_cfg = self.config.get("tfidf", TFIDF_PARAMS)
+        tfidf_cfg = {**TFIDF_PARAMS, **self.config.get("tfidf", {})}
+        ngram_range = tfidf_cfg.get("ngram_range")
+        if isinstance(ngram_range, list):
+            tfidf_cfg["ngram_range"] = tuple(ngram_range)
         self.tfidf = TfidfVectorizer(**tfidf_cfg)
         classifier = build_model(model_name, self.config.get(model_name, {}))
         self.pipeline = Pipeline([("tfidf", self.tfidf), ("clf", classifier)])
         self.is_fitted = False
+        self._label_encoder: LabelEncoder | None = None
 
     def fit(
         self,
@@ -125,13 +130,23 @@ class MLBaselineTrainer:
             self.pipeline = gs.best_estimator_
             logger.info(f"Best params: {gs.best_params_}")
         else:
-            self.pipeline.fit(train_texts, train_labels)
+            y = train_labels
+            clf = self.pipeline.named_steps["clf"]
+            if isinstance(clf, XGBClassifier):
+                self._label_encoder = LabelEncoder().fit(train_labels)
+                y = self._label_encoder.transform(train_labels)
+            else:
+                self._label_encoder = None
+            self.pipeline.fit(train_texts, y)
         self.is_fitted = True
         logger.info("Training complete")
         return self
 
     def predict(self, texts: list[str]) -> np.ndarray:
-        return self.pipeline.predict(texts)
+        preds = self.pipeline.predict(texts)
+        if self._label_encoder is not None:
+            preds = self._label_encoder.inverse_transform(preds)
+        return preds
 
     def predict_proba(self, texts: list[str]) -> np.ndarray | None:
         """Return probability estimates (only for models that support it)."""

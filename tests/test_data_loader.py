@@ -66,8 +66,16 @@ class TestMBTIParser:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["type", "posts"])
-            writer.writerow(["INTP", "I love thinking about abstract|||ideas that make me wonder|||about the nature of things"])
-            writer.writerow(["ENFJ", "People are so important to me|||I love connecting with friends|||and helping others grow"])
+            writer.writerow([
+                "INTP",
+                "I love thinking about abstract possibilities and the connections between ideas|||"
+                "Ideas that make me wonder about the nature of things and how theory meets practice",
+            ])
+            writer.writerow([
+                "ENFJ",
+                "People are so important to me because I help friends build meaningful connections|||"
+                "I love connecting with friends and supporting their growth whenever I can",
+            ])
             temp_path = f.name
 
         try:
