@@ -1,6 +1,5 @@
 """Statistical significance tests: McNemar, bootstrap CI, paired bootstrap."""
 import numpy as np
-from loguru import logger
 
 
 def mcnemar_test(

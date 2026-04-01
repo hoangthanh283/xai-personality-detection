@@ -12,7 +12,7 @@ from typing import Any
 
 import numpy as np
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, f1_score
@@ -176,16 +176,10 @@ class EnsembleClassifier:
         self.config = config or {}
         members = members or ["logistic_regression", "xgboost", "random_forest"]
         tfidf_cfg = self.config.get("tfidf", TFIDF_PARAMS)
-
         estimators = []
         for name in members:
             clf = build_model(name, self.config.get(name, {}))
             estimators.append((name, clf))
-
-        # VotingClassifier requires probability support; LinearSVC doesn't have it
-        # So we use 'hard' voting if SVM is in members (has no predict_proba)
-        has_svm = any(name == "svm" for name, _ in estimators)
-        voting_type = "hard" if has_svm else "soft"
 
         # Build individual pipelines
         self.pipelines = {

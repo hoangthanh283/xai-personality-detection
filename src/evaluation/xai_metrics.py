@@ -1,7 +1,6 @@
 """XAI evaluation metrics: grounding, relevance, faithfulness, consistency."""
 import random
 import re
-from collections import Counter
 
 import numpy as np
 from loguru import logger

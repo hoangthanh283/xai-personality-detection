@@ -1,9 +1,6 @@
 """Retrieve psychology definitions from the Qdrant knowledge base."""
 from dataclasses import dataclass
 
-import numpy as np
-from loguru import logger
-
 from src.knowledge_base.embedder import KBEmbedder
 
 
@@ -42,7 +39,8 @@ class KBRetriever:
 
     def _build_filter(self, framework: str | None = None, category: str | None = None):
         """Build Qdrant payload filter."""
-        from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+        from qdrant_client.models import (FieldCondition, Filter, MatchAny,
+                                          MatchValue)
         conditions = []
         if framework and framework != "both":
             conditions.append(

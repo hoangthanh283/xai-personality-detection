@@ -6,8 +6,6 @@ Ties together:
 3. KB retrieval (psychology definitions)
 4. CoPE reasoning (3-step LLM chain)
 """
-from dataclasses import dataclass
-
 from loguru import logger
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor

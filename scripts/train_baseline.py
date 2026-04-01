@@ -97,7 +97,8 @@ def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
 
 def train_transformer(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
     """Train a transformer baseline."""
-    from src.baselines.transformer_baseline import TransformerBaseline, TransformerConfig
+    from src.baselines.transformer_baseline import (TransformerBaseline,
+                                                    TransformerConfig)
 
     model_cfg = config.get("transformer", {}).get(model_name, {})
 

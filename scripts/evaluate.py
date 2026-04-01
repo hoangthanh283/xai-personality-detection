@@ -33,11 +33,13 @@ def load_predictions(path: str) -> list[dict]:
 
 def run_full_evaluation(args, config: dict) -> None:
     """Compute full metrics suite for all prediction files."""
-    from src.evaluation.classification_metrics import compute_classification_metrics
-    from src.evaluation.xai_metrics import evidence_grounding_score
-    from src.evaluation.statistical_tests import bootstrap_confidence_interval
-    from sklearn.metrics import accuracy_score, f1_score
     import numpy as np
+    from sklearn.metrics import accuracy_score, f1_score
+
+    from src.evaluation.classification_metrics import \
+        compute_classification_metrics
+    from src.evaluation.statistical_tests import bootstrap_confidence_interval
+    from src.evaluation.xai_metrics import evidence_grounding_score
 
     pred_dir = Path(args.predictions_dir)
     output_dir = Path(args.output)

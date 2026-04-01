@@ -1,16 +1,10 @@
 """Tests for data loaders and parsers."""
-import json
 import os
 import tempfile
-import pytest
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor
-from src.utils.text_utils import (
-    clean_text_pipeline,
-    remove_mbti_mentions,
-    count_words,
-    MBTI_TYPES,
-)
+from src.utils.text_utils import (MBTI_TYPES, clean_text_pipeline, count_words,
+                                  remove_mbti_mentions)
 
 
 class TestTextUtils:
@@ -65,7 +59,7 @@ class TestMBTIParser:
 
     def test_mbti_parser_with_temp_csv(self):
         import csv
-        import io
+
         from src.data.mbti_parser import MBTIParser
 
         # Create a minimal CSV

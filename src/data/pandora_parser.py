@@ -12,11 +12,10 @@ Output: data/processed/pandora/{train,val,test}.jsonl
 """
 import hashlib
 import json
-import re
 import random
+import re
 from pathlib import Path
 
-import pandas as pd
 from loguru import logger
 from sklearn.model_selection import train_test_split
 

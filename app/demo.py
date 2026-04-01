@@ -218,7 +218,8 @@ with tab2:
         baseline_preds = [json.loads(l) for l in baseline_file.read().decode().split("\n") if l.strip()]
         ragxpr_preds = [json.loads(l) for l in rag_xpr_file.read().decode().split("\n") if l.strip()]
 
-        from src.evaluation.classification_metrics import compute_classification_metrics
+        from src.evaluation.classification_metrics import \
+            compute_classification_metrics
         baseline_y = [p.get("gold_label", "") for p in baseline_preds]
         baseline_pred = [p.get("predicted_label", "") for p in baseline_preds]
         ragxpr_y = [p.get("gold_label", "") for p in ragxpr_preds]

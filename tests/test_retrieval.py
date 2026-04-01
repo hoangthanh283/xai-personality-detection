@@ -1,7 +1,7 @@
 """Tests for retrieval components."""
-import pytest
 
-from src.retrieval.evidence_retriever import EvidenceRetriever, EvidenceSentence
+from src.retrieval.evidence_retriever import (EvidenceRetriever,
+                                              EvidenceSentence)
 
 
 class TestEvidenceRetriever:
@@ -21,7 +21,6 @@ class TestEvidenceRetriever:
         scored = retriever.score_sentences(sentences)
         assert len(scored) == 3
         # Sentences with personality keywords should score higher
-        scores = {s.text: s.score for s in scored}
         # "I love thinking" and "Socializing" have personality keywords
         assert max(scored, key=lambda s: s.score).score > 0
 

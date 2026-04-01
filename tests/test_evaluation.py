@@ -1,10 +1,12 @@
 """Tests for evaluation modules."""
 import numpy as np
-import pytest
 
-from src.evaluation.classification_metrics import compute_classification_metrics
-from src.evaluation.xai_metrics import evidence_grounding_score, fuzzy_match, evidence_relevance_f1
-from src.evaluation.statistical_tests import bootstrap_confidence_interval, paired_bootstrap_test
+from src.evaluation.classification_metrics import \
+    compute_classification_metrics
+from src.evaluation.statistical_tests import (bootstrap_confidence_interval,
+                                              paired_bootstrap_test)
+from src.evaluation.xai_metrics import (evidence_grounding_score,
+                                        evidence_relevance_f1, fuzzy_match)
 
 
 class TestClassificationMetrics:
@@ -81,7 +83,6 @@ class TestStatisticalTests:
         y_true = np.array(["INTP"] * 50 + ["INFJ"] * 50)
         pred_a = np.copy(y_true)
         pred_b = np.copy(y_true)
-        from sklearn.metrics import accuracy_score
         result = paired_bootstrap_test(y_true, pred_a, pred_b, lambda a, b: (a == b).mean(), n_bootstrap=100)
         # When methods are identical, p-value should be high (not significant)
         assert "p_value" in result

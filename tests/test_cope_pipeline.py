@@ -1,12 +1,11 @@
 """Tests for CoPE pipeline components."""
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
-
-from src.reasoning.evidence_extractor import EvidenceExtractor, ExtractedEvidence
-from src.reasoning.state_identifier import StateIdentifier, IdentifiedState
-from src.reasoning.trait_inferencer import TraitInferencer, PredictionResult
+from src.reasoning.evidence_extractor import (EvidenceExtractor,
+                                              ExtractedEvidence)
+from src.reasoning.state_identifier import IdentifiedState, StateIdentifier
+from src.reasoning.trait_inferencer import TraitInferencer
 from src.retrieval.evidence_retriever import EvidenceSentence
 
 

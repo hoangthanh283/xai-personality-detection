@@ -13,7 +13,6 @@ Output: data/processed/mbti/{train,val,test}.jsonl
 """
 import hashlib
 import json
-import re
 from pathlib import Path
 
 import pandas as pd
@@ -122,10 +121,8 @@ class MBTIParser:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        texts = [r["text"] for r in records]
         labels = [r["label_mbti"] for r in records]
 
-        train_size = self.split_ratio[0]
         val_size = self.split_ratio[1]
         test_size = self.split_ratio[2]
 

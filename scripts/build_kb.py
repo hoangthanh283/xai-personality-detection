@@ -89,7 +89,9 @@ def _create_demo_chunks():
 def step_embed(config: dict) -> None:
     """Embed chunks with Sentence-Transformers."""
     import json
+
     import numpy as np
+
     from src.knowledge_base.builder import KBChunk
     from src.knowledge_base.embedder import KBEmbedder
 
@@ -117,7 +119,9 @@ def step_embed(config: dict) -> None:
 def step_index(config: dict) -> None:
     """Index embeddings into Qdrant."""
     import json
+
     import numpy as np
+
     from src.knowledge_base.builder import KBChunk
     from src.knowledge_base.indexer import KBIndexer
 

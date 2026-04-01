@@ -8,22 +8,16 @@ Supports two classification modes:
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from loguru import logger
 
 try:
     import torch
-    from torch import nn
-    from transformers import (
-        AutoModelForSequenceClassification,
-        AutoTokenizer,
-        EarlyStoppingCallback,
-        Trainer,
-        TrainingArguments,
-    )
     from datasets import Dataset as HFDataset
+    from transformers import (AutoModelForSequenceClassification,
+                              AutoTokenizer, EarlyStoppingCallback, Trainer,
+                              TrainingArguments)
     HAS_TRANSFORMERS = True
 except ImportError:
     HAS_TRANSFORMERS = False
@@ -61,8 +55,8 @@ class TransformerBaseline:
 
     def _setup_labels(self, labels: list[str]) -> None:
         unique_labels = sorted(set(labels))
-        self.label2id = {l: i for i, l in enumerate(unique_labels)}
-        self.id2label = {i: l for l, i in self.label2id.items()}
+        self.label2id = {label: idx for idx, label in enumerate(unique_labels)}
+        self.id2label = {idx: label for label, idx in self.label2id.items()}
 
     def _tokenize(self, texts: list[str]) -> dict:
         return self.tokenizer(
@@ -80,7 +74,7 @@ class TransformerBaseline:
             padding=True,
             max_length=self.config.max_length,
         )
-        label_ids = [self.label2id[l] for l in labels]
+        label_ids = [self.label2id[label] for label in labels]
         data = dict(encodings)
         data["labels"] = label_ids
         return HFDataset.from_dict(data)

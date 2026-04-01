@@ -1,8 +1,9 @@
 """Full 3-step CoPE pipeline orchestrator."""
 from loguru import logger
 
-from src.reasoning.evidence_extractor import EvidenceExtractor, ExtractedEvidence
-from src.reasoning.state_identifier import StateIdentifier, IdentifiedState
+from src.reasoning.evidence_extractor import (EvidenceExtractor,
+                                              ExtractedEvidence)
+from src.reasoning.state_identifier import IdentifiedState, StateIdentifier
 from src.reasoning.trait_inferencer import PredictionResult, TraitInferencer
 from src.retrieval.evidence_retriever import EvidenceSentence
 from src.retrieval.kb_retriever import KBChunkResult, deduplicate_chunks

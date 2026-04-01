@@ -31,6 +31,7 @@ class PersonalityEvdParser:
         """Parse a single dialogue into per-speaker records."""
         dialogue = dialogue_data.get("dialogue", [])
         personality = dialogue_data.get("personality", {})
+        personality_ocean = dialogue_data.get("personality_ocean", {})
         evidence_list = dialogue_data.get("evidence", [])
 
         records = []
@@ -62,7 +63,7 @@ class PersonalityEvdParser:
                 "text": text,
                 "label_mbti": mbti_type,
                 "label_mbti_dimensions": self._parse_dimensions(mbti_type) if mbti_type else None,
-                "label_ocean": None,
+                "label_ocean": personality_ocean.get(speaker),
                 "source": "personality_evd",
                 "split": split_name,
                 "metadata": {

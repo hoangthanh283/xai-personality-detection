@@ -20,6 +20,12 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 
+[tool.flake8]
+max-line-length = 400
+
+[tool.flake8]
+max-line-length = 120
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

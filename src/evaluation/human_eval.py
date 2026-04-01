@@ -10,7 +10,6 @@ from pathlib import Path
 
 from loguru import logger
 
-
 EVAL_CRITERIA = [
     {
         "id": "relevance",
@@ -136,14 +135,14 @@ class HumanEvalGenerator:
         ]
 
         for sample in samples:
-            html_parts.append(f"<div class='sample'>")
+            html_parts.append("<div class='sample'>")
             html_parts.append(f"<h2>Sample ID: {sample['sample_id']}</h2>")
             html_parts.append(f"<p><strong>Gold Label:</strong> {sample['gold_label']}</p>")
             text_preview = sample["text"][:400].replace("<", "&lt;").replace(">", "&gt;")
             html_parts.append(f"<p><strong>Input Text:</strong> {text_preview}...</p>")
 
             for method_name, method_data in sample.get("methods", {}).items():
-                html_parts.append(f"<div class='method'>")
+                html_parts.append("<div class='method'>")
                 html_parts.append(f"<h3>Method: [BLIND-{hash(method_name) % 1000}]</h3>")
                 html_parts.append(f"<p><strong>Predicted:</strong> {method_data.get('predicted_label', '')}</p>")
                 for ev in method_data.get("evidence", []):
