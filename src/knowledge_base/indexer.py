@@ -31,7 +31,7 @@ class KBIndexer:
             from qdrant_client import QdrantClient
             url = self.config.get("url", "http://localhost:6333")
             logger.info(f"Connecting to Qdrant at {url}")
-            self._client = QdrantClient(url=url)
+            self._client = QdrantClient(url=url, check_compatibility=False)
         return self._client
 
     def create_collection(self, recreate: bool = False) -> None:
@@ -109,15 +109,15 @@ class KBIndexer:
         info = self.client.get_collection(collection_name)
         return {
             "name": collection_name,
-            "vectors_count": info.vectors_count,
-            "points_count": info.points_count,
+            "vectors_count": getattr(info, "vectors_count", getattr(info, "points_count", 0)),
+            "points_count": getattr(info, "points_count", getattr(info, "vectors_count", 0)),
         }
 
     def sample_query(self, query_vector: np.ndarray, top_k: int = 3) -> list[dict]:
         """Run a sample query to verify the index."""
-        results = self.client.search(
+        response = self.client.query_points(
             collection_name=self.config["collection_name"],
-            query_vector=query_vector.tolist(),
+            query=query_vector.tolist(),
             limit=top_k,
         )
-        return [{"score": r.score, "text": r.payload.get("text", ""), "chunk_id": r.payload.get("chunk_id", "")} for r in results]
+        return [{"score": r.score, "text": r.payload.get("text", ""), "chunk_id": r.payload.get("chunk_id", "")} for r in response.points]

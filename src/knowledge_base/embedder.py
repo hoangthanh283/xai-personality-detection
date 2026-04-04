@@ -7,8 +7,8 @@ from loguru import logger
 from src.knowledge_base.builder import KBChunk
 
 EMBEDDING_CONFIG = {
-    "model": "BAAI/bge-base-en-v1.5",
-    "batch_size": 64,
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "batch_size": 128,  # Can be larger for the smaller model
     "normalize": True,
 }
 
@@ -23,10 +23,16 @@ class KBEmbedder:
     @property
     def model(self):
         if self._model is None:
+            import torch
             from sentence_transformers import SentenceTransformer
             model_name = self.config["model"]
-            logger.info(f"Loading embedding model: {model_name}")
-            self._model = SentenceTransformer(model_name)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Support Apple Silicon (MPS)
+            if device == "cpu" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                device = "mps"
+
+            logger.info(f"Loading embedding model: {model_name} on {device}")
+            self._model = SentenceTransformer(model_name, device=device)
         return self._model
 
     def embed_texts(self, texts: list[str]) -> np.ndarray:

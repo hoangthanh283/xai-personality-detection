@@ -2,14 +2,48 @@
 import json
 import os
 import sys
+import warnings
 from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
-load_dotenv()
+from src.rag_pipeline.pipeline import RAGXPRPipeline
 
+# ────────── Setup ──────────
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+
+@st.cache_resource(show_spinner="🤖 Loading model... (first time only)")
+def load_pipeline(provider, model, framework, num_evidence, num_kb_chunks,
+                  api_key=None, base_url=None, save_intermediate=True):
+    """Build and cache the RAG-XPR pipeline. Reused across all Streamlit reruns."""
+    config = {
+        "llm": {
+            "provider": provider,
+            "model": model,
+            "api_key": api_key,
+            "base_url": base_url,
+            "temperature": 0.1,
+            "max_tokens": 2048,
+            "timeout": 180,
+            "retry_attempts": 5,
+        },
+        "cope": {
+            "num_evidence": num_evidence,
+            "num_kb_chunks": num_kb_chunks,
+            "framework": framework,
+            "max_retries_per_step": 2,
+        },
+        "evidence_retrieval": {"method": "hybrid", "top_k": num_evidence},
+        "output": {"save_intermediate": save_intermediate},
+    }
+    return RAGXPRPipeline(config)
+
 
 # ────────────────────────────────────────────────────────────────────────────
 # Page config
@@ -20,6 +54,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
 
 # ────────────────────────────────────────────────────────────────────────────
 # Custom CSS
@@ -49,19 +84,20 @@ st.markdown('<p class="subheader">Explainable Personality Recognition via Retrie
 # ────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("⚙️ Configuration")
-    llm_provider = st.selectbox("LLM Provider", ["openrouter", "openai", "ollama", "vllm"])
+    llm_provider = st.selectbox("LLM Provider", ["local", "openrouter", "openai", "ollama", "vllm"])
     default_model = (
-        "qwen/qwen3.6-plus-preview:free"
-        if llm_provider == "openrouter"
-        else "gpt-4o-mini" if llm_provider == "openai" else "llama3.1:8b"
+        "microsoft/Phi-3.5-mini-instruct"
+        if llm_provider == "local"
+        else "qwen/qwen3.6-plus:free" if llm_provider == "openrouter" else "gpt-4o-mini"
     )
     llm_model = st.text_input(
         "Model",
-        default_model,
+        value=default_model,
+        key="model_input"
     )
     framework = st.selectbox("Personality Framework", ["mbti", "ocean"])
-    num_evidence = st.slider("Max Evidence Sentences", 3, 15, 10)
-    num_kb_chunks = st.slider("KB Chunks per Evidence", 1, 10, 5)
+    num_evidence = st.slider("Max Evidence Sentences", 3, 10, 6)
+    num_kb_chunks = st.slider("KB Chunks per Evidence", 1, 5, 3)
     save_intermediate = st.checkbox("Show Intermediate Steps", value=True)
 
     st.divider()
@@ -79,6 +115,22 @@ with st.sidebar:
     3. 🤔 CoPE Reasoning Chain (LLM)
     4. 🎯 Personality Prediction + Explanation
     """)
+
+# ────────────────────────────────────────────────────────────────────────────
+# Eager pipeline warm-up: runs once on app start, cached for all future reruns
+# ────────────────────────────────────────────────────────────────────────────
+resolved_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+base_url = "https://openrouter.ai/api/v1" if llm_provider == "openrouter" else None
+pipeline = load_pipeline(
+    provider=llm_provider,
+    model=llm_model,
+    framework=framework,
+    num_evidence=num_evidence,
+    num_kb_chunks=num_kb_chunks,
+    api_key=resolved_key,
+    base_url=base_url,
+    save_intermediate=save_intermediate,
+)
 
 # ────────────────────────────────────────────────────────────────────────────
 # Main content
@@ -122,25 +174,39 @@ with tab1:
     if analyze_button and input_text.strip():
         with st.spinner("🔄 Running RAG-XPR pipeline..."):
             try:
-                config = {
-                    "llm": {
-                        "provider": llm_provider,
-                        "model": llm_model,
-                        "base_url": "https://openrouter.ai/api/v1" if llm_provider == "openrouter" else None,
-                        "temperature": 0.1,
-                        "max_tokens": 2048,
-                    },
-                    "cope": {"num_evidence": num_evidence, "num_kb_chunks": num_kb_chunks, "framework": framework, "max_retries_per_step": 2},
-                    "evidence_retrieval": {"method": "hybrid", "top_k": num_evidence},
-                    "output": {"save_intermediate": save_intermediate},
-                }
+                # Validate API key proactively
+                resolved_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+                if not resolved_key and llm_provider in ("openai", "openrouter"):
+                    st.error("Missing API Key! Please enter your API key in the sidebar or check your .env file.")
+                    st.stop()
 
-                from src.rag_pipeline.pipeline import RAGXPRPipeline
-                pipeline = RAGXPRPipeline(config)
-                result = pipeline.predict(input_text)
+                # Use a placeholder to show progress
+                status_box = st.empty()
 
-                # ── Prediction Display ──────────────────────────────────────
+                with status_box.status("🔍 Analyzing Personality...", expanded=True) as status:
+                    st.write("Step 1: Extracting behavioral evidence from text...")
+
+                    # Call predict as a generator to show intermediate results
+                    generator = pipeline.predict(input_text, yield_steps=True)
+
+                    result = None
+                    for step_name, data in generator:
+                        if isinstance(data, list) and len(data) > 0:
+                            if hasattr(data[0], "quote"):  # Step 1 (Evidence)
+                                st.write(f"✅ Extracted {len(data)} behavioral evidence items.")
+                            elif hasattr(data[0], "state_label"):  # Step 2 (States)
+                                st.write(f"✅ Identified {len(data)} psychological states.")
+
+                        st.write(f"Working on {step_name}...")
+                        result = data  # The last yield from the generator will be the final result dict
+
+                    status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
+
+                status_box.empty()
+
+                # ── Analysis Summary ──────────────────────────────────────────
                 st.divider()
+                st.subheader("🏁 Final Prediction")
                 col_pred, col_conf = st.columns([1, 2])
 
                 with col_pred:
@@ -161,44 +227,51 @@ with tab1:
                             st.progress(confidence, text=f"{dim}: **{label}** ({confidence:.0%})")
 
                 # ── Explanation ──────────────────────────────────────────────
-                st.divider()
-                st.subheader("📝 Explanation")
+                st.subheader("📝 Summary Explanation")
                 explanation = result.get("explanation", "No explanation generated.")
                 st.info(explanation)
 
-                # ── Evidence Chain ───────────────────────────────────────────
-                st.subheader("🔗 Evidence Chain")
-                evidence_chain = result.get("evidence_chain", [])
-                if evidence_chain:
-                    for ev in evidence_chain:
-                        with st.container():
+                # ── Step-by-Step Details ──────────────────────────────────────
+                st.divider()
+                st.subheader("🧬 Chain-of-Personality-Evidence (CoPE)")
+
+                if "intermediate" in result:
+                    intermediate = result["intermediate"]
+
+                    # Step 1: Evidence
+                    with st.expander("📌 Step 1: Extracted Evidence", expanded=True):
+                        st.write("Quotes from the input text that reveal personality-relevant behaviors:")
+                        for i, ev in enumerate(intermediate.get("step1_evidence", [])):
                             st.markdown(f"""
-                            <div class="evidence-card">
-                                <strong>📌 Evidence:</strong> "{ev.get('evidence', '')}"<br>
-                                <strong>💡 State:</strong> {ev.get('state', '')} &nbsp;|&nbsp;
-                                <strong>🎯 Contribution:</strong> {ev.get('trait_contribution', '')}
+                            <div class="evidence-card" style="border-left: 4px solid #3498db;">
+                                <strong>{i+1}. [{ev.get('behavior_type', 'Behavior')}]</strong><br>
+                                <em>"{ev.get('quote', '')}"</em><br>
+                                <small style="opacity:0.7">Insight: {ev.get('description', '')}</small>
                             </div>
                             """, unsafe_allow_html=True)
-                else:
-                    st.warning("No evidence chain available")
 
-                # ── Intermediate Steps ────────────────────────────────────────
-                if save_intermediate and "intermediate" in result:
-                    with st.expander("🔬 Intermediate Steps (Debug)"):
-                        intermediate = result["intermediate"]
-                        st.markdown('<p class="step-header">Step 1: Extracted Evidence</p>', unsafe_allow_html=True)
-                        for i, ev in enumerate(intermediate.get("step1_evidence", [])):
-                            st.markdown(f"**{i+1}.** [{ev.get('behavior_type', '')}] *\"{ev.get('quote', '')}\"* — {ev.get('description', '')}")
-
-                        st.markdown('<p class="step-header">Step 2: Psychological States</p>', unsafe_allow_html=True)
+                    # Step 2: States
+                    with st.expander("💡 Step 2: Psychological States", expanded=True):
+                        st.write("Mapping behaviors to psychological states using the Knowledge Base:")
                         for state in intermediate.get("step2_states", []):
                             st.markdown(f"""
-                            <div class="state-card">
-                                <strong>{state.get('state_label', '')}</strong> (conf: {state.get('confidence', 0):.0%})<br>
-                                "{state.get('quote', '')}"<br>
-                                <em>{state.get('reasoning', '')}</em>
+                            <div class="state-card" style="border-left: 4px solid #e67e22; padding: 10px; margin-bottom: 5px; background: rgba(230,126,34,0.1); border-radius: 4px;">
+                                <strong>{state.get('state_label', '')}</strong> (Confidence: {state.get('confidence', 0):.0%})<br>
+                                <small style="opacity:0.8">Source Quote: "{state.get('quote', '')}"</small><br>
+                                <p style="margin-top:5px; font-size:0.9em;">Reasoning: {state.get('reasoning', '')}</p>
                             </div>
                             """, unsafe_allow_html=True)
+
+                    # Step 3: Combined Prediction Chain
+                    with st.expander("📊 Step 3: Trait Contribution", expanded=False):
+                        evidence_chain = result.get("evidence_chain", [])
+                        if evidence_chain:
+                            for ev in evidence_chain:
+                                st.write(f"• **{ev.get('state', 'State')}** supports **{ev.get('trait_contribution', 'Trait')}**")
+                        else:
+                            st.write("Aggregating all identified states for the final prediction...")
+                else:
+                    st.warning("Run analysis with 'Save Intermediate' enabled to see step-by-step details.")
 
             except ImportError as e:
                 st.error(f"Missing dependency: {e}. Please install requirements: `pip install -r requirements.txt`")

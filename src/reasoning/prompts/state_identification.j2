@@ -1,40 +1,8 @@
-You are an expert psychologist mapping behavioral evidence to psychological states.
+Map each behavioral quote to a psychological state. Return ONLY a JSON array.
 
-## Task
-For each piece of behavioral evidence, identify the psychological state it reflects. Use the provided psychology reference material as your knowledge base.
-
-## Behavioral Evidence
-{% for ev in evidence_list %}
-{{ loop.index }}. [{{ ev.behavior_type }}] "{{ ev.quote }}"
-   Description: {{ ev.description }}
+Evidence:
+{% for ev in evidence_list %}{{ loop.index }}. [{{ ev.behavior_type }}] "{{ ev.quote }}"
 {% endfor %}
 
-## Psychology Reference (from Knowledge Base)
-{% for chunk in kb_chunks %}
----
-[Source: {{ chunk.metadata.source | default("unknown") }} | Category: {{ chunk.metadata.category | default("general") }}]
-{{ chunk.text }}
----
-{% endfor %}
-
-## Output Format (JSON)
-```json
-[
-  {
-    "evidence_idx": 1,
-    "quote": "the original quote",
-    "state_label": "e.g., Social Anxiety, Achievement Motivation, Openness to Fantasy",
-    "state_definition": "brief definition from the KB reference",
-    "kb_reference": "source name and category used",
-    "confidence": 0.85,
-    "reasoning": "one sentence explaining the mapping"
-  }
-]
-```
-
-## Rules
-- Map each evidence to exactly ONE state
-- State labels MUST align with established psychology terminology from the KB
-- If a KB reference contradicts your mapping, defer to the KB
-- Confidence: 0.0-1.0 based on how clearly the evidence maps to the state
-- Return a JSON array with one item per evidence
+Output (JSON array only, no explanation):
+[{"evidence_idx": 1, "quote": "...", "state_label": "...", "confidence": 0.8, "reasoning": "..."}]

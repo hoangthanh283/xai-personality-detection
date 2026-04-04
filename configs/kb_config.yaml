@@ -22,14 +22,14 @@ chunking:
   min_chunk_size: 50
 
 embedding:
-  model: BAAI/bge-base-en-v1.5
+  model: sentence-transformers/all-MiniLM-L6-v2
   batch_size: 64
   normalize: true
 
 qdrant:
   url: http://localhost:6333
   collection_name: psych_kb
-  vector_size: 768
+  vector_size: 384
   distance: Cosine
   on_disk: false
   hnsw_config:

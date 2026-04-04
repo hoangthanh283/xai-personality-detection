@@ -34,7 +34,7 @@ class KBRetriever:
     def qdrant(self):
         if self._qdrant is None:
             from qdrant_client import QdrantClient
-            self._qdrant = QdrantClient(url=self.qdrant_url)
+            self._qdrant = QdrantClient(url=self.qdrant_url, check_compatibility=False)
         return self._qdrant
 
     def _build_filter(self, framework: str | None = None, category: str | None = None):
@@ -57,6 +57,33 @@ class KBRetriever:
             return Filter(must=conditions)
         return None
 
+    def _qdrant_query(self, **kwargs):
+        """Robust qdrant query handling for both search() and query_points() APIs."""
+        client = self.qdrant
+        # New API (v1.10.0+)
+        if hasattr(client, "query_points"):
+            return client.query_points(**kwargs)
+        # Old API (v1.1.0 - v1.9.0)
+        elif hasattr(client, "search"):
+            # Map query_points arguments to search arguments if necessary
+            search_kwargs = {
+                "collection_name": kwargs.get("collection_name"),
+                "query_vector": kwargs.get("query"),
+                "query_filter": kwargs.get("query_filter"),
+                "limit": kwargs.get("limit"),
+                "with_payload": kwargs.get("with_payload", True),
+            }
+            # Response format differ slightly, but we only need .points
+            from dataclasses import dataclass
+
+            @dataclass
+            class MockResponse:
+                points: list
+            res = client.search(**search_kwargs)
+            return MockResponse(points=res)
+        else:
+            raise AttributeError(f"QdrantClient object has no attribute 'query_points' or 'search'. Available: {dir(client)}")
+
     def search(
         self,
         query: str,
@@ -71,9 +98,9 @@ class KBRetriever:
             vector = vector[0]
 
         filter_ = self._build_filter(framework, category)
-        results = self.qdrant.search(
+        response = self._qdrant_query(
             collection_name=self.collection_name,
-            query_vector=vector.tolist(),
+            query=vector.tolist(),
             query_filter=filter_,
             limit=top_k,
         )
@@ -84,7 +111,7 @@ class KBRetriever:
                 score=r.score,
                 metadata={k: v for k, v in r.payload.items() if k not in ("chunk_id", "text")},
             )
-            for r in results
+            for r in response.points
         ]
 
     def search_many(
@@ -94,8 +121,38 @@ class KBRetriever:
         framework: str | None = None,
         category: str | None = None,
     ) -> list[list[KBChunkResult]]:
-        """Batch search for multiple queries."""
-        return [self.search(q, top_k=top_k, framework=framework, category=category) for q in queries]
+        """Batch search for multiple queries (optimized)."""
+        if not queries:
+            return []
+
+        # 1. Batch embed all queries
+        query_vectors = self.embedder.encode(queries)
+        if query_vectors.ndim == 1:
+            query_vectors = query_vectors.reshape(1, -1)
+
+        filter_ = self._build_filter(framework, category)
+
+        # 2. Qdrant doesn't have a simple multi-query semantic search in one call
+        # (unless using the Batch API, but query_points is per-point).
+        # However, batching the embedding step is the biggest win.
+        results = []
+        for vector in query_vectors:
+            response = self._qdrant_query(
+                collection_name=self.collection_name,
+                query=vector.tolist(),
+                query_filter=filter_,
+                limit=top_k,
+            )
+            results.append([
+                KBChunkResult(
+                    chunk_id=r.payload.get("chunk_id", ""),
+                    text=r.payload.get("text", ""),
+                    score=r.score,
+                    metadata={k: v for k, v in r.payload.items() if k not in ("chunk_id", "text")},
+                )
+                for r in response.points
+            ])
+        return results
 
 
 def deduplicate_chunks(chunks: list[KBChunkResult]) -> list[KBChunkResult]:
