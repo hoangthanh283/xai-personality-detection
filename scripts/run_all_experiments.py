@@ -16,7 +16,7 @@ from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.utils.logging_config import setup_logging
+from src.utils.logging_config import setup_logging  # noqa: E402
 
 
 def run_command(cmd: list[str]) -> int:
@@ -27,10 +27,10 @@ def run_command(cmd: list[str]) -> int:
     return result.returncode
 
 
-def run_baselines(args) -> None:
+def run_baselines(args, seed: int) -> None:
     """Run all baseline experiments (B1-B9)."""
     wandb = ["--wandb_project", args.wandb_project] if args.wandb_project else []
-    base_cmd = [sys.executable, "scripts/train_baseline.py"]
+    base_cmd = [sys.executable, "scripts/train_baseline.py", "--seed", str(seed)]
 
     experiments = [
         # ML baselines
@@ -50,9 +50,9 @@ def run_baselines(args) -> None:
         run_command(base_cmd + exp_args + wandb)
 
 
-def run_rag_xpr(args) -> None:
+def run_rag_xpr(args, seed: int) -> None:
     """Run RAG-XPR experiments (R1-R6)."""
-    base_cmd = [sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml"]
+    base_cmd = [sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml", "--seed", str(seed)]
 
     experiments = [
         [
@@ -71,10 +71,10 @@ def run_rag_xpr(args) -> None:
         run_command(base_cmd + exp_args)
 
 
-def run_ablations(args) -> None:
+def run_ablations(args, seed: int) -> None:
     """Run ablation studies (A1-A8)."""
     base_cmd = [sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
-                "--dataset", "mbti", "--sample", "500"]
+                "--dataset", "mbti", "--sample", "500", "--seed", str(seed)]
     ablations = ["no_kb", "no_evidence_filter", "no_cope"]
     for ablation in ablations:
         run_command(base_cmd + ["--ablation", ablation, "--output", f"outputs/predictions/ablation_{ablation}.jsonl"])
@@ -100,16 +100,20 @@ def main():
     elif args.group:
         groups_to_run = [args.group]
 
-    for group in groups_to_run:
-        logger.info(f"\n{'='*60}")
-        logger.info(f"Running experiment group: {group}")
-        logger.info(f"{'='*60}")
-        if group == "baselines":
-            run_baselines(args)
-        elif group == "rag_xpr":
-            run_rag_xpr(args)
-        elif group == "ablations":
-            run_ablations(args)
+    for seed in seeds:
+        logger.info(f"\n{'#'*60}")
+        logger.info(f"# RUNNING EXPERIMENTS WITH SEED: {seed}")
+        logger.info(f"{'#'*60}")
+        for group in groups_to_run:
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Running experiment group: {group} (Seed: {seed})")
+            logger.info(f"{'='*60}")
+            if group == "baselines":
+                run_baselines(args, seed)
+            elif group == "rag_xpr":
+                run_rag_xpr(args, seed)
+            elif group == "ablations":
+                run_ablations(args, seed)
 
 
 if __name__ == "__main__":

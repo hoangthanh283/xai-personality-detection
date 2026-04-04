@@ -5,6 +5,9 @@ import sys
 from pathlib import Path
 
 import streamlit as st
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -201,8 +204,8 @@ with tab1:
                 st.error(f"Missing dependency: {e}. Please install requirements: `pip install -r requirements.txt`")
             except Exception as e:
                 st.error(f"Pipeline error: {e}")
-                if "LLM_API_KEY" not in os.environ:
-                    st.warning("💡 Set your LLM API key in the sidebar.")
+                if not any(k in os.environ for k in ("LLM_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "VLLM_API_KEY")):
+                    st.warning("💡 Set your LLM API key in the sidebar or in the .env file.")
 
 with tab2:
     st.subheader("📊 Compare Methods")
@@ -215,8 +218,8 @@ with tab2:
         rag_xpr_file = st.file_uploader("RAG-XPR Predictions (JSONL)", type="jsonl")
 
     if baseline_file and rag_xpr_file:
-        baseline_preds = [json.loads(l) for l in baseline_file.read().decode().split("\n") if l.strip()]
-        ragxpr_preds = [json.loads(l) for l in rag_xpr_file.read().decode().split("\n") if l.strip()]
+        baseline_preds = [json.loads(line) for line in baseline_file.read().decode().split("\n") if line.strip()]
+        ragxpr_preds = [json.loads(line) for line in rag_xpr_file.read().decode().split("\n") if line.strip()]
 
         from src.evaluation.classification_metrics import \
             compute_classification_metrics

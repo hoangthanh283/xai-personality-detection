@@ -14,16 +14,25 @@ Usage:
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
 import yaml
 from loguru import logger
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed; rely on shell env vars
+
+import wandb
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.utils.logging_config import setup_logging
-from src.utils.seed import set_seed
+from src.utils.logging_config import setup_logging  # noqa: E402
+from src.utils.seed import set_seed  # noqa: E402
 
 ML_MODELS = ["logistic_regression", "svm", "naive_bayes", "xgboost", "random_forest"]
 TRANSFORMER_MODELS = ["distilbert", "roberta"]
@@ -63,17 +72,90 @@ def get_task_data(dataset: str, task: str, config: dict) -> tuple:
     return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
 
 
+def save_predictions(texts: list[str], gold_labels: list[str], predicted_labels: list[str], model_name: str, dataset: str, task: str, output_dir: str = "outputs/predictions"):
+    """Save predictions to JSONL for evaluation."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    output_file = output_path / f"{model_name}_{dataset}_{task}.jsonl"
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        for i, (text, gold, pred) in enumerate(zip(texts, gold_labels, predicted_labels)):
+            record = {
+                "id": f"{model_name}_{i}",
+                "text": text,
+                "gold_label": gold,
+                "predicted_label": pred
+            }
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    logger.info(f"Predictions saved to {output_file}")
+
+
+def _log_ml_metrics_to_wandb(metrics: dict) -> None:
+    """Log ML metrics to W&B, handling classification_report as a Table."""
+    scalar_metrics = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
+    wandb.log(scalar_metrics)
+
+    # Log per-class classification report as a W&B Table
+    report_str = metrics.get("classification_report", "")
+    if report_str:
+        lines = [line for line in report_str.strip().splitlines() if line.strip()]
+        table = wandb.Table(columns=["class", "precision", "recall", "f1-score", "support"])
+        for line in lines[1:]:  # skip header
+            parts = line.split()
+            if len(parts) >= 5 and parts[0] not in ("accuracy", "macro", "weighted"):
+                label = parts[0]
+                try:
+                    table.add_data(label, float(parts[1]), float(parts[2]), float(parts[3]), int(parts[4]))
+                except (ValueError, IndexError):
+                    pass
+        if table.data:
+            wandb.log({"per_class_metrics": table})
+
+
 def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
     """Train a single ML baseline model."""
     from src.baselines.ml_baselines import MLBaselineTrainer
 
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, task, config)
 
+    # Initialize W&B for ML if project provided
+    run = None
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    if wandb_project:
+        model_cfg = config.get(model_name, {})
+        run = wandb.init(
+            project=wandb_project,
+            name=f"{model_name}_{dataset}_{task}",
+            config={
+                **model_cfg,
+                "model": model_name,
+                "dataset": dataset,
+                "task": task,
+                "grid_search": args.grid_search,
+                "seed": args.seed,
+                "train_size": len(train_texts),
+                "test_size": len(test_texts),
+            },
+            tags=["ml", model_name, dataset, task],
+            reinit=True,
+        )
+
     trainer = MLBaselineTrainer(model_name, config)
     trainer.fit(train_texts, train_labels, use_grid_search=args.grid_search)
 
     logger.info("Evaluating on test set...")
     metrics = trainer.evaluate(test_texts, test_labels)
+
+    # Log metrics to W&B
+    if run:
+        _log_ml_metrics_to_wandb(metrics)
+        # Log summary scalars so they appear on the W&B run overview
+        run.summary.update({k: v for k, v in metrics.items() if isinstance(v, (int, float))})
+        run.finish()
+
+    # Save predictions
+    preds = trainer.predict(test_texts)
+    save_predictions(test_texts, test_labels, preds.tolist(), model_name, dataset, task)
 
     output_path = f"outputs/models/tfidf_{model_name}_{dataset}_{task}.pkl"
     trainer.save(output_path)
@@ -88,64 +170,134 @@ def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
     train_texts, train_labels, _, _, test_texts, test_labels = get_task_data(dataset, task, config)
     members = args.ensemble_members.split(",") if args.ensemble_members else ["logistic_regression", "xgboost", "random_forest"]
 
+    # Initialize W&B
+    run = None
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    if wandb_project:
+        run = wandb.init(
+            project=wandb_project,
+            name=f"ensemble_{dataset}_{task}",
+            config={
+                "members": members,
+                "dataset": dataset,
+                "task": task,
+                "seed": args.seed,
+                "train_size": len(train_texts),
+                "test_size": len(test_texts),
+            },
+            tags=["ensemble", dataset, task],
+            reinit=True,
+        )
+
     ensemble = EnsembleClassifier(members=members, config=config)
     ensemble.fit(train_texts, train_labels)
+
+    logger.info("Evaluating on test set...")
     metrics = ensemble.evaluate(test_texts, test_labels)
-    logger.info(f"Ensemble metrics: {metrics}")
+
+    if run:
+        scalar_metrics = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
+        wandb.log(scalar_metrics)
+        run.summary.update(scalar_metrics)
+        run.finish()
+
+    # Save predictions
+    preds = ensemble.predict(test_texts)
+    save_predictions(test_texts, test_labels, preds.tolist(), "ensemble", dataset, task)
+
+    return metrics
+
+
+def _train_transformer_single(
+    model_name: str,
+    dataset: str,
+    dim: str,
+    model_cfg: dict,
+    config: dict,
+    args,
+    extra_tags: list[str] | None = None,
+) -> dict:
+    """Train and evaluate a single transformer for one dimension/class."""
+    from src.baselines.transformer_baseline import (TransformerBaseline,
+                                                    TransformerConfig)
+
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    output_dir = args.output_dir or f"outputs/models/{model_name}_{dataset}_{dim}"
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, dim, config)
+
+    transformer_config = TransformerConfig(
+        model_name=model_cfg.get("model_name", f"{model_name}-base-uncased"),
+        **{k: v for k, v in model_cfg.items() if k != "model_name"},
+        output_dir=output_dir,
+    )
+
+    # Initialize W&B BEFORE calling trainer.train(), so HF Trainer picks it up
+    if wandb_project:
+        tags = ["transformer", model_name, dataset, dim] + (extra_tags or [])
+        wandb.init(
+            project=wandb_project,
+            name=f"{model_name}_{dataset}_{dim}",
+            config={
+                **{k: v for k, v in vars(transformer_config).items()},
+                "dataset": dataset,
+                "task": dim,
+                "train_size": len(train_texts),
+                "val_size": len(val_texts),
+                "test_size": len(test_texts),
+                "seed": args.seed,
+            },
+            tags=tags,
+            reinit=True,
+        )
+
+    trainer = TransformerBaseline(transformer_config)
+    trainer.train(train_texts, train_labels, val_texts, val_labels, output_dir, wandb_project)
+
+    metrics = trainer.evaluate(test_texts, test_labels)
+    if wandb.run is not None:
+        test_metrics = {f"test_{k}": v for k, v in metrics.items() if isinstance(v, (int, float))}
+        wandb.log(test_metrics)
+        wandb.run.summary.update(test_metrics)
+        wandb.finish()
+
     return metrics
 
 
 def train_transformer(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
     """Train a transformer baseline."""
-    from src.baselines.transformer_baseline import (TransformerBaseline,
-                                                    TransformerConfig)
-
     model_cfg = config.get("transformer", {}).get(model_name, {})
 
     if task == "4dim":
-        # Train 4 separate binary classifiers
         all_metrics = {}
         for dim in ["IE", "SN", "TF", "JP"]:
             logger.info(f"\n=== Training {model_name} on {dim} dimension ===")
-            output_dir = args.output_dir or f"outputs/models/{model_name}_{dataset}_{dim}"
-            train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, dim, config)
-            transformer_config = TransformerConfig(
-                model_name=model_cfg.get("model_name", f"{model_name}-base-uncased"),
-                **{k: v for k, v in model_cfg.items() if k != "model_name"},
-                output_dir=output_dir,
-            )
-            trainer = TransformerBaseline(transformer_config)
-            trainer.train(train_texts, train_labels, val_texts, val_labels, output_dir, args.wandb_project)
-            metrics = trainer.evaluate(test_texts, test_labels)
+            metrics = _train_transformer_single(model_name, dataset, dim, model_cfg, config, args, extra_tags=["4dim"])
             all_metrics[dim] = metrics
         return all_metrics
+
     elif task == "ocean_binary":
         all_metrics = {}
         for trait in ["O", "C", "E", "A", "N"]:
             logger.info(f"\n=== Training {model_name} on OCEAN trait {trait} ===")
-            output_dir = args.output_dir or f"outputs/models/{model_name}_{dataset}_{trait}"
-            train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, trait, config)
-            transformer_config = TransformerConfig(
-                model_name=model_cfg.get("model_name", f"{model_name}-base-uncased"),
-                **{k: v for k, v in model_cfg.items() if k != "model_name"},
-                output_dir=output_dir,
-            )
-            trainer = TransformerBaseline(transformer_config)
-            trainer.train(train_texts, train_labels, val_texts, val_labels, output_dir, args.wandb_project)
-            metrics = trainer.evaluate(test_texts, test_labels)
+            metrics = _train_transformer_single(model_name, dataset, trait, model_cfg, config, args, extra_tags=["ocean"])
             all_metrics[trait] = metrics
         return all_metrics
+
     else:
         output_dir = args.output_dir or f"outputs/models/{model_name}_{dataset}_{task}"
-        train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, task, config)
-        transformer_config = TransformerConfig(
-            model_name=model_cfg.get("model_name", f"{model_name}-base-uncased"),
-            **{k: v for k, v in model_cfg.items() if k != "model_name"},
-            output_dir=output_dir,
+        metrics = _train_transformer_single(model_name, dataset, task, model_cfg, config, args)
+
+        # Save predictions (only for single tasks, not multi-dim loops)
+        from src.baselines.transformer_baseline import TransformerBaseline
+        trainer = TransformerBaseline.load(output_dir)
+        preds = trainer.predict(
+            get_task_data(dataset, task, config)[4]  # test_texts
         )
-        trainer = TransformerBaseline(transformer_config)
-        trainer.train(train_texts, train_labels, val_texts, val_labels, output_dir, args.wandb_project)
-        return trainer.evaluate(test_texts, test_labels)
+        test_labels = get_task_data(dataset, task, config)[5]  # test_labels
+        save_predictions(
+            get_task_data(dataset, task, config)[4], test_labels, preds, model_name, dataset, task
+        )
+        return metrics
 
 
 def main():
@@ -197,6 +349,35 @@ def main():
     with open(results_file, "w") as f:
         json.dump(all_results, f, indent=2, default=str)
     logger.info(f"\nAll results saved to {results_file}")
+
+    # Log aggregate summary run to W&B (useful when running multiple models/tasks)
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    if wandb_project and len(all_results) > 1:
+        with wandb.init(
+            project=wandb_project,
+            name=f"summary_{args.model}_{args.dataset}_{args.task}",
+            job_type="summary",
+            tags=["summary", args.dataset, args.task],
+            reinit=True,
+        ) as summary_run:
+            # Build a comparison table
+            table = wandb.Table(columns=["experiment", "accuracy", "f1_macro", "f1_weighted"])
+            for exp_key, m in all_results.items():
+                if isinstance(m, dict) and "accuracy" in m:
+                    table.add_data(exp_key, m.get("accuracy", 0), m.get("f1_macro", 0), m.get("f1_weighted", 0))
+                elif isinstance(m, dict):
+                    # Multi-dim results (4dim / ocean_binary)
+                    for sub_key, sub_m in m.items():
+                        if isinstance(sub_m, dict):
+                            table.add_data(
+                                f"{exp_key}/{sub_key}",
+                                sub_m.get("accuracy", 0),
+                                sub_m.get("f1_macro", 0),
+                                sub_m.get("f1_weighted", 0),
+                            )
+            wandb.log({"results_summary": table})
+            summary_run.summary["results_file"] = str(results_file)
+        logger.info("Aggregate summary logged to W&B")
 
 
 if __name__ == "__main__":
