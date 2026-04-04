@@ -5,6 +5,7 @@ Usage:
     python scripts/run_all_experiments.py --group baselines
     python scripts/run_all_experiments.py --group rag_xpr
     python scripts/run_all_experiments.py --group ablations
+    python scripts/run_all_experiments.py --group personality_evd
     python scripts/run_all_experiments.py --all --wandb_project rag-xpr
 """
 import argparse
@@ -75,14 +76,54 @@ def run_ablations(args, seed: int) -> None:
     """Run ablation studies (A1-A8)."""
     base_cmd = [sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
                 "--dataset", "mbti", "--sample", "500", "--seed", str(seed)]
-    ablations = ["no_kb", "no_evidence_filter", "no_cope"]
+    ablations = ["no_kb", "no_evidence_filter", "no_cope", "no_step_2", "semantic_only", "keyword_only", "small_kb", "large_kb"]
     for ablation in ablations:
         run_command(base_cmd + ["--ablation", ablation, "--output", f"outputs/predictions/ablation_{ablation}.jsonl"])
 
 
+def run_llm_direct(args, seed: int) -> None:
+    """Run LLM Direct experiments (L1-L6)."""
+    base_cmd = [sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
+                "--mode", "llm_direct", "--dataset", "mbti", "--seed", str(seed)]
+
+    experiments = [
+        ["--prompt", "zero_shot", "--sample", "500", "--output", "outputs/predictions/llm_direct_L1.jsonl"],
+        ["--prompt", "few_shot", "--sample", "500", "--output", "outputs/predictions/llm_direct_L2.jsonl"],
+        ["--prompt", "cot_basic", "--sample", "500", "--output", "outputs/predictions/llm_direct_L3.jsonl"],
+        ["--prompt", "zero_shot", "--sample", "200", "--llm_provider", "openai", "--llm_model", "gpt-4o", "--output", "outputs/predictions/llm_direct_L4.jsonl"],
+        ["--prompt", "zero_shot", "--sample", "500", "--llm_provider", "vllm", "--llm_model", "meta-llama/Llama-3.1-8B-Instruct", "--output", "outputs/predictions/llm_direct_L5.jsonl"],
+        ["--prompt", "few_shot", "--sample", "500", "--llm_provider", "vllm", "--llm_model", "meta-llama/Llama-3.1-8B-Instruct", "--output", "outputs/predictions/llm_direct_L6.jsonl"],
+    ]
+    for exp_args in experiments:
+        run_command(base_cmd + exp_args)
+
+
+def run_personality_evd(args, seed: int) -> None:
+    """Run Personality Evd experiments (E1-E4)."""
+    # E1: RAG-XPR (full)
+    run_command([sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
+                 "--dataset", "personality_evd", "--seed", str(seed),
+                 "--output", "outputs/predictions/evd_E1_rag_xpr.jsonl"])
+
+    # E2: LLM + CoPE (no RAG)
+    run_command([sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
+                 "--dataset", "personality_evd", "--seed", str(seed), "--ablation", "no_kb",
+                 "--output", "outputs/predictions/evd_E2_no_rag.jsonl"])
+
+    # E3: LLM zero-shot
+    run_command([sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
+                 "--mode", "llm_direct", "--prompt", "zero_shot",
+                 "--dataset", "personality_evd", "--seed", str(seed),
+                 "--output", "outputs/predictions/evd_E3_llm_direct.jsonl"])
+
+    # E4: DistilBERT
+    run_command([sys.executable, "scripts/train_baseline.py", "--model", "distilbert",
+                 "--dataset", "personality_evd", "--task", "16class", "--seed", str(seed)])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run all experiments")
-    parser.add_argument("--group", choices=["baselines", "rag_xpr", "ablations", "personality_evd"])
+    parser.add_argument("--group", choices=["baselines", "rag_xpr", "ablations", "personality_evd", "llm_direct"])
     parser.add_argument("--all", action="store_true", help="Run all experiment groups")
     parser.add_argument("--wandb_project", default="rag-xpr")
     parser.add_argument("--seeds", default="42", help="Comma-separated seeds")
@@ -96,7 +137,7 @@ def main():
 
     groups_to_run = []
     if args.all:
-        groups_to_run = ["baselines", "rag_xpr", "ablations"]
+        groups_to_run = ["baselines", "llm_direct", "rag_xpr", "ablations", "personality_evd"]
     elif args.group:
         groups_to_run = [args.group]
 
@@ -114,6 +155,10 @@ def main():
                 run_rag_xpr(args, seed)
             elif group == "ablations":
                 run_ablations(args, seed)
+            elif group == "llm_direct":
+                run_llm_direct(args, seed)
+            elif group == "personality_evd":
+                run_personality_evd(args, seed)
 
 
 if __name__ == "__main__":

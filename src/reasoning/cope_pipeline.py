@@ -29,6 +29,7 @@ class CoPEPipeline:
         self.num_evidence = self.config.get("num_evidence", 10)
         self.num_kb_chunks = self.config.get("num_kb_chunks", 5)
         self.max_retries = self.config.get("max_retries_per_step", 2)
+        self.skip_steps = set(self.config.get("skip_steps", []))
 
     def run(
         self,
@@ -58,24 +59,60 @@ class CoPEPipeline:
         logger.info(f"Extracted {len(evidence)} evidence items")
 
         # ── Step 2: State Identification ─────────────────────────────────────
-        logger.info("Step 2: Identifying psychological states")
-        kb_chunks: list[KBChunkResult] = []
-        if self.kb is not None:
-            for ev in evidence:
-                chunks = self.kb.search(
-                    ev.description or ev.quote,
-                    top_k=self.num_kb_chunks,
-                    framework=framework,
-                    category="behavioral_marker",
-                )
-                kb_chunks.extend(chunks)
-            kb_chunks = deduplicate_chunks(kb_chunks)
-            logger.info(f"Retrieved {len(kb_chunks)} KB chunks for state identification")
+        if 2 in self.skip_steps and 3 in self.skip_steps:
+            logger.info("Skipping Steps 2 and 3 (Direct RAG ablation)")
+            import json
+            kb_texts = []
+            if self.kb is not None:
+                trait_kb = self.kb.search(f"{framework} personality trait definitions", top_k=5, framework=framework, category="trait_definition")
+                kb_texts = [c.text for c in trait_kb]
+            evidence_text = "\n".join([e.quote for e in evidence])
+            prompt = f"Predict the {framework} personality type based on the text.\n\nText:\n{evidence_text}\n"
+            if kb_texts:
+                prompt += "\nKnowledge Base Context:\n" + "\n".join(kb_texts) + "\n"
+            prompt += '\nProvide output as JSON: {"prediction": {"type": "XXXX"}, "explanation": "..."}'
 
-        states: list[IdentifiedState] = self.state_identifier.identify(
-            evidence, kb_chunks, max_retries=self.max_retries
-        )
-        logger.info(f"Identified {len(states)} states")
+            response = self.llm.generate([{"role": "user", "content": prompt}])
+            try:
+                data = json.loads(response.strip().strip("```json").strip("```"))
+                pred = data.get("prediction", {}).get("type", "UNKNOWN")
+                expl = data.get("explanation", "")
+                expl = data.get("explanation", "")
+            except Exception:
+                pred = "UNKNOWN"
+                expl = response
+
+            output = {
+                "predicted_label": pred,
+                "prediction_details": {"type": pred},
+                "explanation": expl,
+                "evidence_chain": [],
+            }
+            return output
+
+        if 2 in self.skip_steps:
+            logger.info("Skipping Step 2: Extracting state directly from evidence")
+            states = [IdentifiedState(state_label=e.behavior_type, confidence=1.0, quote=e.quote, reasoning="Skipped Step 2") for e in evidence]
+            kb_chunks = []
+        else:
+            logger.info("Step 2: Identifying psychological states")
+            kb_chunks: list[KBChunkResult] = []
+            if self.kb is not None:
+                for ev in evidence:
+                    chunks = self.kb.search(
+                        ev.description or ev.quote,
+                        top_k=self.num_kb_chunks,
+                        framework=framework,
+                        category="behavioral_marker",
+                    )
+                    kb_chunks.extend(chunks)
+                kb_chunks = deduplicate_chunks(kb_chunks)
+                logger.info(f"Retrieved {len(kb_chunks)} KB chunks for state identification")
+
+            states: list[IdentifiedState] = self.state_identifier.identify(
+                evidence, kb_chunks, max_retries=self.max_retries
+            )
+            logger.info(f"Identified {len(states)} states")
 
         # ── Step 3: Trait Inference ───────────────────────────────────────────
         logger.info("Step 3: Inferring personality traits")

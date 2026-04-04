@@ -39,12 +39,20 @@ class RAGXPRPipeline:
         self.evidence_retriever = EvidenceRetriever(evidence_config)
 
         # KB retriever (semantic, BM25, or hybrid)
-        method = evidence_config.get("method", "semantic")
-        if method == "hybrid":
-            chunks_path = config.get("kb_chunks_path")
-            self.kb_retriever = HybridRetriever(retrieval_config, chunks_path)
+        skip_kb = retrieval_config.get("skip_kb", False)
+        if skip_kb:
+            self.kb_retriever = None
         else:
-            self.kb_retriever = KBRetriever(retrieval_config)
+            method = evidence_config.get("method", "hybrid")
+            if method == "hybrid":
+                chunks_path = config.get("kb_chunks_path", "data/knowledge_base/chunks.jsonl")
+                self.kb_retriever = HybridRetriever(retrieval_config, chunks_path)
+            elif method == "semantic":
+                self.kb_retriever = KBRetriever(retrieval_config)
+            elif method == "keyword":
+                chunks_path = config.get("kb_chunks_path", "data/knowledge_base/chunks.jsonl")
+                from src.retrieval.hybrid_search import BM25Retriever
+                self.kb_retriever = BM25Retriever(chunks_path)
 
         # LLM client
         llm_config = config.get(
@@ -72,8 +80,14 @@ class RAGXPRPipeline:
 
         # 2. Retrieve evidence sentences from text
         top_k_evidence = self.config.get("evidence_retrieval", {}).get("top_k", 10)
-        candidate_evidence = self.evidence_retriever.extract(clean_text, top_k=top_k_evidence)
-        logger.debug(f"Found {len(candidate_evidence)} candidate evidence sentences")
+        pre_filter = self.config.get("evidence_retrieval", {}).get("pre_filter", True)
+        if pre_filter:
+            candidate_evidence = self.evidence_retriever.extract(clean_text, top_k=top_k_evidence)
+            logger.debug(f"Found {len(candidate_evidence)} candidate evidence sentences")
+        else:
+            from src.retrieval.evidence_retriever import EvidenceSentence
+            candidate_evidence = [EvidenceSentence(text=clean_text[:2000], sentence_idx=0, score=1.0)]
+            logger.debug("Skipping evidence pre-filter (ablation)")
 
         # 3 + 4. CoPE reasoning (retrieves KB context internally)
         result = self.cope_pipeline.run(

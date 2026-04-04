@@ -16,8 +16,8 @@ from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.utils.logging_config import setup_logging
-from src.utils.seed import set_seed
+from src.utils.logging_config import setup_logging  # noqa: E402
+from src.utils.seed import set_seed  # noqa: E402
 
 
 def load_config(config_path: str) -> dict:
@@ -50,14 +50,6 @@ def run_full_pipeline(args, config: dict) -> None:
         import random
         records = random.sample(records, min(args.sample, len(records)))
         logger.info(f"Sampling {len(records)} records")
-
-    # Override config values from CLI
-    if args.llm_provider:
-        config["llm"]["provider"] = args.llm_provider
-    if args.llm_model:
-        config["llm"]["model"] = args.llm_model
-    if args.framework:
-        config["cope"]["framework"] = args.framework
 
     logger.info("Initializing RAG-XPR pipeline...")
     pipeline = RAGXPRPipeline(config)
@@ -156,7 +148,7 @@ def run_llm_direct(args, config: dict) -> None:
                 logger.error(f"LLM call failed at {i}: {e}")
 
     correct = sum(1 for r in results if r.get("predicted_label", "") == r.get("gold_label", ""))
-    logger.info(f"LLM Direct accuracy: {correct}/{len(results)} = {correct/max(len(results),1):.2%}")
+    logger.info(f"LLM Direct accuracy: {correct}/{len(results)} = {correct/max(len(results), 1):.2%}")
     logger.info(f"Saved to {output_path}")
 
 
@@ -181,6 +173,14 @@ def main():
     set_seed(args.seed)
     config = load_config(args.config)
 
+    # Apply global config overrides
+    if args.llm_provider:
+        config["llm"]["provider"] = args.llm_provider
+    if args.llm_model:
+        config["llm"]["model"] = args.llm_model
+    if args.framework:
+        config["cope"]["framework"] = args.framework
+
     # Apply ablation overrides
     if args.ablation == "no_kb":
         config["retrieval"]["skip_kb"] = True
@@ -188,6 +188,16 @@ def main():
         config["cope"]["skip_steps"] = [2, 3]
     elif args.ablation == "no_evidence_filter":
         config["evidence_retrieval"]["pre_filter"] = False
+    elif args.ablation == "no_step_2":
+        config["cope"]["skip_steps"] = [2]
+    elif args.ablation == "semantic_only":
+        config["evidence_retrieval"]["method"] = "semantic"
+    elif args.ablation == "keyword_only":
+        config["evidence_retrieval"]["method"] = "keyword"
+    elif args.ablation == "small_kb":
+        config["retrieval"]["collection"] = config["retrieval"].get("collection", "psych_kb") + "_small"
+    elif args.ablation == "large_kb":
+        config["retrieval"]["collection"] = config["retrieval"].get("collection", "psych_kb") + "_large"
 
     if args.mode == "llm_direct":
         run_llm_direct(args, config)

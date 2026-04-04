@@ -196,30 +196,49 @@ class EnsembleClassifier:
             clf = build_model(name, self.config.get(name, {}))
             estimators.append((name, clf))
 
-        # Build individual pipelines
-        self.pipelines = {
-            name: Pipeline([("tfidf", TfidfVectorizer(**tfidf_cfg)), ("clf", clf)])
-            for name, clf in estimators
-        }
-        self.member_names = [name for name, _ in estimators]
-        self.labels_: list[str] = []
+        voting = "soft"
+        for name, clf in estimators:
+            if not hasattr(clf, "predict_proba"):
+                logger.warning(f"Model {name} does not support predict_proba. Falling back to 'hard' voting.")
+                voting = "hard"
+                break
+
+        from sklearn.ensemble import VotingClassifier
+        vc = VotingClassifier(estimators=estimators, voting=voting)
+
+        ngram_range = tfidf_cfg.get("ngram_range")
+        if isinstance(ngram_range, list):
+            tfidf_cfg["ngram_range"] = tuple(ngram_range)
+
+        self.pipeline = Pipeline([("tfidf", TfidfVectorizer(**tfidf_cfg)), ("clf", vc)])
+        self.member_names = members
+        self._label_encoder = None
 
     def fit(self, train_texts: list[str], train_labels: list[str]) -> "EnsembleClassifier":
-        self.labels_ = sorted(set(train_labels))
-        for name, pipeline in self.pipelines.items():
-            logger.info(f"Training ensemble member: {name}")
-            pipeline.fit(train_texts, train_labels)
+        y = train_labels
+        from sklearn.preprocessing import LabelEncoder
+        try:
+            from xgboost import XGBClassifier
+            has_xgb = any(isinstance(clf, XGBClassifier) for _, clf in self.pipeline.named_steps["clf"].estimators)
+        except ImportError:
+            has_xgb = False
+
+        if has_xgb:
+            self._label_encoder = LabelEncoder().fit(train_labels)
+            y = self._label_encoder.transform(train_labels)
+
+        logger.info(f"Training ensemble members: {self.member_names} (voting='{self.pipeline.named_steps['clf'].voting}')")
+        self.pipeline.fit(train_texts, y)
         return self
 
     def predict(self, texts: list[str]) -> np.ndarray:
-        """Majority vote across all member classifiers."""
-        all_preds = np.array([p.predict(texts) for p in self.pipelines.values()])
-        # Majority vote
-        from scipy.stats import mode
-        result, _ = mode(all_preds, axis=0)
-        return result.flatten()
+        preds = self.pipeline.predict(texts)
+        if self._label_encoder is not None:
+            preds = self._label_encoder.inverse_transform(preds)
+        return preds
 
     def evaluate(self, texts: list[str], labels: list[str]) -> dict:
+        from sklearn.metrics import accuracy_score, f1_score
         preds = self.predict(texts)
         return {
             "accuracy": accuracy_score(labels, preds),

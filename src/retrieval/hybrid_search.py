@@ -32,7 +32,7 @@ class BM25Retriever:
         except ImportError:
             logger.warning("rank_bm25 not installed, BM25 retrieval disabled")
 
-    def search(self, query: str, top_k: int = 10) -> list[KBChunkResult]:
+    def search(self, query: str, top_k: int = 10, framework: str | None = None, category: str | None = None) -> list[KBChunkResult]:
         if self._bm25 is None or not self._corpus:
             return []
         tokenized_query = query.lower().split()

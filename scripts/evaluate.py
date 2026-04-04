@@ -11,6 +11,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -69,7 +70,8 @@ def run_full_evaluation(args, config: dict) -> None:
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    all_results = {}
+    all_results: Dict[str, Any] = {}
+    xai_results = {}
 
     pred_files = list(pred_dir.glob("*.jsonl"))
     if not pred_files:
@@ -116,7 +118,49 @@ def run_full_evaluation(args, config: dict) -> None:
         metrics = compute_classification_metrics(list(y_true), list(y_pred))
 
         # XAI metrics
-        metrics["evidence_grounding"] = evidence_grounding_score(predictions)
+        xai: Dict[str, Any] = {}
+        xai["evidence_grounding"] = evidence_grounding_score(predictions)
+
+        # Evidence Relevance (for Personality Evd)
+        gold_evidences = [p.get("gold_evidence") for p in predictions]
+        if any(gold_evidences):
+            from src.evaluation.xai_metrics import evidence_relevance_f1
+            pred_evs, gold_evs = [], []
+            for p in predictions:
+                if "gold_evidence" in p:
+                    pred_ev = " ".join([e.get("evidence", "") for e in p.get("evidence_chain", [])])
+                    gold_ev = " ".join(p["gold_evidence"]) if isinstance(p["gold_evidence"], list) else str(p["gold_evidence"])
+                    pred_evs.append(pred_ev)
+                    gold_evs.append(gold_ev)
+            xai["evidence_relevance_f1"] = evidence_relevance_f1(pred_evs, gold_evs)
+
+        # Explanation Consistency & Faithfulness
+        try:
+            from src.evaluation.xai_metrics import (explanation_consistency,
+                                                    faithfulness_score)
+            from src.rag_pipeline.llm_client import build_llm_client
+            from src.rag_pipeline.pipeline import RAGXPRPipeline
+
+            # Try to build LLM for consistency checking
+            llm_config = config.get("llm", {"provider": "openrouter", "model": "qwen/qwen3.6-plus-preview:free"})
+            llm_client = build_llm_client(llm_config)
+
+            # Check consistency
+            xai["explanation_consistency"] = explanation_consistency(predictions, llm_client)
+            # For faithfulness, we need the pipeline instantiated.
+            # We ONLY run faithfulness for RAG-XPR (which generates evidence chains).
+            if "rag_xpr" in pred_file.stem and any(p.get("evidence_chain") for p in predictions):
+                rag_cfg_path = "configs/rag_xpr_config.yaml"
+                if Path(rag_cfg_path).exists():
+                    pipeline = RAGXPRPipeline.from_config_file(rag_cfg_path)
+                    xai["faithfulness"] = faithfulness_score(pipeline, predictions, n_samples=min(20, len(predictions)))
+        except Exception as e:
+            logger.warning(f"Could not compute LLM-based XAI metrics for {pred_file.stem}: {e}")
+
+        # Store XAI back to metrics, and also into dedicated dict
+        for k, v in xai.items():
+            metrics[k] = v
+        xai_results[pred_file.stem] = xai
 
         # Bootstrap CI for accuracy
         y_true_arr = (np.array(y_true) == np.array(y_pred)).astype(int)  # correctness mask
@@ -183,7 +227,12 @@ def run_full_evaluation(args, config: dict) -> None:
     results_file = output_dir / "classification_results.json"
     with open(results_file, "w") as f:
         json.dump(all_results, f, indent=2, default=str)
-    logger.info(f"\nResults saved to {results_file}")
+    logger.info(f"\nClassification results saved to {results_file}")
+
+    xai_results_file = output_dir / "xai_results.json"
+    with open(xai_results_file, "w") as f:
+        json.dump(xai_results, f, indent=2, default=str)
+    logger.info(f"XAI metrics saved to {xai_results_file}")
 
     # Generate comparison table
     table_file = output_dir / "comparison_tables.md"
@@ -312,6 +361,30 @@ def generate_human_eval(args) -> None:
     generator.run(method_predictions, output_dir, n_samples=args.n_samples or 50)
 
 
+def generate_baseline_predictions(args, config: dict) -> None:
+    """Load baseline models and generate predictions on test datasets."""
+    models_dir = Path(args.models_dir)
+    output_dir = Path(args.output)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if not models_dir.exists():
+        logger.error(f"Models directory not found: {models_dir}")
+        return
+
+    logger.info(f"Scanning for models in {models_dir}")
+
+    # Simple heuristic to identify models, their datasets and tasks
+    # Ideally, this should rely on metadata saved alongside the model
+    # Here we demonstrate loading logic assuming standard naming from train_baseline.py
+
+    for path in models_dir.glob("*"):
+        if path.is_file() and path.suffix == ".pkl":
+            continue  # Needs dataset info. Better to run baseline predictions using the script provided in `train_baseline.py` actually.
+
+    logger.error("Generating predictions iteratively across unknown PKL/checkpoints is not fully self-contained.")
+    logger.info("Please use 'scripts/train_baseline.py' which automatically outputs .jsonl test predictions upon completion.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run evaluation suite")
     parser.add_argument("--mode", choices=["full", "baseline_predictions", "generate_human_eval", "statistical_tests"], required=True)
@@ -339,6 +412,8 @@ def main():
         generate_human_eval(args)
     elif args.mode == "statistical_tests":
         run_statistical_tests(args, config)
+    elif args.mode == "baseline_predictions":
+        generate_baseline_predictions(args, config)
     else:
         logger.info(f"Mode '{args.mode}' not fully implemented yet")
 

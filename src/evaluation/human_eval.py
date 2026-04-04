@@ -184,3 +184,34 @@ class HumanEvalGenerator:
         self.generate_csv(samples, str(output_path / "eval_forms.csv"))
         self.generate_html(samples, str(output_path / "eval_forms.html"))
         logger.info(f"Human evaluation materials ready in {output_dir}")
+
+
+def compute_agreement(annotations: list[list[list[int]]]) -> float:
+    """
+    Compute Krippendorff's Alpha (all annotators, ordinal scale)
+    annotations shape: [n_annotators, n_samples, n_criteria]
+    """
+    try:
+        import krippendorff
+        import numpy as np
+
+        # krippendorff expects annotations in [n_annotators, n_items] shape.
+        # Since we have [n_samples, n_criteria], we can flatten them to view as n_items = n_samples * n_criteria
+        # or calculate individually and average.
+        n_annotators = len(annotations)
+        if n_annotators < 2:
+            return 1.0
+
+        flattened = []
+        for ann in annotations:
+            flat_ann = []
+            for sample in ann:
+                flat_ann.extend(sample)
+            flattened.append(flat_ann)
+
+        data = np.array(flattened)
+        alpha = krippendorff.alpha(reliability_data=data, level_of_measurement="ordinal")
+        return alpha
+    except ImportError:
+        logger.warning("krippendorff package not installed. Cannot compute agreement. Run: pip install krippendorff")
+        return 0.0
