@@ -1,4 +1,6 @@
 """Full 3-step CoPE pipeline orchestrator."""
+from typing import Any
+
 from loguru import logger
 
 from src.reasoning.evidence_extractor import (EvidenceExtractor,
@@ -36,17 +38,12 @@ class CoPEPipeline:
         text: str,
         candidate_evidence: list[EvidenceSentence],
         framework: str = "mbti",
-        save_intermediate: bool = False,
-    ) -> dict:
+        save_intermediate: bool = True,
+        yield_steps: bool = False,
+    ) -> dict | Any:
         """
-        Run the full CoPE pipeline.
-
-        Returns a dict with keys:
-        - predicted_label
-        - prediction_details
-        - explanation
-        - evidence_chain
-        - intermediate (if save_intermediate=True)
+        Run the 3-step reasoning chain.
+        If yield_steps=True, acts as a generator yielding (step_name, current_result).
         """
         # ── Step 1: Evidence Extraction ──────────────────────────────────────
         logger.info("Step 1: Extracting behavioral evidence")
@@ -57,6 +54,8 @@ class CoPEPipeline:
             max_retries=self.max_retries,
         )
         logger.info(f"Extracted {len(evidence)} evidence items")
+        if yield_steps:
+            yield "Step 1: Extracting Evidence", evidence
 
         # ── Step 2: State Identification ─────────────────────────────────────
         if 2 in self.skip_steps and 3 in self.skip_steps:
@@ -98,21 +97,24 @@ class CoPEPipeline:
             logger.info("Step 2: Identifying psychological states")
             kb_chunks: list[KBChunkResult] = []
             if self.kb is not None:
-                for ev in evidence:
-                    chunks = self.kb.search(
-                        ev.description or ev.quote,
-                        top_k=self.num_kb_chunks,
-                        framework=framework,
-                        category="behavioral_marker",
-                    )
+                queries = [ev.description or ev.quote for ev in evidence]
+                results = self.kb.search_many(
+                    queries,
+                    top_k=self.num_kb_chunks,
+                    framework=framework,
+                    category="behavioral_marker",
+                )
+                for chunks in results:
                     kb_chunks.extend(chunks)
                 kb_chunks = deduplicate_chunks(kb_chunks)
-                logger.info(f"Retrieved {len(kb_chunks)} KB chunks for state identification")
+                logger.info(f"Retrieved {len(kb_chunks)} KB chunks for state identification via batch search")
 
             states: list[IdentifiedState] = self.state_identifier.identify(
                 evidence, kb_chunks, max_retries=self.max_retries
             )
             logger.info(f"Identified {len(states)} states")
+            if yield_steps:
+                yield "Step 2: Identifying Psychological States", states
 
         # ── Step 3: Trait Inference ───────────────────────────────────────────
         logger.info("Step 3: Inferring personality traits")
@@ -129,6 +131,8 @@ class CoPEPipeline:
             states, trait_kb, framework=framework, max_retries=self.max_retries
         )
         logger.info(f"Predicted: {result.predicted_label}")
+        if yield_steps:
+            yield "Step 3: Predicting Traits", result
 
         output = {
             "predicted_label": result.predicted_label,
@@ -157,5 +161,8 @@ class CoPEPipeline:
                     for c in (kb_chunks + trait_kb)[:20]
                 ],
             }
+
+        if yield_steps:
+            yield "Final Result", output
 
         return output

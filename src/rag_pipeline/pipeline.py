@@ -6,6 +6,8 @@ Ties together:
 3. KB retrieval (psychology definitions)
 4. CoPE reasoning (3-step LLM chain)
 """
+from typing import Any
+
 from loguru import logger
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor
@@ -67,13 +69,10 @@ class RAGXPRPipeline:
         self.framework = cope_config.get("framework", "mbti")
         self.save_intermediate = config.get("output", {}).get("save_intermediate", True)
 
-    def predict(self, text: str) -> dict:
+    def predict(self, text: str, yield_steps: bool = False) -> dict | Any:
         """
         Run the full RAG-XPR pipeline on a single text.
-
-        Returns:
-            dict with keys: predicted_label, prediction_details,
-                           explanation, evidence_chain, [intermediate]
+        If yield_steps=True, returns a generator of results.
         """
         # 1. Preprocess
         clean_text = self.preprocessor.clean(text)
@@ -90,6 +89,15 @@ class RAGXPRPipeline:
             logger.debug("Skipping evidence pre-filter (ablation)")
 
         # 3 + 4. CoPE reasoning (retrieves KB context internally)
+        if yield_steps:
+            return self.cope_pipeline.run(
+                clean_text,
+                candidate_evidence,
+                framework=self.framework,
+                save_intermediate=self.save_intermediate,
+                yield_steps=True
+            )
+
         result = self.cope_pipeline.run(
             clean_text,
             candidate_evidence,

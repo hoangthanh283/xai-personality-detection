@@ -109,3 +109,28 @@ class HybridRetriever:
         )
         sparse_results = self.sparse_retriever.search(query, top_k=top_k * 2)
         return self._reciprocal_rank_fusion(dense_results, sparse_results, top_k)
+
+    def search_many(
+        self,
+        queries: list[str],
+        top_k: int = 5,
+        framework: str | None = None,
+        category: str | None = None,
+    ) -> list[list[KBChunkResult]]:
+        """Batch hybrid search."""
+        if not queries:
+            return []
+
+        # 1. Batch dense search
+        dense_results_list = self.dense_retriever.search_many(
+            queries, top_k=top_k * 2, framework=framework, category=category
+        )
+
+        # 2. Sequential sparse search (BM25 is very fast on CPU locally)
+        results = []
+        for i, query in enumerate(queries):
+            sparse_results = self.sparse_retriever.search(query, top_k=top_k * 2)
+            results.append(
+                self._reciprocal_rank_fusion(dense_results_list[i], sparse_results, top_k)
+            )
+        return results
