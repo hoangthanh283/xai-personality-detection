@@ -7,28 +7,35 @@ tfidf:
 
 ml_models:
   logistic_regression:
-    max_iter: 1000
+    max_iter: 3000
     class_weight: balanced
     C: 1.0
-    solver: lbfgs
+    solver: saga
 
   svm:
-    max_iter: 5000
+    max_iter: 10000
     class_weight: balanced
     C: 1.0
+    dual: auto
 
   naive_bayes:
-    alpha: 1.0
+    alpha: 0.5
 
   xgboost:
-    n_estimators: 300
+    n_estimators: 200
     max_depth: 6
-    learning_rate: 0.1
+    learning_rate: 0.05
+    tree_method: hist
+    n_jobs: 4
+    subsample: 0.8
+    colsample_bytree: 0.8
     eval_metric: mlogloss
 
   random_forest:
     n_estimators: 300
+    max_depth: 20
     class_weight: balanced
+    n_jobs: 4
 
 grid_search:
   cv: 5
@@ -36,45 +43,65 @@ grid_search:
   scoring: f1_macro
   param_grid:
     logistic_regression:
-      clf__C: [0.01, 0.1, 1.0, 10.0]
+      clf__C: [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
     svm:
-      clf__C: [0.01, 0.1, 1.0, 10.0]
+      clf__C: [0.01, 0.1, 0.5, 1.0, 2.0, 5.0]
     naive_bayes:
-      clf__alpha: [0.1, 0.5, 1.0, 2.0]
+      clf__alpha: [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]
     xgboost:
-      clf__n_estimators: [100, 300]
+      clf__n_estimators: [100, 200, 300]
       clf__max_depth: [4, 6, 8]
       clf__learning_rate: [0.05, 0.1]
     random_forest:
-      clf__n_estimators: [100, 300, 500]
-      clf__max_depth: [null, 20, 50]
+      clf__n_estimators: [200, 300, 500]
+      clf__max_depth: [20, 50, null]
 
 transformer:
   distilbert:
     model_name: distilbert-base-uncased
+    use_pretrained: true
     max_length: 512
-    batch_size: 32
+    batch_size: 8
     learning_rate: 2.0e-5
     weight_decay: 0.01
-    num_epochs: 10
+    num_epochs: 50
     warmup_ratio: 0.1
     lr_scheduler: linear
-    early_stopping_patience: 3
+    early_stopping_patience: 5
     fp16: true
-    gradient_accumulation_steps: 1
+    gradient_accumulation_steps: 2
 
   roberta:
     model_name: roberta-base
+    use_pretrained: true
     max_length: 512
-    batch_size: 16
-    learning_rate: 1.0e-5
+    batch_size: 4
+    learning_rate: 2.0e-5
     weight_decay: 0.01
-    num_epochs: 8
+    num_epochs: 50
     warmup_ratio: 0.1
     lr_scheduler: linear
-    early_stopping_patience: 3
+    early_stopping_patience: 5
     fp16: true
-    gradient_accumulation_steps: 2
+    gradient_accumulation_steps: 4
+
+  dataset_overrides:
+    essays:
+      max_length: 384
+      num_epochs: 10
+      early_stopping_patience: 3
+    pandora_big5:
+      max_length: 128
+      num_epochs: 1
+      early_stopping_patience: 1
+    personality_evd:
+      max_length: 64
+      num_epochs: 10
+      early_stopping_patience: 3
+      distilbert:
+        model_name: distilbert-base-multilingual-cased
+      roberta:
+        model_name: xlm-roberta-base
 
 output_dir: outputs/models/
 seed: 42

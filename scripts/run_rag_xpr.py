@@ -155,7 +155,7 @@ def run_llm_direct(args, config: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Run RAG-XPR inference pipeline")
     parser.add_argument("--config", default="configs/rag_xpr_config.yaml")
-    parser.add_argument("--dataset", default="mbti", choices=["mbti", "essays", "pandora", "personality_evd"])
+    parser.add_argument("--dataset", default="mbti", choices=["mbti", "essays", "pandora", "pandora_big5", "personality_evd"])
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
     parser.add_argument("--output", help="Output file path")
     parser.add_argument("--llm_provider", choices=["openrouter", "openai", "vllm", "ollama"])

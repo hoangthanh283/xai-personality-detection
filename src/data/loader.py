@@ -68,6 +68,9 @@ class DataLoader:
             else:
                 label = None
 
+            if label_type == "ocean" and str(label).upper() not in {"HIGH", "LOW"}:
+                continue
+
             if label is not None:
                 texts.append(text)
                 labels.append(label)

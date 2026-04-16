@@ -58,6 +58,17 @@ def preprocess_pandora(cfg: dict) -> None:
     parser.run(raw_path, output_dir)
 
 
+def preprocess_pandora_big5(cfg: dict) -> None:
+    from src.data.pandora_big5_parser import PandoraBig5Parser
+    parser = PandoraBig5Parser(cfg)
+    raw_path = cfg["raw_path"]
+    output_dir = cfg["output_dir"]
+    if not Path(raw_path).exists():
+        logger.error(f"pandora_big5 data dir not found: {raw_path}")
+        return
+    parser.run(raw_path, output_dir)
+
+
 def preprocess_personality_evd(cfg: dict) -> None:
     from src.data.personality_evd_parser import PersonalityEvdParser
     parser = PersonalityEvdParser(cfg)
@@ -92,7 +103,7 @@ def verify_outputs(config: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Preprocess personality datasets")
     parser.add_argument("--config", default="configs/data_config.yaml")
-    parser.add_argument("--dataset", choices=["mbti", "essays", "pandora", "personality_evd"])
+    parser.add_argument("--dataset", choices=["mbti", "essays", "pandora", "pandora_big5", "personality_evd"])
     parser.add_argument("--all", action="store_true", help="Process all datasets")
     parser.add_argument("--verify", action="store_true", help="Verify outputs")
     parser.add_argument("--seed", type=int, default=42)
@@ -108,7 +119,7 @@ def main():
 
     datasets_to_process = []
     if args.all:
-        datasets_to_process = ["mbti", "essays", "pandora", "personality_evd"]
+        datasets_to_process = ["mbti", "essays", "pandora", "pandora_big5", "personality_evd"]
     elif args.dataset:
         datasets_to_process = [args.dataset]
     else:
@@ -128,6 +139,8 @@ def main():
                 preprocess_essays(cfg)
             elif dataset_name == "pandora":
                 preprocess_pandora(cfg)
+            elif dataset_name == "pandora_big5":
+                preprocess_pandora_big5(cfg)
             elif dataset_name == "personality_evd":
                 preprocess_personality_evd(cfg)
         except Exception as e:

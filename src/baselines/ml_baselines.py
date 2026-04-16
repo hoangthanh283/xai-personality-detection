@@ -7,6 +7,7 @@ Usage:
     trainer.save("outputs/models/tfidf_lr_mbti.pkl")
 """
 import pickle
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,8 @@ from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.metrics import (accuracy_score, classification_report, f1_score,
+                             precision_score, recall_score)
 from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -53,6 +55,18 @@ GRID_SEARCH_PARAMS = {
 }
 
 
+def _get_ml_model_config(config: Mapping[str, Any] | None, model_name: str) -> dict[str, Any]:
+    if not config:
+        return {}
+    return dict(config.get("ml_models", {}).get(model_name, {}))
+
+
+def _get_grid_search_config(config: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not config:
+        return {}
+    return dict(config.get("grid_search", {}))
+
+
 def build_model(model_name: str, config: dict | None = None) -> Any:
     """Build a sklearn estimator from model name."""
     cfg = config or {}
@@ -62,12 +76,14 @@ def build_model(model_name: str, config: dict | None = None) -> Any:
             class_weight=cfg.get("class_weight", "balanced"),
             C=cfg.get("C", 1.0),
             solver=cfg.get("solver", "lbfgs"),
+            n_jobs=cfg.get("n_jobs"),
         )
     elif model_name == "svm":
         return LinearSVC(
             max_iter=cfg.get("max_iter", 5000),
             class_weight=cfg.get("class_weight", "balanced"),
             C=cfg.get("C", 1.0),
+            dual=cfg.get("dual", "auto"),
         )
     elif model_name == "naive_bayes":
         return MultinomialNB(alpha=cfg.get("alpha", 1.0))
@@ -75,18 +91,22 @@ def build_model(model_name: str, config: dict | None = None) -> Any:
         if not HAS_XGBOOST:
             raise ImportError("XGBoost not installed")
         return XGBClassifier(
-            n_estimators=cfg.get("n_estimators", 300),
-            max_depth=cfg.get("max_depth", 6),
+            n_estimators=cfg.get("n_estimators", 100),
+            max_depth=cfg.get("max_depth", 4),
             learning_rate=cfg.get("learning_rate", 0.1),
-            eval_metric="mlogloss",
+            tree_method=cfg.get("tree_method", "hist"),
+            n_jobs=cfg.get("n_jobs", 4),
+            subsample=cfg.get("subsample", 0.8),
+            colsample_bytree=cfg.get("colsample_bytree", 0.8),
+            eval_metric=cfg.get("eval_metric", "mlogloss"),
             verbosity=0,
         )
     elif model_name == "random_forest":
         return RandomForestClassifier(
-            n_estimators=cfg.get("n_estimators", 300),
+            n_estimators=cfg.get("n_estimators", 200),
             max_depth=cfg.get("max_depth", None),
             class_weight=cfg.get("class_weight", "balanced"),
-            n_jobs=-1,
+            n_jobs=cfg.get("n_jobs", 4),
         )
     else:
         raise ValueError(f"Unknown model: {model_name}")
@@ -103,7 +123,7 @@ class MLBaselineTrainer:
         if isinstance(ngram_range, list):
             tfidf_cfg["ngram_range"] = tuple(ngram_range)
         self.tfidf = TfidfVectorizer(**tfidf_cfg)
-        classifier = build_model(model_name, self.config.get(model_name, {}))
+        classifier = build_model(model_name, _get_ml_model_config(self.config, model_name))
         self.pipeline = Pipeline([("tfidf", self.tfidf), ("clf", classifier)])
         self.is_fitted = False
         self._label_encoder: LabelEncoder | None = None
@@ -116,14 +136,18 @@ class MLBaselineTrainer:
         cv: int = 5,
     ) -> "MLBaselineTrainer":
         logger.info(f"Training {self.model_name} on {len(train_texts)} samples...")
+        grid_cfg = _get_grid_search_config(self.config)
         if use_grid_search and self.model_name in GRID_SEARCH_PARAMS:
-            param_grid = GRID_SEARCH_PARAMS[self.model_name]
+            param_grid = grid_cfg.get("param_grid", {}).get(
+                self.model_name,
+                GRID_SEARCH_PARAMS[self.model_name],
+            )
             gs = GridSearchCV(
                 self.pipeline,
                 param_grid,
-                cv=cv,
-                scoring="f1_macro",
-                n_jobs=-1,
+                cv=grid_cfg.get("cv", cv),
+                scoring=grid_cfg.get("scoring", "f1_macro"),
+                n_jobs=grid_cfg.get("n_jobs", -1),
                 verbose=1,
             )
             gs.fit(train_texts, train_labels)
@@ -160,6 +184,10 @@ class MLBaselineTrainer:
             "accuracy": accuracy_score(labels, preds),
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
+            "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
+            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
+            "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
+            "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
             "classification_report": classification_report(labels, preds, zero_division=0),
         }
         logger.info(
@@ -193,7 +221,7 @@ class EnsembleClassifier:
         tfidf_cfg = self.config.get("tfidf", TFIDF_PARAMS)
         estimators = []
         for name in members:
-            clf = build_model(name, self.config.get(name, {}))
+            clf = build_model(name, _get_ml_model_config(self.config, name))
             estimators.append((name, clf))
 
         voting = "soft"
@@ -238,10 +266,16 @@ class EnsembleClassifier:
         return preds
 
     def evaluate(self, texts: list[str], labels: list[str]) -> dict:
-        from sklearn.metrics import accuracy_score, f1_score
+        from sklearn.metrics import (accuracy_score, classification_report,
+                                     f1_score, precision_score, recall_score)
         preds = self.predict(texts)
         return {
             "accuracy": accuracy_score(labels, preds),
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
+            "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
+            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
+            "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
+            "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
+            "classification_report": classification_report(labels, preds, zero_division=0),
         }

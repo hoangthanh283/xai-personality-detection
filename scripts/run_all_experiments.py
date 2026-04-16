@@ -37,14 +37,32 @@ def run_baselines(args, seed: int) -> None:
         # ML baselines
         ["--model", "logistic_regression", "--dataset", "mbti", "--task", "16class"],
         ["--model", "svm", "--dataset", "mbti", "--task", "16class"],
+        ["--model", "naive_bayes", "--dataset", "mbti", "--task", "16class"],
         ["--model", "xgboost", "--dataset", "mbti", "--task", "16class"],
+        ["--model", "random_forest", "--dataset", "mbti", "--task", "16class"],
+        ["--model", "all_ml", "--dataset", "mbti", "--task", "4dim"],
         ["--model", "ensemble", "--dataset", "mbti", "--task", "16class"],
+        ["--model", "ensemble", "--dataset", "mbti", "--task", "4dim"],
         # Transformer baselines
         ["--model", "distilbert", "--dataset", "mbti", "--task", "16class"],
         ["--model", "roberta", "--dataset", "mbti", "--task", "16class"],
         ["--model", "distilbert", "--dataset", "mbti", "--task", "4dim"],
+        ["--model", "roberta", "--dataset", "mbti", "--task", "4dim"],
+        # Essays
+        ["--model", "all_ml", "--dataset", "essays", "--task", "ocean_binary"],
+        ["--model", "ensemble", "--dataset", "essays", "--task", "ocean_binary"],
         ["--model", "distilbert", "--dataset", "essays", "--task", "ocean_binary"],
-        ["--model", "distilbert", "--dataset", "pandora", "--task", "ocean_binary"],
+        ["--model", "roberta", "--dataset", "essays", "--task", "ocean_binary"],
+        # Pandora Big5
+        ["--model", "all_ml", "--dataset", "pandora_big5", "--task", "ocean_binary"],
+        ["--model", "ensemble", "--dataset", "pandora_big5", "--task", "ocean_binary"],
+        ["--model", "distilbert", "--dataset", "pandora_big5", "--task", "ocean_binary"],
+        ["--model", "roberta", "--dataset", "pandora_big5", "--task", "ocean_binary"],
+        # Personality Evd (OCEAN only in converted data)
+        ["--model", "all_ml", "--dataset", "personality_evd", "--task", "ocean_binary"],
+        ["--model", "ensemble", "--dataset", "personality_evd", "--task", "ocean_binary"],
+        ["--model", "distilbert", "--dataset", "personality_evd", "--task", "ocean_binary"],
+        ["--model", "roberta", "--dataset", "personality_evd", "--task", "ocean_binary"],
     ]
 
     for exp_args in experiments:
@@ -64,7 +82,7 @@ def run_rag_xpr(args, seed: int) -> None:
         ["--dataset", "mbti"],
         ["--dataset", "mbti", "--llm_provider", "vllm", "--llm_model", "meta-llama/Llama-3.1-8B-Instruct"],
         ["--dataset", "essays", "--framework", "ocean"],
-        ["--dataset", "pandora", "--framework", "ocean"],
+        ["--dataset", "pandora_big5", "--framework", "ocean"],
         ["--dataset", "personality_evd"],
     ]
 
@@ -116,9 +134,9 @@ def run_personality_evd(args, seed: int) -> None:
                  "--dataset", "personality_evd", "--seed", str(seed),
                  "--output", "outputs/predictions/evd_E3_llm_direct.jsonl"])
 
-    # E4: DistilBERT
+    # E4: DistilBERT OCEAN baseline
     run_command([sys.executable, "scripts/train_baseline.py", "--model", "distilbert",
-                 "--dataset", "personality_evd", "--task", "16class", "--seed", str(seed)])
+                 "--dataset", "personality_evd", "--task", "ocean_binary", "--seed", str(seed)])
 
 
 def main():

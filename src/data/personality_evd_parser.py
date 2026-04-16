@@ -26,6 +26,7 @@ class PersonalityEvdParser:
         self.use_original_split = self.config.get("use_original_split", True)
         self.split_ratio = self.config.get("split_ratio", [0.70, 0.15, 0.15])
         self.seed = self.config.get("seed", 42)
+        self.drop_unknown_ocean = self.config.get("drop_unknown_ocean", True)
 
     def parse_dialogue(self, dialogue_data: dict, split_name: str = "train") -> list[dict]:
         """Parse a single dialogue into per-speaker records."""
@@ -98,6 +99,65 @@ class PersonalityEvdParser:
                     logger.debug(f"Skipping malformed record: {e}")
         return records
 
+    @staticmethod
+    def _ocean_signature(record: dict) -> str | None:
+        ocean = record.get("label_ocean") or {}
+        values = [ocean.get(trait) for trait in ["O", "C", "E", "A", "N"]]
+        if any(v is None for v in values):
+            return None
+        return "|".join(str(v).upper() for v in values)
+
+    def _filter_records_for_ocean(self, records: list[dict]) -> list[dict]:
+        if not self.drop_unknown_ocean:
+            return records
+
+        filtered = []
+        dropped = 0
+        for rec in records:
+            ocean = rec.get("label_ocean") or {}
+            values = [str(ocean.get(trait, "")).upper() for trait in ["O", "C", "E", "A", "N"]]
+            if all(v in {"HIGH", "LOW"} for v in values):
+                filtered.append(rec)
+            else:
+                dropped += 1
+
+        if dropped:
+            logger.info(f"Dropped {dropped} personality_evd records with UNKNOWN OCEAN labels")
+        return filtered
+
+    def _build_custom_splits(self, combined: list[dict]) -> dict[str, list[dict]]:
+        combined = self._filter_records_for_ocean(combined)
+        if not combined:
+            return {"train": [], "val": [], "test": []}
+
+        signatures = [self._ocean_signature(rec) for rec in combined]
+        if any(sig is None for sig in signatures):
+            raise ValueError("personality_evd custom split requires complete OCEAN signatures")
+
+        val_size = self.split_ratio[1]
+        test_size = self.split_ratio[2]
+        train_idx, valtest_idx = train_test_split(
+            range(len(combined)),
+            test_size=(val_size + test_size),
+            stratify=signatures,
+            random_state=self.seed,
+        )
+        valtest_labels = [signatures[i] for i in valtest_idx]
+        val_idx, test_idx = train_test_split(
+            list(valtest_idx),
+            test_size=test_size / (val_size + test_size),
+            stratify=valtest_labels,
+            random_state=self.seed,
+        )
+
+        all_records = {"train": [], "val": [], "test": []}
+        for split_name, indices in [("train", train_idx), ("val", val_idx), ("test", test_idx)]:
+            for i in indices:
+                rec = dict(combined[i])
+                rec["split"] = split_name
+                all_records[split_name].append(rec)
+        return all_records
+
     def run(self, data_dir: str, output_dir: str) -> None:
         data_path = Path(data_dir)
         output_path = Path(output_dir)
@@ -105,44 +165,28 @@ class PersonalityEvdParser:
 
         all_records: dict[str, list[dict]] = {"train": [], "val": [], "test": []}
 
-        # Try original splits first
-        for split_name in ["train", "val", "test"]:
-            for possible_name in [split_name, f"{split_name}_data"]:
-                split_file = data_path / f"{possible_name}.json"
-                if not split_file.exists():
-                    split_file = data_path / f"{possible_name}.jsonl"
-                if split_file.exists():
-                    records = self.parse_file(split_file, split_name)
-                    all_records[split_name].extend(records)
-                    logger.info(f"Loaded {len(records)} records for {split_name} split")
-                    break
+        if self.use_original_split:
+            for split_name in ["train", "val", "test"]:
+                for possible_name in [split_name, f"{split_name}_data"]:
+                    split_file = data_path / f"{possible_name}.json"
+                    if not split_file.exists():
+                        split_file = data_path / f"{possible_name}.jsonl"
+                    if split_file.exists():
+                        records = self.parse_file(split_file, split_name)
+                        all_records[split_name].extend(records)
+                        logger.info(f"Loaded {len(records)} records for {split_name} split")
+                        break
 
-        # If no original splits, create custom splits
         if not any(all_records.values()):
-            logger.warning("No split files found, creating custom splits")
+            logger.warning("Creating custom splits for personality_evd")
             all_files = list(data_path.glob("*.json")) + list(data_path.glob("*.jsonl"))
             combined = []
             for f in all_files:
-                combined.extend(self.parse_file(f, "all"))
+                if f.name in {"train.json", "train.jsonl", "val.json", "val.jsonl", "test.json", "test.jsonl"}:
+                    combined.extend(self.parse_file(f, "all"))
 
             if combined:
-                labels = [r.get("label_mbti", "INTP") for r in combined]
-                val_size = self.split_ratio[1]
-                test_size = self.split_ratio[2]
-                train_idx, valtest_idx = train_test_split(
-                    range(len(combined)), test_size=(val_size + test_size),
-                    stratify=labels, random_state=self.seed,
-                )
-                valtest_labels = [labels[i] for i in valtest_idx]
-                val_idx, test_idx = train_test_split(
-                    list(valtest_idx), test_size=test_size / (val_size + test_size),
-                    stratify=valtest_labels, random_state=self.seed,
-                )
-                for split_name, indices in [("train", train_idx), ("val", val_idx), ("test", test_idx)]:
-                    for i in indices:
-                        rec = dict(combined[i])
-                        rec["split"] = split_name
-                        all_records[split_name].append(rec)
+                all_records = self._build_custom_splits(combined)
 
         # Save to JSONL
         for split_name, records in all_records.items():

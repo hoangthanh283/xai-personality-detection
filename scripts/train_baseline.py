@@ -36,11 +36,27 @@ from src.utils.seed import set_seed  # noqa: E402
 
 ML_MODELS = ["logistic_regression", "svm", "naive_bayes", "xgboost", "random_forest"]
 TRANSFORMER_MODELS = ["distilbert", "roberta"]
+MBTI_DIMENSIONS = ["IE", "SN", "TF", "JP"]
+OCEAN_TRAITS = ["O", "C", "E", "A", "N"]
 
 
 def load_config(config_path: str) -> dict:
     with open(config_path) as f:
         return yaml.safe_load(f)
+
+
+def expand_tasks(dataset: str, task: str) -> list[str]:
+    """Expand task shortcuts into the valid task list for a dataset."""
+    if task != "all":
+        return [task]
+
+    if dataset == "mbti":
+        return ["16class", "4dim"]
+
+    if dataset in {"essays", "pandora", "pandora_big5", "personality_evd"}:
+        return ["ocean_binary"]
+
+    raise ValueError(f"Unsupported dataset for task expansion: {dataset}")
 
 
 def get_task_data(dataset: str, task: str, config: dict) -> tuple:
@@ -56,6 +72,10 @@ def get_task_data(dataset: str, task: str, config: dict) -> tuple:
         train_texts, train_labels = loader.get_texts_and_labels(train_records, "mbti")
         val_texts, val_labels = loader.get_texts_and_labels(val_records, "mbti")
         test_texts, test_labels = loader.get_texts_and_labels(test_records, "mbti")
+    elif task == "4dim":
+        raise ValueError("Task shortcut '4dim' must be expanded before calling get_task_data().")
+    elif task == "ocean_binary":
+        raise ValueError("Task shortcut 'ocean_binary' must be expanded before calling get_task_data().")
     elif task in ("IE", "SN", "TF", "JP"):
         train_texts, train_labels = loader.get_texts_and_labels(train_records, "mbti_dim", dimension=task)
         val_texts, val_labels = loader.get_texts_and_labels(val_records, "mbti_dim", dimension=task)
@@ -90,13 +110,29 @@ def save_predictions(texts: list[str], gold_labels: list[str], predicted_labels:
     logger.info(f"Predictions saved to {output_file}")
 
 
-def _log_ml_metrics_to_wandb(metrics: dict) -> None:
-    """Log ML metrics to W&B, handling classification_report as a Table."""
-    scalar_metrics = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
-    wandb.log(scalar_metrics)
+def _build_split_metrics(train_metrics: dict, eval_metrics: dict, test_metrics: dict) -> dict:
+    """Flatten split metrics while preserving legacy top-level test keys."""
+    combined = {}
+    for split_name, split_metrics in (
+        ("train", train_metrics),
+        ("eval", eval_metrics),
+        ("test", test_metrics),
+    ):
+        for key, value in split_metrics.items():
+            if isinstance(value, (int, float)):
+                combined[f"{split_name}_{key}"] = value
 
-    # Log per-class classification report as a W&B Table
-    report_str = metrics.get("classification_report", "")
+    # Keep legacy aliases so existing summaries and reports still work.
+    combined.update({k: v for k, v in test_metrics.items() if isinstance(v, (int, float))})
+
+    if "classification_report" in test_metrics:
+        combined["classification_report"] = test_metrics["classification_report"]
+
+    return combined
+
+
+def _log_classification_report_table(report_str: str, key: str) -> None:
+    """Log a sklearn classification report string as a W&B table."""
     if report_str:
         lines = [line for line in report_str.strip().splitlines() if line.strip()]
         table = wandb.Table(columns=["class", "precision", "recall", "f1-score", "support"])
@@ -109,11 +145,30 @@ def _log_ml_metrics_to_wandb(metrics: dict) -> None:
                 except (ValueError, IndexError):
                     pass
         if table.data:
-            wandb.log({"per_class_metrics": table})
+            wandb.log({key: table})
 
 
-def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
-    """Train a single ML baseline model."""
+def _log_split_metrics_to_wandb(split_metrics: dict[str, dict], log_test_table: bool = False) -> dict:
+    """Log prefixed split metrics to W&B and return the flattened scalar view."""
+    combined_metrics = _build_split_metrics(
+        split_metrics["train"],
+        split_metrics["eval"],
+        split_metrics["test"],
+    )
+    scalar_metrics = {k: v for k, v in combined_metrics.items() if isinstance(v, (int, float))}
+    wandb.log(scalar_metrics)
+
+    if log_test_table:
+        _log_classification_report_table(
+            split_metrics["test"].get("classification_report", ""),
+            "test_per_class_metrics",
+        )
+
+    return combined_metrics
+
+
+def _train_ml_single(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
+    """Train and evaluate one ML baseline for one concrete task."""
     from src.baselines.ml_baselines import MLBaselineTrainer
 
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, task, config)
@@ -122,7 +177,7 @@ def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args)
     run = None
     wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
     if wandb_project:
-        model_cfg = config.get(model_name, {})
+        model_cfg = config.get("ml_models", {}).get(model_name, {})
         run = wandb.init(
             project=wandb_project,
             name=f"{model_name}_{dataset}_{task}",
@@ -134,6 +189,7 @@ def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args)
                 "grid_search": args.grid_search,
                 "seed": args.seed,
                 "train_size": len(train_texts),
+                "val_size": len(val_texts),
                 "test_size": len(test_texts),
             },
             tags=["ml", model_name, dataset, task],
@@ -143,14 +199,22 @@ def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args)
     trainer = MLBaselineTrainer(model_name, config)
     trainer.fit(train_texts, train_labels, use_grid_search=args.grid_search)
 
-    logger.info("Evaluating on test set...")
-    metrics = trainer.evaluate(test_texts, test_labels)
+    logger.info("Evaluating final train/eval/test metrics...")
+    split_metrics = {
+        "train": trainer.evaluate(train_texts, train_labels),
+        "eval": trainer.evaluate(val_texts, val_labels),
+        "test": trainer.evaluate(test_texts, test_labels),
+    }
+    metrics = _build_split_metrics(
+        split_metrics["train"],
+        split_metrics["eval"],
+        split_metrics["test"],
+    )
 
     # Log metrics to W&B
     if run:
-        _log_ml_metrics_to_wandb(metrics)
-        # Log summary scalars so they appear on the W&B run overview
-        run.summary.update({k: v for k, v in metrics.items() if isinstance(v, (int, float))})
+        logged_metrics = _log_split_metrics_to_wandb(split_metrics, log_test_table=True)
+        run.summary.update({k: v for k, v in logged_metrics.items() if isinstance(v, (int, float))})
         run.finish()
 
     # Save predictions
@@ -163,11 +227,30 @@ def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args)
     return metrics
 
 
-def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
-    """Train ensemble baseline."""
+def train_ml_model(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
+    """Train ML baselines, expanding multi-task shortcuts when needed."""
+    if task == "4dim":
+        all_metrics = {}
+        for dim in MBTI_DIMENSIONS:
+            logger.info(f"\n=== Training {model_name} on {dim} dimension ===")
+            all_metrics[dim] = _train_ml_single(model_name, dataset, dim, config, args)
+        return all_metrics
+
+    if task == "ocean_binary":
+        all_metrics = {}
+        for trait in OCEAN_TRAITS:
+            logger.info(f"\n=== Training {model_name} on OCEAN trait {trait} ===")
+            all_metrics[trait] = _train_ml_single(model_name, dataset, trait, config, args)
+        return all_metrics
+
+    return _train_ml_single(model_name, dataset, task, config, args)
+
+
+def _train_ensemble_single(dataset: str, task: str, config: dict, args) -> dict:
+    """Train and evaluate one ensemble for one concrete task."""
     from src.baselines.ml_baselines import EnsembleClassifier
 
-    train_texts, train_labels, _, _, test_texts, test_labels = get_task_data(dataset, task, config)
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, task, config)
     members = args.ensemble_members.split(",") if args.ensemble_members else ["logistic_regression", "xgboost", "random_forest"]
 
     # Initialize W&B
@@ -183,6 +266,7 @@ def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
                 "task": task,
                 "seed": args.seed,
                 "train_size": len(train_texts),
+                "val_size": len(val_texts),
                 "test_size": len(test_texts),
             },
             tags=["ensemble", dataset, task],
@@ -192,13 +276,21 @@ def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
     ensemble = EnsembleClassifier(members=members, config=config)
     ensemble.fit(train_texts, train_labels)
 
-    logger.info("Evaluating on test set...")
-    metrics = ensemble.evaluate(test_texts, test_labels)
+    logger.info("Evaluating final train/eval/test metrics...")
+    split_metrics = {
+        "train": ensemble.evaluate(train_texts, train_labels),
+        "eval": ensemble.evaluate(val_texts, val_labels),
+        "test": ensemble.evaluate(test_texts, test_labels),
+    }
+    metrics = _build_split_metrics(
+        split_metrics["train"],
+        split_metrics["eval"],
+        split_metrics["test"],
+    )
 
     if run:
-        scalar_metrics = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
-        wandb.log(scalar_metrics)
-        run.summary.update(scalar_metrics)
+        logged_metrics = _log_split_metrics_to_wandb(split_metrics, log_test_table=True)
+        run.summary.update({k: v for k, v in logged_metrics.items() if isinstance(v, (int, float))})
         run.finish()
 
     # Save predictions
@@ -206,6 +298,25 @@ def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
     save_predictions(test_texts, test_labels, preds.tolist(), "ensemble", dataset, task)
 
     return metrics
+
+
+def train_ensemble(dataset: str, task: str, config: dict, args) -> dict:
+    """Train ensemble baselines, expanding multi-task shortcuts when needed."""
+    if task == "4dim":
+        all_metrics = {}
+        for dim in MBTI_DIMENSIONS:
+            logger.info(f"\n=== Training ensemble on {dim} dimension ===")
+            all_metrics[dim] = _train_ensemble_single(dataset, dim, config, args)
+        return all_metrics
+
+    if task == "ocean_binary":
+        all_metrics = {}
+        for trait in OCEAN_TRAITS:
+            logger.info(f"\n=== Training ensemble on OCEAN trait {trait} ===")
+            all_metrics[trait] = _train_ensemble_single(dataset, trait, config, args)
+        return all_metrics
+
+    return _train_ensemble_single(dataset, task, config, args)
 
 
 def _train_transformer_single(
@@ -224,10 +335,21 @@ def _train_transformer_single(
     wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
     output_dir = args.output_dir or f"outputs/models/{model_name}_{dataset}_{dim}"
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, dim, config)
+    dataset_override_cfg = config.get("transformer", {}).get("dataset_overrides", {}).get(dataset, {})
+    common_override_cfg = {
+        k: v for k, v in dataset_override_cfg.items()
+        if k not in TRANSFORMER_MODELS
+    }
+    model_specific_override_cfg = dataset_override_cfg.get(model_name, {})
+    resolved_model_cfg = {**model_cfg, **common_override_cfg, **model_specific_override_cfg}
 
     transformer_config = TransformerConfig(
-        model_name=model_cfg.get("model_name", f"{model_name}-base-uncased"),
-        **{k: v for k, v in model_cfg.items() if k != "model_name"},
+        model_name=resolved_model_cfg.get("model_name", f"{model_name}-base-uncased"),
+        **{
+            k: v
+            for k, v in resolved_model_cfg.items()
+            if k != "model_name"
+        },
         output_dir=output_dir,
     )
 
@@ -253,11 +375,19 @@ def _train_transformer_single(
     trainer = TransformerBaseline(transformer_config)
     trainer.train(train_texts, train_labels, val_texts, val_labels, output_dir, wandb_project)
 
-    metrics = trainer.evaluate(test_texts, test_labels)
+    split_metrics = {
+        "train": trainer.evaluate(train_texts, train_labels),
+        "eval": trainer.evaluate(val_texts, val_labels),
+        "test": trainer.evaluate(test_texts, test_labels),
+    }
+    metrics = _build_split_metrics(
+        split_metrics["train"],
+        split_metrics["eval"],
+        split_metrics["test"],
+    )
     if wandb.run is not None:
-        test_metrics = {f"test_{k}": v for k, v in metrics.items() if isinstance(v, (int, float))}
-        wandb.log(test_metrics)
-        wandb.run.summary.update(test_metrics)
+        logged_metrics = _log_split_metrics_to_wandb(split_metrics, log_test_table=True)
+        wandb.run.summary.update({k: v for k, v in logged_metrics.items() if isinstance(v, (int, float))})
         wandb.finish()
 
     return metrics
@@ -269,7 +399,7 @@ def train_transformer(model_name: str, dataset: str, task: str, config: dict, ar
 
     if task == "4dim":
         all_metrics = {}
-        for dim in ["IE", "SN", "TF", "JP"]:
+        for dim in MBTI_DIMENSIONS:
             logger.info(f"\n=== Training {model_name} on {dim} dimension ===")
             metrics = _train_transformer_single(model_name, dataset, dim, model_cfg, config, args, extra_tags=["4dim"])
             all_metrics[dim] = metrics
@@ -277,7 +407,7 @@ def train_transformer(model_name: str, dataset: str, task: str, config: dict, ar
 
     elif task == "ocean_binary":
         all_metrics = {}
-        for trait in ["O", "C", "E", "A", "N"]:
+        for trait in OCEAN_TRAITS:
             logger.info(f"\n=== Training {model_name} on OCEAN trait {trait} ===")
             metrics = _train_transformer_single(model_name, dataset, trait, model_cfg, config, args, extra_tags=["ocean"])
             all_metrics[trait] = metrics
@@ -303,7 +433,7 @@ def train_transformer(model_name: str, dataset: str, task: str, config: dict, ar
 def main():
     parser = argparse.ArgumentParser(description="Train baseline models")
     parser.add_argument("--model", required=True, help="Model name or 'all_ml'")
-    parser.add_argument("--dataset", required=True, choices=["mbti", "essays", "pandora", "personality_evd"])
+    parser.add_argument("--dataset", required=True, choices=["mbti", "essays", "pandora", "pandora_big5", "personality_evd"])
     parser.add_argument("--task", required=True, help="16class, 4dim, ocean_binary, IE, SN, TF, JP")
     parser.add_argument("--config", default="configs/baseline_config.yaml")
     parser.add_argument("--output_dir", help="Override output directory")
@@ -318,7 +448,7 @@ def main():
     set_seed(args.seed)
     config = load_config(args.config)
 
-    tasks = ["16class", "4dim", "ocean_binary"] if args.task == "all" else [args.task]
+    tasks = expand_tasks(args.dataset, args.task)
     models = ML_MODELS if args.model == "all_ml" else [args.model]
 
     all_results = {}
