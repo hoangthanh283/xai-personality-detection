@@ -1,10 +1,10 @@
 """Tests for data loaders and parsers."""
+
 import os
 import tempfile
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor
-from src.utils.text_utils import (MBTI_TYPES, clean_text_pipeline, count_words,
-                                  remove_mbti_mentions)
+from src.utils.text_utils import MBTI_TYPES, clean_text_pipeline, count_words, remove_mbti_mentions
 
 
 class TestTextUtils:
@@ -17,7 +17,7 @@ class TestTextUtils:
         text = "As an INTJ, I think logically"
         result = remove_mbti_mentions(text)
         assert "INTJ" not in result
-        assert "[TYPE]" in result
+        assert "[TYPE]" not in result
 
     def test_count_words(self):
         assert count_words("hello world foo") == 3
@@ -38,7 +38,9 @@ class TestTextPreprocessor:
     def test_min_words_filter(self):
         preprocessor = TextPreprocessor(PreprocessorConfig(min_words=10))
         assert not preprocessor.is_valid("Too short")
-        assert preprocessor.is_valid("This is a longer text with many words that should pass the filter check")
+        assert preprocessor.is_valid(
+            "This is a longer text with many words that should pass the filter check"
+        )
 
     def test_clean_and_validate_returns_none_for_short(self):
         preprocessor = TextPreprocessor(PreprocessorConfig(min_words=10))
@@ -49,11 +51,13 @@ class TestTextPreprocessor:
 class TestMBTIParser:
     def test_parse_dimensions(self):
         from src.data.mbti_parser import parse_mbti_dimensions
+
         dims = parse_mbti_dimensions("INTP")
         assert dims == {"IE": "I", "SN": "N", "TF": "T", "JP": "P"}
 
     def test_parse_dimensions_invalid(self):
         from src.data.mbti_parser import parse_mbti_dimensions
+
         dims = parse_mbti_dimensions("INVALID")
         assert dims == {}
 
@@ -63,19 +67,25 @@ class TestMBTIParser:
         from src.data.mbti_parser import MBTIParser
 
         # Create a minimal CSV
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             writer = csv.writer(f)
             writer.writerow(["type", "posts"])
-            writer.writerow([
-                "INTP",
-                "I love thinking about abstract possibilities and the connections between ideas|||"
-                "Ideas that make me wonder about the nature of things and how theory meets practice",
-            ])
-            writer.writerow([
-                "ENFJ",
-                "People are so important to me because I help friends build meaningful connections|||"
-                "I love connecting with friends and supporting their growth whenever I can",
-            ])
+            writer.writerow(
+                [
+                    "INTP",
+                    "I love thinking about abstract possibilities and the connections between ideas|||"
+                    "Ideas that make me wonder about the nature of things and how theory meets practice",
+                ]
+            )
+            writer.writerow(
+                [
+                    "ENFJ",
+                    "People are so important to me because I help friends build meaningful connections|||"
+                    "I love connecting with friends and supporting their growth whenever I can",
+                ]
+            )
             temp_path = f.name
 
         try:
@@ -90,6 +100,7 @@ class TestMBTIParser:
 class TestEssaysParser:
     def test_label_mapping(self):
         from src.data.essays_parser import label_to_binary
+
         assert label_to_binary("y") == "HIGH"
         assert label_to_binary("n") == "LOW"
         assert label_to_binary("Y") == "HIGH"

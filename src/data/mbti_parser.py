@@ -11,6 +11,7 @@ Pipeline:
 
 Output: data/processed/mbti/{train,val,test}.jsonl
 """
+
 import hashlib
 import json
 from pathlib import Path
@@ -20,7 +21,7 @@ from loguru import logger
 from sklearn.model_selection import train_test_split
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor
-from src.utils.text_utils import MBTI_TYPES
+from src.utils.text_utils import MBTI_TYPES, truncate_to_words
 
 # MBTI dimension mapping
 DIMENSIONS = {
@@ -60,7 +61,7 @@ class MBTIParser:
             remove_mentions=True,
             remove_mbti_mentions=self.config.get("remove_type_mentions", True),
             min_words=self.config.get("min_words", 10),
-            max_words=self.config.get("max_tokens", 512) * 4,  # rough word estimate
+            max_words=self.config.get("max_words", 500),
         )
         self.preprocessor = TextPreprocessor(preprocessor_cfg)
         self.split_ratio = self.config.get("split_ratio", [0.70, 0.15, 0.15])
@@ -95,6 +96,9 @@ class MBTIParser:
 
             # Concatenate posts for the user
             combined_text = " ".join(cleaned_posts)
+            # Final truncation after concatenation for manageable input length
+            max_total_words = self.config.get("max_total_words", 500)
+            combined_text = truncate_to_words(combined_text, max_total_words)
             record_id = make_id(combined_text, "mbti")
 
             record = {
@@ -107,7 +111,8 @@ class MBTIParser:
                 "split": None,
                 "metadata": {
                     "num_posts": len(cleaned_posts),
-                    "avg_post_length": sum(len(p.split()) for p in cleaned_posts) / max(len(cleaned_posts), 1),
+                    "avg_post_length": sum(len(p.split()) for p in cleaned_posts)
+                    / max(len(cleaned_posts), 1),
                 },
                 "evidence_gold": None,
             }

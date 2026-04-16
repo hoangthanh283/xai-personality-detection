@@ -6,6 +6,7 @@ Usage:
     metrics = trainer.evaluate(test_texts, test_labels)
     trainer.save("outputs/models/tfidf_lr_mbti.pkl")
 """
+
 import pickle
 from collections.abc import Mapping
 from pathlib import Path
@@ -16,8 +17,13 @@ from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (accuracy_score, classification_report, f1_score,
-                             precision_score, recall_score)
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -25,18 +31,30 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 
 try:
+    from sklearn.decomposition import TruncatedSVD
+
+    HAS_SVD = True
+except ImportError:
+    HAS_SVD = False
+
+try:
     from xgboost import XGBClassifier
+
     HAS_XGBOOST = True
 except ImportError:
     HAS_XGBOOST = False
     logger.warning("XGBoost not installed, XGBClassifier will not be available")
 
 TFIDF_PARAMS = {
-    "max_features": 50000,
+    "max_features": 10000,
     "ngram_range": (1, 2),
     "sublinear_tf": True,
     "min_df": 3,
     "max_df": 0.95,
+}
+
+SVD_PARAMS = {
+    "n_components": 300,
 }
 
 GRID_SEARCH_PARAMS = {
@@ -53,6 +71,8 @@ GRID_SEARCH_PARAMS = {
         "clf__max_depth": [None, 20, 50],
     },
 }
+
+MODELS_USING_SVD = {"logistic_regression", "svm"}
 
 
 def _get_ml_model_config(config: Mapping[str, Any] | None, model_name: str) -> dict[str, Any]:
@@ -113,7 +133,7 @@ def build_model(model_name: str, config: dict | None = None) -> Any:
 
 
 class MLBaselineTrainer:
-    """TF-IDF + sklearn classifier pipeline."""
+    """TF-IDF + sklearn classifier pipeline, with optional SVD for dense models."""
 
     def __init__(self, model_name: str = "logistic_regression", config: dict | None = None):
         self.model_name = model_name
@@ -124,7 +144,18 @@ class MLBaselineTrainer:
             tfidf_cfg["ngram_range"] = tuple(ngram_range)
         self.tfidf = TfidfVectorizer(**tfidf_cfg)
         classifier = build_model(model_name, _get_ml_model_config(self.config, model_name))
-        self.pipeline = Pipeline([("tfidf", self.tfidf), ("clf", classifier)])
+
+        use_svd = self.config.get("dimensionality_reduction", {}).get("enabled", True)
+        use_svd = use_svd and model_name in MODELS_USING_SVD and HAS_SVD
+
+        pipeline_steps = [("tfidf", self.tfidf)]
+        if use_svd:
+            svd_cfg = {**SVD_PARAMS, **self.config.get("dimensionality_reduction", {})}
+            svd_cfg.pop("enabled", None)
+            pipeline_steps.append(("svd", TruncatedSVD(**svd_cfg)))
+            logger.info(f"Using TruncatedSVD with n_components={svd_cfg.get('n_components', 300)}")
+        pipeline_steps.append(("clf", classifier))
+        self.pipeline = Pipeline(pipeline_steps)
         self.is_fitted = False
         self._label_encoder: LabelEncoder | None = None
 
@@ -174,7 +205,12 @@ class MLBaselineTrainer:
 
     def predict_proba(self, texts: list[str]) -> np.ndarray | None:
         """Return probability estimates (only for models that support it)."""
-        if hasattr(self.pipeline.named_steps["clf"], "predict_proba"):
+        clf = self.pipeline.named_steps["clf"]
+        if hasattr(clf, "predict_proba"):
+            if "svd" in self.pipeline.named_steps:
+                X = self.pipeline.named_steps["tfidf"].transform(texts)
+                X = self.pipeline.named_steps["svd"].transform(X)
+                return clf.predict_proba(X)
             return self.pipeline.predict_proba(texts)
         return None
 
@@ -185,7 +221,9 @@ class MLBaselineTrainer:
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
             "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
-            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
+            "precision_weighted": precision_score(
+                labels, preds, average="weighted", zero_division=0
+            ),
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
             "classification_report": classification_report(labels, preds, zero_division=0),
@@ -227,11 +265,14 @@ class EnsembleClassifier:
         voting = "soft"
         for name, clf in estimators:
             if not hasattr(clf, "predict_proba"):
-                logger.warning(f"Model {name} does not support predict_proba. Falling back to 'hard' voting.")
+                logger.warning(
+                    f"Model {name} does not support predict_proba. Falling back to 'hard' voting."
+                )
                 voting = "hard"
                 break
 
         from sklearn.ensemble import VotingClassifier
+
         vc = VotingClassifier(estimators=estimators, voting=voting)
 
         ngram_range = tfidf_cfg.get("ngram_range")
@@ -245,9 +286,14 @@ class EnsembleClassifier:
     def fit(self, train_texts: list[str], train_labels: list[str]) -> "EnsembleClassifier":
         y = train_labels
         from sklearn.preprocessing import LabelEncoder
+
         try:
             from xgboost import XGBClassifier
-            has_xgb = any(isinstance(clf, XGBClassifier) for _, clf in self.pipeline.named_steps["clf"].estimators)
+
+            has_xgb = any(
+                isinstance(clf, XGBClassifier)
+                for _, clf in self.pipeline.named_steps["clf"].estimators
+            )
         except ImportError:
             has_xgb = False
 
@@ -255,7 +301,9 @@ class EnsembleClassifier:
             self._label_encoder = LabelEncoder().fit(train_labels)
             y = self._label_encoder.transform(train_labels)
 
-        logger.info(f"Training ensemble members: {self.member_names} (voting='{self.pipeline.named_steps['clf'].voting}')")
+        logger.info(
+            f"Training ensemble members: {self.member_names} (voting='{self.pipeline.named_steps['clf'].voting}')"
+        )
         self.pipeline.fit(train_texts, y)
         return self
 
@@ -266,15 +314,23 @@ class EnsembleClassifier:
         return preds
 
     def evaluate(self, texts: list[str], labels: list[str]) -> dict:
-        from sklearn.metrics import (accuracy_score, classification_report,
-                                     f1_score, precision_score, recall_score)
+        from sklearn.metrics import (
+            accuracy_score,
+            classification_report,
+            f1_score,
+            precision_score,
+            recall_score,
+        )
+
         preds = self.predict(texts)
         return {
             "accuracy": accuracy_score(labels, preds),
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
             "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
-            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
+            "precision_weighted": precision_score(
+                labels, preds, average="weighted", zero_division=0
+            ),
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
             "classification_report": classification_report(labels, preds, zero_division=0),

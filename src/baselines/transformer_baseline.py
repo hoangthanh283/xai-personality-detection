@@ -5,6 +5,7 @@ Supports two classification modes:
   - "4dim":    Four binary classifiers (one per MBTI dimension)
   - "ocean_binary": Five binary classifiers (one per Big Five trait)
 """
+
 import inspect
 import json
 from dataclasses import dataclass
@@ -16,10 +17,15 @@ from loguru import logger
 try:
     import torch
     from datasets import Dataset as HFDataset
-    from transformers import (AutoModelForSequenceClassification,
-                              AutoTokenizer, DataCollatorWithPadding,
-                              EarlyStoppingCallback, Trainer,
-                              TrainingArguments)
+    from transformers import (
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+        DataCollatorWithPadding,
+        EarlyStoppingCallback,
+        Trainer,
+        TrainingArguments,
+    )
+
     HAS_TRANSFORMERS = True
 except ImportError:
     HAS_TRANSFORMERS = False
@@ -41,11 +47,13 @@ class TransformerConfig:
     early_stopping_patience: int = 3
     fp16: bool = True
     gradient_accumulation_steps: int = 1
+    dropout: float | None = None
     seed: int = 42
     output_dir: str = "outputs/models/transformer"
 
 
 if HAS_TRANSFORMERS:
+
     class WeightedClassificationTrainer(Trainer):
         """Trainer that applies label-frequency class weights for single-label classification."""
 
@@ -72,7 +80,9 @@ class TransformerBaseline:
 
     def __init__(self, config: TransformerConfig | None = None):
         if not HAS_TRANSFORMERS:
-            raise ImportError("Please install torch and transformers: pip install torch transformers")
+            raise ImportError(
+                "Please install torch and transformers: pip install torch transformers"
+            )
         self.config = config or TransformerConfig()
         self.tokenizer = None
         self.model = None
@@ -138,8 +148,8 @@ class TransformerBaseline:
         return torch.tensor(weights, dtype=torch.float32)
 
     def _compute_metrics(self, eval_pred) -> dict:
-        from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                                     recall_score)
+        from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+
         logits, labels = eval_pred
         preds = np.argmax(logits, axis=-1)
         return {
@@ -147,7 +157,9 @@ class TransformerBaseline:
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
             "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
-            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
+            "precision_weighted": precision_score(
+                labels, preds, average="weighted", zero_division=0
+            ),
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
         }
@@ -171,16 +183,24 @@ class TransformerBaseline:
             json.dump({"label2id": self.label2id, "id2label": self.id2label}, f)
 
         if not self.config.use_pretrained:
-            raise ValueError("Transformer baselines must use pretrained checkpoints. Set use_pretrained=true.")
+            raise ValueError(
+                "Transformer baselines must use pretrained checkpoints. Set use_pretrained=true."
+            )
 
         # Load tokenizer and model
         logger.info(f"Loading pretrained tokenizer/model from {self.config.model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+        model_kwargs = {
+            "num_labels": len(self.label2id),
+            "id2label": self.id2label,
+            "label2id": self.label2id,
+        }
+        if self.config.dropout is not None:
+            model_kwargs["dropout"] = self.config.dropout
+            model_kwargs["seq_classif_dropout"] = self.config.dropout
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.config.model_name,
-            num_labels=len(self.label2id),
-            id2label=self.id2label,
-            label2id=self.label2id,
+            **model_kwargs,
         )
         logger.info(
             "Loaded pretrained checkpoint: "
@@ -210,7 +230,8 @@ class TransformerBaseline:
             "fp16": self.config.fp16 and torch.cuda.is_available(),
             "gradient_accumulation_steps": self.config.gradient_accumulation_steps,
             "save_strategy": "epoch",
-            "load_best_model_at_end": False,
+            "save_total_limit": 3,
+            "load_best_model_at_end": True,
             "metric_for_best_model": "f1_macro",
             "greater_is_better": True,
             "report_to": report_to,
@@ -226,7 +247,9 @@ class TransformerBaseline:
 
         training_args = TrainingArguments(**training_args_kwargs)
 
-        callbacks = [EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience)]
+        callbacks = [
+            EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience)
+        ]
         trainer = WeightedClassificationTrainer(
             model=self.model,
             args=training_args,
@@ -264,7 +287,7 @@ class TransformerBaseline:
         all_preds = []
 
         for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i:i + batch_size]
+            batch_texts = texts[i : i + batch_size]
             prepared_batch_texts = self._prepare_texts_for_tokenizer(batch_texts)
             inputs = self.tokenizer(
                 prepared_batch_texts,
@@ -281,15 +304,23 @@ class TransformerBaseline:
         return all_preds
 
     def evaluate(self, texts: list[str], labels: list[str]) -> dict:
-        from sklearn.metrics import (accuracy_score, classification_report,
-                                     f1_score, precision_score, recall_score)
+        from sklearn.metrics import (
+            accuracy_score,
+            classification_report,
+            f1_score,
+            precision_score,
+            recall_score,
+        )
+
         preds = self.predict(texts)
         return {
             "accuracy": accuracy_score(labels, preds),
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
             "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
-            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
+            "precision_weighted": precision_score(
+                labels, preds, average="weighted", zero_division=0
+            ),
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
             "classification_report": classification_report(labels, preds, zero_division=0),

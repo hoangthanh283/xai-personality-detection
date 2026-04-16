@@ -1,15 +1,28 @@
 """Common text processing utilities."""
+
 import re
 import unicodedata
 
 MBTI_TYPES = [
-    "INFJ", "INFP", "INTJ", "INTP",
-    "ISFJ", "ISFP", "ISTJ", "ISTP",
-    "ENFJ", "ENFP", "ENTJ", "ENTP",
-    "ESFJ", "ESFP", "ESTJ", "ESTP",
+    "INFJ",
+    "INFP",
+    "INTJ",
+    "INTP",
+    "ISFJ",
+    "ISFP",
+    "ISTJ",
+    "ISTP",
+    "ENFJ",
+    "ENFP",
+    "ENTJ",
+    "ENTP",
+    "ESFJ",
+    "ESFP",
+    "ESTJ",
+    "ESTP",
 ]
 
-MBTI_PATTERN = re.compile(r"\b(" + "|".join(MBTI_TYPES) + r")\b", re.IGNORECASE)
+MBTI_PATTERN = re.compile(r"\b(" + "|".join(MBTI_TYPES) + r")(s|es)?\b", re.IGNORECASE)
 URL_PATTERN = re.compile(r"https?://\S+|www\.\S+")
 MENTION_PATTERN = re.compile(r"@\w+")
 REPEATED_PUNCT_PATTERN = re.compile(r"([!?.]){2,}")
@@ -25,8 +38,12 @@ def remove_mentions(text: str) -> str:
     return MENTION_PATTERN.sub(" ", text)
 
 
-def remove_mbti_mentions(text: str, replace_with: str = "[TYPE]") -> str:
-    """Remove MBTI type mentions to prevent data leakage."""
+def remove_mbti_mentions(text: str, replace_with: str = "") -> str:
+    """Remove MBTI type mentions to prevent data leakage.
+
+    Default replaces with empty string to avoid creating a noisy,
+    non-discriminative token that pollutes TF-IDF vocabulary.
+    """
     return MBTI_PATTERN.sub(replace_with, text)
 
 

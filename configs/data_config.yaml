@@ -3,6 +3,8 @@ datasets:
     raw_path: data/raw/mbti/mbti_1.csv
     output_dir: data/processed/mbti
     max_tokens: 512
+    max_words: 500
+    max_total_words: 500
     min_words: 10
     remove_type_mentions: true
     split_ratio: [0.70, 0.15, 0.15]
