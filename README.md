@@ -272,18 +272,108 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt python sc
 
 ## 9) Train Baselines
 
-Classical ML baselines:
+Three scripts handle baseline training. All require `.env` to be populated with
+`WANDB_PROJECT` (and optionally `WANDB_API_KEY`) before running.
+
+### 9.1 Full matrix (recommended)
+
+Runs classical-ML (CPU) and transformer (GPU) queues in parallel and streams
+both logs to `outputs/reports/`:
 
 ```bash
-uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/train_baseline.py --model all_ml --dataset mbti --task 16class
+UV_RUN="uv run --no-project --python 3.12 --with-requirements requirements.txt"
+$UV_RUN python scripts/run_all_experiments.py --group baselines
 ```
 
-Transformer baselines:
+Select a specific GPU device:
 
 ```bash
-uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/train_baseline.py --model distilbert --dataset mbti --task 16class
-uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/train_baseline.py --model roberta --dataset mbti --task 16class
+CUDA_VISIBLE_DEVICES=1 $UV_RUN python scripts/run_all_experiments.py --group baselines
 ```
+
+### 9.2 CPU queue only (classical ML)
+
+Runs all classical-ML models (Logistic Regression, SVM, Naive Bayes, XGBoost,
+Random Forest, Ensemble) across all datasets and tasks:
+
+```bash
+bash scripts/run_cpu_classical_baselines.sh
+```
+
+Datasets and tasks covered:
+
+| Dataset | Tasks |
+|---------|-------|
+| MBTI | 16-class, 4-dim (IE/SN/TF/JP) |
+| Essays | OCEAN binary (O/C/E/A/N) |
+| Pandora | OCEAN binary |
+| Personality-Evd | OCEAN binary |
+
+### 9.3 GPU queue only (transformers)
+
+Runs DistilBERT and RoBERTa across all datasets. Includes a special re-run of
+the MBTI SN dimension with `sqrt_balanced` class weighting — the 86 %/14 %
+N/S imbalance causes majority-class collapse without it:
+
+```bash
+bash scripts/run_gpu_transformer_baselines.sh
+```
+
+SN weighted checkpoints are saved to `outputs/models/*_mbti_SN_weighted/`
+separately from the standard 4-dim checkpoint so the main 4-dim result is not
+overwritten.
+
+### 9.4 Single experiment
+
+Train one model on one dataset/task:
+
+```bash
+UV_RUN="uv run --no-project --python 3.12 --with-requirements requirements.txt"
+
+# Classical ML — all models at once
+$UV_RUN python scripts/train_baseline.py --model all_ml --dataset mbti --task 16class
+
+# Single model
+$UV_RUN python scripts/train_baseline.py --model logistic_regression --dataset essays --task ocean_binary
+
+# Transformer
+$UV_RUN python scripts/train_baseline.py --model distilbert --dataset mbti --task 4dim
+$UV_RUN python scripts/train_baseline.py --model roberta    --dataset essays --task ocean_binary
+
+# Per-dimension (MBTI 4-dim)
+$UV_RUN python scripts/train_baseline.py --model distilbert --dataset mbti --task IE
+$UV_RUN python scripts/train_baseline.py --model distilbert --dataset mbti --task SN \
+    --set transformer.distilbert.loss_weighting=sqrt_balanced \
+    --output_dir outputs/models/distilbert_mbti_SN_weighted
+```
+
+### 9.5 Config overrides
+
+Use `--set KEY=VALUE` to override any config value without editing YAML:
+
+```bash
+# Change learning rate
+$UV_RUN python scripts/train_baseline.py --model distilbert --dataset mbti --task 16class \
+    --set transformer.distilbert.learning_rate=2e-5
+
+# Disable class weighting
+$UV_RUN python scripts/train_baseline.py --model distilbert --dataset mbti --task SN \
+    --set transformer.distilbert.loss_weighting=none
+```
+
+### 9.6 Expected results
+
+Results are written to `outputs/reports/baseline_results.json` after each run.
+Target ranges on cleaned data (no MBTI type-mention leakage):
+
+| Dataset / Task | Model | Target accuracy |
+|----------------|-------|----------------|
+| MBTI 16-class | LR / SVM | 50–70 % |
+| MBTI 16-class | DistilBERT / RoBERTa | 55–75 % |
+| MBTI 4-dim (per axis) | DistilBERT / RoBERTa | 70–88 % |
+| Essays OCEAN (per trait) | DistilBERT / RoBERTa | 55–65 % |
+| Pandora OCEAN (per trait) | any | ~60 % (limited labels) |
+| Personality-Evd OCEAN | multilingual models | 55–65 % |
 
 ## 10) Run RAG-XPR Inference
 
