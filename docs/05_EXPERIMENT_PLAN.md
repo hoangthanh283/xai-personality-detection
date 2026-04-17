@@ -6,7 +6,7 @@
 
 All experiments use seed=42. 3 random restarts planned for final paper numbers.
 
-### Experiment 1: Baseline Benchmarking — ✅ COMPLETE
+### Experiment 1: Baseline Benchmarking — COMPLETE
 
 **Goal:** Establish accuracy baselines WITHOUT explainability.
 
@@ -16,14 +16,14 @@ All experiments use seed=42. 3 random restarts planned for final paper numbers.
 
 | ID | Model | Datasets | Tasks | Status |
 |----|-------|----------|-------|--------|
-| B1 | TF-IDF + LR / SVM / NB / XGBoost / RF | MBTI, Essays, Pandora, personality_evd | 16-class + 4-dim + OCEAN binary | ✅ |
-| B2 | Ensemble (soft-vote) | MBTI | 16-class + 4-dim | ✅ |
-| B3 | BiLSTM + Attention (random init) | All 5 datasets | all tasks | ✅ |
-| B4 | BiLSTM + Attention (GloVe 300d + sqrt_balanced) | MBTI, Essays, Pandora | all tasks | ✅ |
-| B5 | DistilBERT | All 5 datasets | all tasks | ✅ |
-| B6 | DistilBERT (SN sqrt_balanced override) | MBTI | SN | ✅ (separate `_weighted` checkpoint) |
-| B7 | RoBERTa | MBTI, Essays, Pandora | all tasks | ✅ |
-| B8 | XLM-R | personality_evd | OCEAN binary | ⏳ pending GPU availability |
+| B1 | TF-IDF + LR / SVM / NB / XGBoost / RF | MBTI, Essays, Pandora, personality_evd | 16-class + 4-dim + OCEAN binary | Done |
+| B2 | Ensemble (soft-vote) | MBTI | 16-class + 4-dim | Done |
+| B3 | BiLSTM + Attention (random init) | All 5 datasets | all tasks | Done |
+| B4 | BiLSTM + Attention (GloVe 300d + sqrt_balanced) | MBTI, Essays, Pandora | all tasks | Done |
+| B5 | DistilBERT | All 5 datasets | all tasks | Done |
+| B6 | DistilBERT (SN sqrt_balanced override) | MBTI | SN | Done (separate `_weighted` checkpoint) |
+| B7 | RoBERTa | MBTI, Essays, Pandora | all tasks | Done |
+| B8 | XLM-R | personality_evd | OCEAN binary | Pending (GPU) |
 
 **Reproduce:**
 ```bash
@@ -36,7 +36,7 @@ Or combined:
 uv run ... python scripts/run_all_experiments.py
 ```
 
-### Experiment 2: LLM Direct (No RAG, No CoPE) — 📋 PLANNED
+### Experiment 2: LLM Direct (No RAG, No CoPE) — PLANNED
 
 **Goal**: Measure raw LLM performance as the "no-grounding" reference point.
 
@@ -59,7 +59,7 @@ python scripts/run_rag_xpr.py --mode llm_direct --prompt few_shot --sample 500
 python scripts/run_rag_xpr.py --mode llm_direct --prompt cot_basic --sample 500
 ```
 
-### Experiment 3: RAG-XPR (Proposed Method) — 🔄 IN PROGRESS
+### Experiment 3: RAG-XPR (Proposed Method) — IN PROGRESS
 
 **Goal:** Evaluate full pipeline with explainability.
 
@@ -67,18 +67,18 @@ python scripts/run_rag_xpr.py --mode llm_direct --prompt cot_basic --sample 500
 
 | ID | Config | Dataset | LLM | Metric | Status |
 |----|--------|---------|-----|--------|--------|
-| R1 | RAG-XPR (full) | MBTI test | Qwen (OpenRouter) | Acc, F1, XAI | 🔄 running |
-| R4 | RAG-XPR (full) | Essays test | Qwen | Acc, F1, XAI | 🔄 running |
-| R6 | RAG-XPR (full) | personality_evd test | Qwen | Acc, F1, XAI | 🔄 running |
-| R2 | RAG-XPR (full) | MBTI test | GPT-4o-mini | Acc, F1, XAI | 📋 queued |
-| R3 | RAG-XPR (full) | MBTI test | Llama-3.1-8B | Acc, F1, XAI | 📋 queued |
-| R5 | RAG-XPR (full) | Pandora test | Qwen | Acc, F1, XAI | 📋 queued |
+| R1 | RAG-XPR (full) | MBTI test | Qwen (OpenRouter) | Acc, F1, XAI | Running |
+| R4 | RAG-XPR (full) | Essays test | Qwen | Acc, F1, XAI | Running |
+| R6 | RAG-XPR (full) | personality_evd test | Qwen | Acc, F1, XAI | Running |
+| R2 | RAG-XPR (full) | MBTI test | GPT-4o-mini | Acc, F1, XAI | Queued |
+| R3 | RAG-XPR (full) | MBTI test | Llama-3.1-8B | Acc, F1, XAI | Queued |
+| R5 | RAG-XPR (full) | Pandora test | Qwen | Acc, F1, XAI | Queued |
 
 ```bash
 python scripts/run_all_experiments.py --group rag_xpr
 ```
 
-### Experiment 4: Ablation Studies — 📋 PLANNED
+### Experiment 4: Ablation Studies — PLANNED
 
 **Goal**: Quantify contribution of each component.
 
@@ -107,11 +107,11 @@ python scripts/run_rag_xpr.py --config configs/rag_xpr_config.yaml \
 python scripts/run_all_experiments.py --group ablations
 ```
 
-### Experiment 5: Personality Evd — Explainability Benchmark — 📋 PLANNED
+### Experiment 5: Personality Evd — Explainability Benchmark — PLANNED
 
 **Goal**: Evaluate on the dataset specifically designed for explainable personality recognition.
 
-**Status:** Classification baselines ✅ done; evidence-F1 and state-acc pending pipeline runs.
+**Status:** Classification baselines done; evidence-F1 and state-acc pending pipeline runs.
 
 | ID | Method | Evidence F1 | State Acc | Trait Acc |
 |----|--------|-------------|-----------|-----------|
@@ -134,13 +134,13 @@ Follow this order to manage dependencies and costs:
 
 ```
 Past sprints (complete):
-  ✅ Data preprocessing — all 5 datasets (incl. cleaned MBTI with verified 0 leakage)
-  ✅ Exp 1 — Baselines across 8 model families × 5 datasets (110+ W&B runs)
-  ✅ KB construction + retrieval engine + CoPE pipeline
-  ✅ Evaluation harness (classification + XAI metrics)
+  - Data preprocessing — all 5 datasets (incl. cleaned MBTI with verified 0 leakage)
+  - Exp 1 — Baselines across 8 model families × 5 datasets (110+ W&B runs)
+  - KB construction + retrieval engine + CoPE pipeline
+  - Evaluation harness (classification + XAI metrics)
 
 Current sprint (in progress):
-  🔄 Exp 3 R1/R4/R6 — RAG-XPR on 150–200-sample test splits
+  - Exp 3 R1/R4/R6 — RAG-XPR on 150–200-sample test splits
 
 Next 1–2 weeks:
   - Finish Exp 3 full test-set evaluation (all R1–R6)
@@ -152,8 +152,6 @@ Following 1–2 weeks:
   - Exp 5 (explainability benchmark: evidence-F1, state-grounding)
   - Human evaluation campaign (N=100, 2 raters)
   - Paper draft writing
-         ↓
-Week 6: Final full-scale runs, statistical tests, report
 ```
 
 ---
@@ -183,11 +181,11 @@ Week 6: Final full-scale runs, statistical tests, report
 | Method           | Accuracy | Explainability | Cost   |
 |                  |          | (Human Eval)   | ($/1K) |
 |------------------|----------|----------------|--------|
-| TF-IDF + LR      | ★★☆      | ★★★ (weights)  | ~$0    |
-| DistilBERT       | ★★★      | ☆☆☆ (black box)| ~$0    |
-| LLM zero-shot    | ★★☆      | ★★☆ (halluc.)  | ~$5    |
-| LLM + CoT        | ★★★      | ★★☆ (halluc.)  | ~$15   |
-| RAG-XPR (ours)   | ★★★      | ★★★ (grounded) | ~$20   |
+| TF-IDF + LR      | ☆      |  (weights)  | ~$0    |
+| DistilBERT       |       | ☆☆☆ (black box)| ~$0    |
+| LLM zero-shot    | ☆      | ☆ (halluc.)  | ~$5    |
+| LLM + CoT        |       | ☆ (halluc.)  | ~$15   |
+| RAG-XPR (ours)   |       |  (grounded) | ~$20   |
 ```
 
 ### Table 3: XAI Quality Comparison (Personality Evd)

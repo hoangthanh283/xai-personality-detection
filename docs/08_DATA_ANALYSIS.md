@@ -158,7 +158,7 @@ Comprehensive analysis and statistics for all ingested datasets, including raw d
 | MBTI type mentions in text | **0 records** contain leaked type strings |
 | Empty/missing text | **0 records** |
 | Consistent split tags | All records match their file's split |
-| All records have source="pandora" | ✅ Verified |
+| All records have source="pandora" | Verified |
 
 ### Relationship to Pandora Big5 Mirror
 
@@ -267,10 +267,10 @@ The project also includes a separate parser for the `jingjietan/pandora-big5` Hu
 
 | Dataset | MBTI Records | 16-class | 4-dim binary |
 |---------|-------------|----------|---------------|
-| MBTI | 8,673 | ✅ | ✅ (IE/SN/TF/JP) |
-| Pandora | 9,067 | ✅ | ✅ (IE/SN/TF/JP) |
-| Personality Evd | 0 | ❌ | ❌ |
-| Essays | 0 | ❌ | ❌ |
+| MBTI | 8,673 | Yes | Yes (IE/SN/TF/JP) |
+| Pandora | 9,067 | Yes | Yes (IE/SN/TF/JP) |
+| Personality Evd | 0 | No | No |
+| Essays | 0 | No | No |
 
 ---
 

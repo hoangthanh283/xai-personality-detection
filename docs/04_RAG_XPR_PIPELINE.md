@@ -6,16 +6,16 @@
 
 | Component | Location | Status |
 |-----------|----------|:------:|
-| Evidence Retriever (sentence-level scoring) | `src/retrieval/evidence_retriever.py` | ✅ |
-| Knowledge Base (Qdrant) | `src/knowledge_base/{builder,embedder,indexer}.py` | ✅ built |
-| Hybrid KB Retrieval (semantic + BM25) | `src/retrieval/{hybrid_search,kb_retriever}.py` | ✅ |
-| CoPE Step 1 — Evidence Extraction | `src/reasoning/evidence_extractor.py` | ✅ |
-| CoPE Step 2 — State Identification | `src/reasoning/state_identifier.py` | ✅ |
-| CoPE Step 3 — Trait Inference | `src/reasoning/trait_inferencer.py` | ✅ |
-| Orchestrator | `src/rag_pipeline/pipeline.py` (`RAGXPRPipeline`) | ✅ |
-| LLM Client (OpenAI / OpenRouter / local) | `src/rag_pipeline/llm_client.py` | ✅ |
-| Entry script | `scripts/run_rag_xpr.py` | ✅ |
-| First end-to-end evaluation runs | MBTI / Essays / personality_evd test splits (150–200 samples) | 🔄 in flight |
+| Evidence Retriever (sentence-level scoring) | `src/retrieval/evidence_retriever.py` | Done |
+| Knowledge Base (Qdrant) | `src/knowledge_base/{builder,embedder,indexer}.py` | Built |
+| Hybrid KB Retrieval (semantic + BM25) | `src/retrieval/{hybrid_search,kb_retriever}.py` | Done |
+| CoPE Step 1 — Evidence Extraction | `src/reasoning/evidence_extractor.py` | Done |
+| CoPE Step 2 — State Identification | `src/reasoning/state_identifier.py` | Done |
+| CoPE Step 3 — Trait Inference | `src/reasoning/trait_inferencer.py` | Done |
+| Orchestrator | `src/rag_pipeline/pipeline.py` (`RAGXPRPipeline`) | Done |
+| LLM Client (OpenAI / OpenRouter / local) | `src/rag_pipeline/llm_client.py` | Done |
+| Entry script | `scripts/run_rag_xpr.py` | Done |
+| First end-to-end evaluation runs | MBTI / Essays / personality_evd test splits (150–200 samples) | Running |
 
 ## Architecture
 

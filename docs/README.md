@@ -69,10 +69,10 @@ Every cell in [07_BASELINE_RESULTS_ANALYSIS.md](./07_BASELINE_RESULTS_ANALYSIS.m
 
 ### RAG-XPR pipeline — wired end-to-end, first evaluation runs in flight
 
-- Data pipeline (4 datasets, cleaned, JSONL splits) ✅
-- Knowledge base (Qdrant, hybrid semantic + BM25) ✅
-- Evidence retriever + CoPE 3-step LLM reasoning ✅
-- Classification + XAI evaluation harness ✅
+- Data pipeline (4 datasets, cleaned, JSONL splits)
+- Knowledge base (Qdrant, hybrid semantic + BM25)
+- Evidence retriever + CoPE 3-step LLM reasoning
+- Classification + XAI evaluation harness
 - Test-split inference on MBTI / Essays / personality_evd — running now
 
 ## Quick Start
