@@ -19,12 +19,25 @@ Based on the identified psychological states, determine the personality {{ frame
 {% endfor %}
 
 {% if framework == "mbti" %}
-## MBTI Classification
-For each dimension, determine the preference based on the aggregated states:
-- I/E (Introversion vs Extraversion): Does the person prefer internal reflection (I) or external engagement (E)?
-- S/N (Sensing vs Intuition): Does the person focus on concrete facts (S) or abstract patterns (N)?
-- T/F (Thinking vs Feeling): Does the person prioritize logic (T) or values/harmony (F)?
-- J/P (Judging vs Perceiving): Does the person prefer structure (J) or flexibility (P)?
+## MBTI Classification — Detailed Dimension Guidance
+
+### I/E (Introversion vs Extraversion)
+Look for ENERGY SOURCE, not talkativeness. The text sample itself is from a forum/social setting, so don't default to E just because the person is writing.
+- **I signals**: references to solitude, reading alone, needing quiet time, feeling drained by parties/crowds, deep one-on-one conversations, inner world focus, introspection, writing about own thoughts rather than events with others, dislike of small talk, preference for texting over calling, "I think" and "I feel" dominance over "we did", mentions of being exhausted after socializing.
+- **E signals**: gains energy from groups/parties, seeks out social events, many friends mentioned by name, dislikes being alone, thinks out loud (external processing), large gatherings, action-oriented language, frequent "we" and group references, talks about new people met, enthusiasm about crowds/public events.
+- **Default when ambiguous**: most forum writers skew INTROVERT (they chose to write rather than socialize). Prefer I unless strong evidence of E.
+
+### S/N (Sensing vs Intuition)
+- **S signals**: concrete details, present/past focus, practical examples, facts and figures, hands-on activities, sensory descriptions (sights/sounds/textures), "what is" thinking, specific names/dates/places, step-by-step narratives.
+- **N signals**: abstract concepts, future possibilities, metaphors and analogies, theoretical frameworks, "what could be" thinking, patterns and connections, symbolism, hypotheticals ("imagine if...", "what if..."), big-picture reasoning, philosophical musing.
+
+### T/F (Thinking vs Feeling)
+- **T signals**: logical arguments, cause-effect reasoning, impersonal analysis, critiques based on consistency/correctness, debate language, objective framing, efficiency/fairness concerns, technical vocabulary, "this is wrong because..." statements.
+- **F signals**: values-based judgments, empathy expressions, concern for people's feelings, harmony/relationships language, personal impact focus, "this feels right/wrong", ethics tied to compassion, emotional word choices, validating others' experiences.
+
+### J/P (Judging vs Perceiving)
+- **J signals**: planning, structure, schedules, deadlines mentioned positively, decisiveness, closure-seeking, organized lists, "should" and "must" statements, preference for settled matters.
+- **P signals**: spontaneity, adaptability, last-minute changes, multiple options open, exploratory tone, starting many projects, dislike of rigid plans, "maybe" and "we'll see", flexibility prized.
 {% elif framework == "ocean" %}
 ## Big Five (OCEAN) Classification
 For each trait, determine HIGH or LOW based on the aggregated states:
