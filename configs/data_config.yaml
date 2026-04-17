@@ -3,8 +3,8 @@ datasets:
     raw_path: data/raw/mbti/mbti_1.csv
     output_dir: data/processed/mbti
     max_tokens: 512
-    max_words: 500
-    max_total_words: 500
+    max_words: 2000
+    max_total_words: 2000
     min_words: 10
     remove_type_mentions: true
     split_ratio: [0.70, 0.15, 0.15]
@@ -14,7 +14,11 @@ datasets:
     raw_path: data/raw/pandora/
     output_dir: data/processed/pandora
     max_comments_per_user: 100
-    ocean_threshold: 3.0
+    ocean_threshold: 50.0
+    min_words: 5
+    max_words: 2000
+    filter_english: true
+    chunk_size: 500000
     split_ratio: [0.70, 0.15, 0.15]
     seed: 42
 

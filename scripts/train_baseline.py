@@ -343,12 +343,14 @@ def _train_transformer_single(
     model_specific_override_cfg = dataset_override_cfg.get(model_name, {})
     resolved_model_cfg = {**model_cfg, **common_override_cfg, **model_specific_override_cfg}
 
+    import dataclasses
+    valid_fields = {f.name for f in dataclasses.fields(TransformerConfig)}
     transformer_config = TransformerConfig(
         model_name=resolved_model_cfg.get("model_name", f"{model_name}-base-uncased"),
         **{
             k: v
             for k, v in resolved_model_cfg.items()
-            if k != "model_name"
+            if k != "model_name" and k in valid_fields
         },
         output_dir=output_dir,
     )

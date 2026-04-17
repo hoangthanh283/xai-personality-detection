@@ -61,7 +61,7 @@ class MBTIParser:
             remove_mentions=True,
             remove_mbti_mentions=self.config.get("remove_type_mentions", True),
             min_words=self.config.get("min_words", 10),
-            max_words=self.config.get("max_words", 500),
+            max_words=self.config.get("max_words", 2000),
         )
         self.preprocessor = TextPreprocessor(preprocessor_cfg)
         self.split_ratio = self.config.get("split_ratio", [0.70, 0.15, 0.15])
@@ -97,7 +97,7 @@ class MBTIParser:
             # Concatenate posts for the user
             combined_text = " ".join(cleaned_posts)
             # Final truncation after concatenation for manageable input length
-            max_total_words = self.config.get("max_total_words", 500)
+            max_total_words = self.config.get("max_total_words", 2000)
             combined_text = truncate_to_words(combined_text, max_total_words)
             record_id = make_id(combined_text, "mbti")
 

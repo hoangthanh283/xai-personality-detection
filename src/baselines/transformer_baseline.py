@@ -50,6 +50,8 @@ class TransformerConfig:
     dropout: float | None = None
     seed: int = 42
     output_dir: str = "outputs/models/transformer"
+    loss_weighting: str = "sqrt_balanced"  # none | balanced | sqrt_balanced
+    metric_for_best_model: str = "eval_accuracy"
 
 
 if HAS_TRANSFORMERS:
@@ -138,13 +140,31 @@ class TransformerBaseline:
         data["labels"] = label_ids
         return HFDataset.from_dict(data)
 
-    def _compute_class_weights(self, labels: list[str]) -> "torch.Tensor":
+    def _compute_class_weights(self, labels: list[str]) -> "torch.Tensor | None":
+        """Compute class weights based on loss_weighting config.
+
+        none: no weighting (uniform)
+        balanced: inverse-frequency weights (can be extreme at high imbalance ratios)
+        sqrt_balanced: sqrt-dampened weights, capped at 4x (safer for imbalanced multi-class)
+        """
+        weighting = getattr(self.config, "loss_weighting", "sqrt_balanced")
+        if weighting == "none":
+            return None
+
         from sklearn.utils.class_weight import compute_class_weight
 
-        class_names = [self.id2label[idx] for idx in range(len(self.id2label))]
+        n_classes = len(self.id2label)
         label_ids = np.array([self.label2id[label] for label in labels], dtype=np.int64)
-        class_ids = np.arange(len(class_names))
+        class_ids = np.arange(n_classes)
         weights = compute_class_weight(class_weight="balanced", classes=class_ids, y=label_ids)
+
+        if weighting == "sqrt_balanced":
+            counts = np.bincount(label_ids, minlength=n_classes).astype(float)
+            counts = np.where(counts == 0, 1.0, counts)
+            raw = counts.sum() / (n_classes * counts)
+            weights = np.sqrt(raw)
+            weights = np.clip(weights, 1.0 / 4.0, 4.0)
+
         return torch.tensor(weights, dtype=torch.float32)
 
     def _compute_metrics(self, eval_pred) -> dict:
@@ -211,6 +231,10 @@ class TransformerBaseline:
         train_dataset = self._make_hf_dataset(train_texts, train_labels)
         val_dataset = self._make_hf_dataset(val_texts, val_labels)
         class_weights = self._compute_class_weights(train_labels)
+        logger.info(
+            f"Loss weighting: {getattr(self.config, 'loss_weighting', 'sqrt_balanced')} | "
+            f"weights={'None' if class_weights is None else class_weights.numpy().round(3).tolist()}"
+        )
         data_collator = DataCollatorWithPadding(
             tokenizer=self.tokenizer,
             pad_to_multiple_of=8 if self.config.fp16 and torch.cuda.is_available() else None,
@@ -232,7 +256,9 @@ class TransformerBaseline:
             "save_strategy": "epoch",
             "save_total_limit": 3,
             "load_best_model_at_end": True,
-            "metric_for_best_model": "f1_macro",
+            "metric_for_best_model": getattr(
+                self.config, "metric_for_best_model", "eval_accuracy"
+            ),
             "greater_is_better": True,
             "report_to": report_to,
             "run_name": f"{Path(output_dir).name}",

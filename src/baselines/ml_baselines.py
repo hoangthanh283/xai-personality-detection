@@ -46,8 +46,17 @@ except ImportError:
     logger.warning("XGBoost not installed, XGBClassifier will not be available")
 
 TFIDF_PARAMS = {
-    "max_features": 10000,
+    "max_features": 30000,
     "ngram_range": (1, 2),
+    "sublinear_tf": True,
+    "min_df": 3,
+    "max_df": 0.95,
+}
+
+CHAR_TFIDF_PARAMS = {
+    "analyzer": "char_wb",
+    "ngram_range": (3, 5),
+    "max_features": 20000,
     "sublinear_tf": True,
     "min_df": 3,
     "max_df": 0.95,
@@ -73,6 +82,44 @@ GRID_SEARCH_PARAMS = {
 }
 
 MODELS_USING_SVD = {"logistic_regression", "svm"}
+
+
+def _coerce_ngram(params: dict[str, Any]) -> dict[str, Any]:
+    ngram = params.get("ngram_range")
+    if isinstance(ngram, list):
+        params["ngram_range"] = tuple(ngram)
+    return params
+
+
+def _build_tfidf_vectorizer(config: Mapping[str, Any] | None) -> Any:
+    """Build a word (and optionally char) TF-IDF vectorizer.
+
+    The char-level TF-IDF is OFF by default because combining word + char
+    TF-IDF with ~80K features on small datasets like MBTI 8k-user causes
+    severe overfitting. Set ``tfidf.use_char_ngrams: true`` to opt in.
+    """
+    cfg = dict(config or {})
+    tfidf_cfg = _coerce_ngram({**TFIDF_PARAMS, **cfg.get("tfidf", {})})
+    use_char = bool(tfidf_cfg.pop("use_char_ngrams", False))
+    char_cfg = _coerce_ngram({**CHAR_TFIDF_PARAMS, **cfg.get("tfidf_char", {})})
+
+    word_tfidf = TfidfVectorizer(**tfidf_cfg)
+    if not use_char:
+        logger.info(
+            f"TF-IDF (word-only): max_features={tfidf_cfg['max_features']}, "
+            f"ngram_range={tfidf_cfg['ngram_range']}, min_df={tfidf_cfg['min_df']}"
+        )
+        return word_tfidf
+
+    from sklearn.pipeline import FeatureUnion
+
+    char_tfidf = TfidfVectorizer(**char_cfg)
+    logger.info(
+        "TF-IDF union: word "
+        f"(max={tfidf_cfg['max_features']}, ngram={tfidf_cfg['ngram_range']}) + char "
+        f"(max={char_cfg['max_features']}, ngram={char_cfg['ngram_range']})"
+    )
+    return FeatureUnion([("word", word_tfidf), ("char", char_tfidf)])
 
 
 def _get_ml_model_config(config: Mapping[str, Any] | None, model_name: str) -> dict[str, Any]:
@@ -111,14 +158,16 @@ def build_model(model_name: str, config: dict | None = None) -> Any:
         if not HAS_XGBOOST:
             raise ImportError("XGBoost not installed")
         return XGBClassifier(
-            n_estimators=cfg.get("n_estimators", 100),
-            max_depth=cfg.get("max_depth", 4),
+            n_estimators=cfg.get("n_estimators", 200),
+            max_depth=cfg.get("max_depth", 6),
             learning_rate=cfg.get("learning_rate", 0.1),
             tree_method=cfg.get("tree_method", "hist"),
-            n_jobs=cfg.get("n_jobs", 4),
+            n_jobs=cfg.get("n_jobs", 2),
             subsample=cfg.get("subsample", 0.8),
             colsample_bytree=cfg.get("colsample_bytree", 0.8),
             eval_metric=cfg.get("eval_metric", "mlogloss"),
+            reg_alpha=cfg.get("reg_alpha", 0.0),
+            reg_lambda=cfg.get("reg_lambda", 1.0),
             verbosity=0,
         )
     elif model_name == "random_forest":
@@ -138,14 +187,10 @@ class MLBaselineTrainer:
     def __init__(self, model_name: str = "logistic_regression", config: dict | None = None):
         self.model_name = model_name
         self.config = config or {}
-        tfidf_cfg = {**TFIDF_PARAMS, **self.config.get("tfidf", {})}
-        ngram_range = tfidf_cfg.get("ngram_range")
-        if isinstance(ngram_range, list):
-            tfidf_cfg["ngram_range"] = tuple(ngram_range)
-        self.tfidf = TfidfVectorizer(**tfidf_cfg)
+        self.tfidf = _build_tfidf_vectorizer(self.config)
         classifier = build_model(model_name, _get_ml_model_config(self.config, model_name))
 
-        use_svd = self.config.get("dimensionality_reduction", {}).get("enabled", True)
+        use_svd = self.config.get("dimensionality_reduction", {}).get("enabled", False)
         use_svd = use_svd and model_name in MODELS_USING_SVD and HAS_SVD
 
         pipeline_steps = [("tfidf", self.tfidf)]
@@ -167,6 +212,14 @@ class MLBaselineTrainer:
         cv: int = 5,
     ) -> "MLBaselineTrainer":
         logger.info(f"Training {self.model_name} on {len(train_texts)} samples...")
+        y = train_labels
+        clf = self.pipeline.named_steps["clf"]
+        if isinstance(clf, XGBClassifier):
+            self._label_encoder = LabelEncoder().fit(train_labels)
+            y = self._label_encoder.transform(train_labels)
+        else:
+            self._label_encoder = None
+
         grid_cfg = _get_grid_search_config(self.config)
         if use_grid_search and self.model_name in GRID_SEARCH_PARAMS:
             param_grid = grid_cfg.get("param_grid", {}).get(
@@ -181,17 +234,10 @@ class MLBaselineTrainer:
                 n_jobs=grid_cfg.get("n_jobs", -1),
                 verbose=1,
             )
-            gs.fit(train_texts, train_labels)
+            gs.fit(train_texts, y)
             self.pipeline = gs.best_estimator_
             logger.info(f"Best params: {gs.best_params_}")
         else:
-            y = train_labels
-            clf = self.pipeline.named_steps["clf"]
-            if isinstance(clf, XGBClassifier):
-                self._label_encoder = LabelEncoder().fit(train_labels)
-                y = self._label_encoder.transform(train_labels)
-            else:
-                self._label_encoder = None
             self.pipeline.fit(train_texts, y)
         self.is_fitted = True
         logger.info("Training complete")
@@ -256,7 +302,6 @@ class EnsembleClassifier:
     def __init__(self, members: list[str] | None = None, config: dict | None = None):
         self.config = config or {}
         members = members or ["logistic_regression", "xgboost", "random_forest"]
-        tfidf_cfg = self.config.get("tfidf", TFIDF_PARAMS)
         estimators = []
         for name in members:
             clf = build_model(name, _get_ml_model_config(self.config, name))
@@ -274,12 +319,9 @@ class EnsembleClassifier:
         from sklearn.ensemble import VotingClassifier
 
         vc = VotingClassifier(estimators=estimators, voting=voting)
+        vectorizer = _build_tfidf_vectorizer(self.config)
 
-        ngram_range = tfidf_cfg.get("ngram_range")
-        if isinstance(ngram_range, list):
-            tfidf_cfg["ngram_range"] = tuple(ngram_range)
-
-        self.pipeline = Pipeline([("tfidf", TfidfVectorizer(**tfidf_cfg)), ("clf", vc)])
+        self.pipeline = Pipeline([("tfidf", vectorizer), ("clf", vc)])
         self.member_names = members
         self._label_encoder = None
 

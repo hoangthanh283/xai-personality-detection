@@ -1,44 +1,55 @@
 tfidf:
-  max_features: 10000
+  max_features: 15000
   ngram_range: [1, 2]
+  sublinear_tf: true
+  min_df: 5
+  max_df: 0.90
+  use_char_ngrams: false
+  # Note: 15K features + min_df=5 reduces overfitting vs original 50K+char union
+
+tfidf_char:
+  analyzer: char_wb
+  ngram_range: [3, 5]
+  max_features: 20000
   sublinear_tf: true
   min_df: 3
   max_df: 0.95
 
 dimensionality_reduction:
-  enabled: true
+  enabled: false
   n_components: 300
 
 ml_models:
   logistic_regression:
     max_iter: 5000
     class_weight: balanced
-    C: 1.0
+    C: 0.5
     solver: lbfgs
 
   svm:
     max_iter: 10000
-    class_weight: balanced
+    class_weight: null
     C: 1.0
     dual: auto
 
   naive_bayes:
-    alpha: 0.5
+    alpha: 1.0
 
   xgboost:
-    n_estimators: 200
+    n_estimators: 300
     max_depth: 6
-    learning_rate: 0.05
+    learning_rate: 0.1
     tree_method: hist
-    n_jobs: 4
+    n_jobs: 2
     subsample: 0.8
     colsample_bytree: 0.8
     eval_metric: mlogloss
+    reg_lambda: 1.0
 
   random_forest:
     n_estimators: 300
-    max_depth: 20
-    class_weight: balanced
+    max_depth: 30
+    class_weight: null
     n_jobs: 4
 
 grid_search:
@@ -47,17 +58,17 @@ grid_search:
   scoring: f1_macro
   param_grid:
     logistic_regression:
-      clf__C: [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+      clf__C: [0.5, 1.0, 4.0, 10.0]
     svm:
-      clf__C: [0.01, 0.1, 0.5, 1.0, 2.0, 5.0]
+      clf__C: [0.1, 0.5, 1.0, 4.0]
     naive_bayes:
-      clf__alpha: [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]
+      clf__alpha: [0.1, 0.5, 1.0, 2.0]
     xgboost:
-      clf__n_estimators: [100, 200, 300]
-      clf__max_depth: [4, 6, 8]
+      clf__n_estimators: [200, 400]
+      clf__max_depth: [4, 6]
       clf__learning_rate: [0.05, 0.1]
     random_forest:
-      clf__n_estimators: [200, 300, 500]
+      clf__n_estimators: [300, 500]
       clf__max_depth: [20, 50, null]
 
 transformer:
@@ -65,43 +76,50 @@ transformer:
     model_name: distilbert-base-uncased
     use_pretrained: true
     max_length: 512
-    batch_size: 8
+    batch_size: 16
     learning_rate: 2.0e-5
-    weight_decay: 0.05
-    num_epochs: 15
-    warmup_ratio: 0.1
+    weight_decay: 0.01
+    num_epochs: 5
+    warmup_ratio: 0.06
     lr_scheduler: linear
-    early_stopping_patience: 3
+    early_stopping_patience: 2
     fp16: true
     gradient_accumulation_steps: 2
-    dropout: 0.2
+    dropout: 0.1
+    loss_weighting: sqrt_balanced
 
   roberta:
     model_name: roberta-base
     use_pretrained: true
     max_length: 512
-    batch_size: 4
+    batch_size: 2
     learning_rate: 2.0e-5
-    weight_decay: 0.05
-    num_epochs: 15
-    warmup_ratio: 0.1
+    weight_decay: 0.01
+    num_epochs: 10
+    warmup_ratio: 0.06
     lr_scheduler: linear
     early_stopping_patience: 3
     fp16: true
-    gradient_accumulation_steps: 4
-    dropout: 0.2
+    gradient_accumulation_steps: 8
+    dropout: 0.1
+    loss_weighting: sqrt_balanced
 
   dataset_overrides:
     essays:
       max_length: 384
       num_epochs: 10
       early_stopping_patience: 3
+    pandora:
+      max_length: 256
+      num_epochs: 3
+      early_stopping_patience: 2
+      batch_size: 32
     pandora_big5:
-      max_length: 128
-      num_epochs: 1
-      early_stopping_patience: 1
+      max_length: 256
+      num_epochs: 3
+      early_stopping_patience: 2
     personality_evd:
-      max_length: 64
+      max_length: 256
       num_epochs: 10
       early_stopping_patience: 3
       distilbert:

@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "xai_personality_detection",
+  "project_id": "8d6479a5-0f7b-47ab-992b-6dbede1fc8a5"
+}
