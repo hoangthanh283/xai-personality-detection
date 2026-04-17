@@ -17,14 +17,10 @@ from loguru import logger
 try:
     import torch
     from datasets import Dataset as HFDataset
-    from transformers import (
-        AutoModelForSequenceClassification,
-        AutoTokenizer,
-        DataCollatorWithPadding,
-        EarlyStoppingCallback,
-        Trainer,
-        TrainingArguments,
-    )
+    from transformers import (AutoModelForSequenceClassification,
+                              AutoTokenizer, DataCollatorWithPadding,
+                              EarlyStoppingCallback, Trainer,
+                              TrainingArguments)
 
     HAS_TRANSFORMERS = True
 except ImportError:
@@ -66,12 +62,13 @@ if HAS_TRANSFORMERS:
         def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
             labels = inputs.get("labels")
             outputs = model(**{k: v for k, v in inputs.items() if k != "labels"})
+            logits = outputs.get("logits") if isinstance(outputs, dict) else outputs.logits
 
-            if labels is None or self.class_weights is None:
+            if labels is None:
                 loss = outputs.get("loss") if isinstance(outputs, dict) else outputs.loss
             else:
-                logits = outputs.get("logits") if isinstance(outputs, dict) else outputs.logits
-                loss_fct = torch.nn.CrossEntropyLoss(weight=self.class_weights.to(logits.device))
+                weight = self.class_weights.to(logits.device) if self.class_weights is not None else None
+                loss_fct = torch.nn.CrossEntropyLoss(weight=weight)
                 loss = loss_fct(logits.view(-1, model.config.num_labels), labels.view(-1))
 
             return (loss, outputs) if return_outputs else loss
@@ -148,7 +145,7 @@ class TransformerBaseline:
         sqrt_balanced: sqrt-dampened weights, capped at 4x (safer for imbalanced multi-class)
         """
         weighting = getattr(self.config, "loss_weighting", "sqrt_balanced")
-        if weighting == "none":
+        if weighting is None or weighting == "none":
             return None
 
         from sklearn.utils.class_weight import compute_class_weight
@@ -163,12 +160,13 @@ class TransformerBaseline:
             counts = np.where(counts == 0, 1.0, counts)
             raw = counts.sum() / (n_classes * counts)
             weights = np.sqrt(raw)
-            weights = np.clip(weights, 1.0 / 4.0, 4.0)
+            weights = np.clip(weights, 0.5, 2.0)
 
         return torch.tensor(weights, dtype=torch.float32)
 
     def _compute_metrics(self, eval_pred) -> dict:
-        from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+        from sklearn.metrics import (accuracy_score, f1_score, precision_score,
+                                     recall_score)
 
         logits, labels = eval_pred
         preds = np.argmax(logits, axis=-1)
@@ -215,13 +213,16 @@ class TransformerBaseline:
             "id2label": self.id2label,
             "label2id": self.label2id,
         }
-        if self.config.dropout is not None:
-            model_kwargs["dropout"] = self.config.dropout
-            model_kwargs["seq_classif_dropout"] = self.config.dropout
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.config.model_name,
             **model_kwargs,
         )
+        if self.config.dropout is not None:
+            mc = self.model.config
+            for attr in ("dropout", "seq_classif_dropout", "hidden_dropout_prob",
+                         "attention_probs_dropout_prob", "classifier_dropout"):
+                if hasattr(mc, attr):
+                    setattr(mc, attr, self.config.dropout)
         logger.info(
             "Loaded pretrained checkpoint: "
             f"{getattr(self.model.config, '_name_or_path', self.config.model_name)}"
@@ -313,7 +314,7 @@ class TransformerBaseline:
         all_preds = []
 
         for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i : i + batch_size]
+            batch_texts = texts[i: i + batch_size]
             prepared_batch_texts = self._prepare_texts_for_tokenizer(batch_texts)
             inputs = self.tokenizer(
                 prepared_batch_texts,
@@ -330,13 +331,8 @@ class TransformerBaseline:
         return all_preds
 
     def evaluate(self, texts: list[str], labels: list[str]) -> dict:
-        from sklearn.metrics import (
-            accuracy_score,
-            classification_report,
-            f1_score,
-            precision_score,
-            recall_score,
-        )
+        from sklearn.metrics import (accuracy_score, classification_report,
+                                     f1_score, precision_score, recall_score)
 
         preds = self.predict(texts)
         return {

@@ -474,12 +474,20 @@ def main():
                 logger.error(f"Training failed for {model}/{task}: {e}")
                 raise
 
-    # Save results summary
+    # Save results summary — merge with existing file so parallel runs accumulate
     output_path = Path("outputs/reports")
     output_path.mkdir(parents=True, exist_ok=True)
     results_file = output_path / "baseline_results.json"
+    existing = {}
+    if results_file.exists():
+        try:
+            with open(results_file) as f:
+                existing = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            existing = {}
+    existing.update(all_results)
     with open(results_file, "w") as f:
-        json.dump(all_results, f, indent=2, default=str)
+        json.dump(existing, f, indent=2, default=str)
     logger.info(f"\nAll results saved to {results_file}")
 
     # Log aggregate summary run to W&B (useful when running multiple models/tasks)

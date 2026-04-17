@@ -17,13 +17,8 @@ from loguru import logger
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    f1_score,
-    precision_score,
-    recall_score,
-)
+from sklearn.metrics import (accuracy_score, classification_report, f1_score,
+                             precision_score, recall_score)
 from sklearn.model_selection import GridSearchCV
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -356,13 +351,8 @@ class EnsembleClassifier:
         return preds
 
     def evaluate(self, texts: list[str], labels: list[str]) -> dict:
-        from sklearn.metrics import (
-            accuracy_score,
-            classification_report,
-            f1_score,
-            precision_score,
-            recall_score,
-        )
+        from sklearn.metrics import (accuracy_score, classification_report,
+                                     f1_score, precision_score, recall_score)
 
         preds = self.predict(texts)
         return {

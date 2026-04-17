@@ -23,7 +23,7 @@ run_baseline --model distilbert --dataset mbti --task 4dim
 run_baseline --model roberta --dataset mbti --task 4dim
 run_baseline --model distilbert --dataset essays --task ocean_binary
 run_baseline --model roberta --dataset essays --task ocean_binary
-run_baseline --model distilbert --dataset pandora_big5 --task ocean_binary
-run_baseline --model roberta --dataset pandora_big5 --task ocean_binary
+run_baseline --model distilbert --dataset pandora --task ocean_binary
+run_baseline --model roberta --dataset pandora --task ocean_binary
 run_baseline --model distilbert --dataset personality_evd --task ocean_binary
 run_baseline --model roberta --dataset personality_evd --task ocean_binary
