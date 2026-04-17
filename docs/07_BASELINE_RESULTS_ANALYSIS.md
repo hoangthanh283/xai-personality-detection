@@ -172,29 +172,29 @@ Sun et al. EMNLP 2024. 72 fictional Chinese characters, 1,924 dialogues. English
 
 #### Accuracy per trait
 
-| Model      |   O    |   C    |   E    |   A    |   N    | Mean  |
-|------------|:------:|:------:|:------:|:------:|:------:|:-----:|
-| LR         | 82.3%  | 79.1%  | 31.4%  | 64.6%  | 48.0%  | 61.1% |
-| SVM        | 90.3%  | 86.6%  | 97.5%  | 68.2%  | 62.1%  | 80.9% |
-| NB         | 89.5%  | 87.0%  | 97.5%  | 67.9%  | 62.1%  | 80.8% |
-| XGBoost    | 89.5%  | 86.3%  | 97.5%  | 69.7%  | 59.6%  | 80.5% |
-| RF         | 90.3%  | 87.0%  | 97.5%  | 69.0%  | 60.3%  | 80.8% |
-| DistilBERT | 89.5%  | 87.0%  | 97.5%  | 68.2%  | 65.0%  | 81.4% |
-| LSTM       | 89.5%  | 87.0%  | 97.5%  | 68.2%  | 60.7%  | 80.5% |
-| RoBERTa    |   —    |   —    |   —    |   —    |   —    |   —   |
+| Model | [O](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o0zyruc3) | [C](https://wandb.ai/thanh-workspace/XAI-RAG/runs/hdycjhbp) | [E](https://wandb.ai/thanh-workspace/XAI-RAG/runs/psrg2k2a) | [A](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8ovh3mbe) | [N](https://wandb.ai/thanh-workspace/XAI-RAG/runs/4hfh4bl4) | Mean |
+|-------|:--:|:--:|:--:|:--:|:--:|:---:|
+| LR | [82.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o0zyruc3) | [79.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/hdycjhbp) | [31.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/psrg2k2a) | [64.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8ovh3mbe) | [48.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/4hfh4bl4) | 61.1% |
+| SVM | [90.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9dvi75ja) | [86.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/bi8dlg7u) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/biyenbxo) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wrhrngpp) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m5iyicat) | 80.9% |
+| NB | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/6l0c5xrj) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8eolj5tw) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aottggwa) | [67.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/w4smdvbk) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/b3ndazcp) | 80.8% |
+| XGBoost | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/f0zgnp8r) | [86.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/onajmb9z) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mrqnwz77) | [69.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lvu33z73) | [59.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/hyag42n1) | 80.5% |
+| RF | [90.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/eb2xcz83) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/akd09gmf) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cbtlunau) | [69.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/99lex9ty) | [60.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vfj7z07l) | 80.8% |
+| DistilBERT | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cbm5ny1t) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mucf7vq2) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ggjeg820) | [65.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dgs85426) | 81.4% |
+| LSTM | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/afczjjc1) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ccgfg091) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cncic9dx) | [60.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7c3j09a4) | 80.5% |
+| RoBERTa | [O](https://wandb.ai/thanh-workspace/XAI-RAG/runs/l6w15fsv) | — | — | — | — | — |
 
 #### F1-Macro per trait
 
-| Model      |   O    |   C    |   E    |   A    |   N    | Mean  |
-|------------|:------:|:------:|:------:|:------:|:------:|:-----:|
-| LR         | 58.4%  | 55.8%  | 26.0%  | 49.1%  | 46.6%  | 47.2% |
-| SVM        | 53.9%  | 46.4%  | 49.4%  | 45.5%  | 45.1%  | 48.0% |
-| NB         | 47.2%  | 46.5%  | 49.4%  | 44.4%  | 43.8%  | 46.3% |
-| XGBoost    | 47.2%  | 46.3%  | 49.4%  | 47.9%  | 41.1%  | 46.4% |
-| RF         | 53.9%  | 46.5%  | 49.4%  | 46.7%  | 41.5%  | 47.6% |
-| DistilBERT | 47.2%  | 46.5%  | 49.4%  | 40.6%  | 56.9%  | 48.1% |
-| LSTM       | 47.2%  | 46.5%  | 49.4%  | 40.6%  | 38.6%  | 44.5% |
-| RoBERTa    |   —    |   —    |   —    |   —    |   —    |   —   |
+| Model | O | C | E | A | N | Mean |
+|-------|:--:|:--:|:--:|:--:|:--:|:---:|
+| LR | [58.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o0zyruc3) | [55.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/hdycjhbp) | [26.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/psrg2k2a) | [49.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8ovh3mbe) | [46.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/4hfh4bl4) | 47.2% |
+| SVM | [53.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9dvi75ja) | [46.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/bi8dlg7u) | [49.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/biyenbxo) | [45.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wrhrngpp) | [45.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m5iyicat) | 48.0% |
+| NB | [47.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/6l0c5xrj) | [46.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8eolj5tw) | [49.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aottggwa) | [44.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/w4smdvbk) | [43.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/b3ndazcp) | 46.3% |
+| XGBoost | [47.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/f0zgnp8r) | [46.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/onajmb9z) | [49.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mrqnwz77) | [47.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lvu33z73) | [41.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/hyag42n1) | 46.4% |
+| RF | [53.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/eb2xcz83) | [46.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/akd09gmf) | [49.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cbtlunau) | [46.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/99lex9ty) | [41.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vfj7z07l) | 47.6% |
+| DistilBERT | [47.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) | [46.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cbm5ny1t) | [49.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mucf7vq2) | [40.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ggjeg820) | [56.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dgs85426) | 48.1% |
+| LSTM | [47.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) | [46.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/afczjjc1) | [49.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ccgfg091) | [40.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cncic9dx) | [38.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7c3j09a4) | 44.5% |
+| RoBERTa | [O](https://wandb.ai/thanh-workspace/XAI-RAG/runs/l6w15fsv) | — | — | — | — | — |
 
 **Note:** Extraversion (E) accuracy ~97.5% reflects label skew (97.5% HIGH in training). F1-Macro ~49% correctly captures the near-random genuine detection. This is a dataset artifact, not a model achievement.
 
@@ -295,13 +295,13 @@ Text length (OCEAN-labeled): median 2,000 words (truncated), mean 1,703 words. T
 | Model | O | C | E | A | N | Mean Acc | Mean F1 |
 |-------|:-:|:-:|:-:|:-:|:-:|:--------:|:-------:|
 | Majority class (dummy) | 63.4% | 61.6% | 64.2% | 59.9% | 55.2% | **60.9%** | ~38% |
-| LR | 65.9% | 55.6% | 60.8% | 60.3% | 56.9% | 59.9% | 54.6% |
-| SVM | 67.2% | 58.2% | 62.9% | 59.1% | 56.5% | 60.8% | 49.2% |
-| NB | 63.4% | 61.6% | 64.2% | 59.9% | 56.9% | 61.2% | 39.5% |
-| XGBoost | 65.1% | 60.8% | 63.8% | 59.5% | 55.6% | 60.9% | 48.6% |
-| RF | 63.4% | 61.6% | 64.7% | 59.5% | 54.3% | 60.7% | 41.4% |
-| DistilBERT | 63.4% | 61.6% | 64.2% | 60.3% | 58.2% | **61.6%** | **40.3%** |
-| LSTM | 63.4% | 62.1% | 64.2% | 62.5% | 52.6% | 62.1% | 44.8% |
+| [LR](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wew490j9) | [65.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wew490j9) | [55.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/hr4bkv7a) | [60.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9r86hl95) | [60.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m1f3m395) | [56.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/4hhbxc3o) | 59.9% | 54.6% |
+| [SVM](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o2o8vb3t) | [67.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o2o8vb3t) | [58.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/iprfaznj) | [62.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/eecxwn01) | [59.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vlowa974) | [56.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/r7qgupl1) | 60.8% | 49.2% |
+| [NB](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2oy5fh5s) | [63.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2oy5fh5s) | [61.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/qacc5hpm) | [64.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/s2xmiiax) | [59.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/pmii7pde) | [56.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/uww4yhyi) | 61.2% | 39.5% |
+| [XGBoost](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vzrsv5u2) | [65.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vzrsv5u2) | [60.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/08hi4vq9) | [63.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ajr0lwlg) | [59.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/f8cs3y7z) | [55.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/79fq32bc) | 60.9% | 48.6% |
+| [RF](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2fl7f0if) | [63.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2fl7f0if) | [61.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/amtulbji) | [64.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dd6d2ggq) | [59.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ug6k4ydr) | [54.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ou9n8hze) | 60.7% | 41.4% |
+| [DistilBERT](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [63.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [61.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wilkgati) | [64.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7akqyhpb) | [60.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/fv432rwp) | [58.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nhowbwev) | **61.6%** | **40.3%** |
+| [LSTM](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [63.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/c3msl1nr) | [64.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/q2d8ca8v) | [62.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wcuz01lm) | [52.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/w4lucsei) | 62.1% | 44.8% |
 | RoBERTa+MLP (arXiv:2406.16223) | 84.0% | 88.0% | 61.0% | 79.0% | 62.0% | **74.8%** | **68.0%** |
 
 #### Root Cause Analysis
