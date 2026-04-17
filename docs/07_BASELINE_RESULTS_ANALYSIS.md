@@ -354,8 +354,9 @@ Not directly comparable — original paper uses regression (Pearson r), not bina
 |--------|-------|:-:|:-:|:-:|:-:|:-:|:--------:|
 | Sun et al. EMNLP 2024 — GLM-32k | Fine-tuned LLM | 81.8% | 86.1% | 95.8% | 73.1% | 52.2% | 77.8% |
 | Sun et al. EMNLP 2024 — Qwen-32k | Fine-tuned LLM | — | — | — | — | — | 76.6% |
-| **This repo — DistilBERT** | DistilBERT (English) | 89.5% | 87.0% | 97.5% | 68.2% | 65.0% | 81.4% |
-| **This repo — SVM** | TF-IDF + SVM | 90.3% | 86.6% | 97.5% | 68.2% | 62.1% | 80.9% |
+| **This repo — DistilBERT** | DistilBERT (English) | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cbm5ny1t) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mucf7vq2) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ggjeg820) | [65.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dgs85426) | 81.4% |
+| **This repo — SVM** | TF-IDF + SVM | [90.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9dvi75ja) | [86.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/bi8dlg7u) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/biyenbxo) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wrhrngpp) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m5iyicat) | 80.9% |
+| **This repo — LSTM** | BiLSTM+Attn | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/afczjjc1) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ccgfg091) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cncic9dx) | [60.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7c3j09a4) | 80.5% |
 
 **Verdict:** Our accuracy numbers are comparable to or slightly above the paper's LLM baselines, but this reflects the same label skew (E trait 97.5% HIGH). F1-Macro (~47–48%) correctly shows near-chance genuine detection. The paper's primary metric is **evidence identification F1** (gold evidence spans), not classification accuracy — so accuracy comparison is secondary. ℹ️
 
@@ -460,9 +461,9 @@ This section compares our baselines against the latest published SOTA, including
 | RoBERTa-base (2022) | 77.1% | 86.5% | 79.6% | 70.6% | 78.5% | ❌ Unclear | HIPPD paper |
 | GPT-4o zero-shot (2025) | 80.3% | 86.6% | 78.3% | 71.0% | 79.0% | ❌ Unclear | HIPPD (arXiv:2510.09893) |
 | HIPPD (Oct 2025) | **85.4%** | **92.0%** | **85.3%** | **81.6%** | **86.1%** | ❌ No | arXiv:2510.09893 |
-| **This repo — SVM** | 77.9% | 86.9% | 78.6% | 65.6% | 77.3% | ✅ Yes | — |
-| **This repo — DistilBERT** | 76.6% | 86.1% | 73.2% | 61.8% | 74.4% | ✅ Yes | — |
-| **This repo — LSTM** | 75.6% | 86.0% | 70.0% | 60.9% | 73.1% | ✅ Yes | — |
+| **This repo — SVM** | [77.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/av3cme4u) | [86.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ru81ij2y) | [78.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2yahcnpg) | [65.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ewf75t9) | 77.3% | ✅ Yes | — |
+| **This repo — DistilBERT** | [76.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [86.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/p3rb4wpp) | [73.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/yet39xow) | [61.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e9brdohm) | 74.4% | ✅ Yes | — |
+| **This repo — LSTM** | [75.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [86.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nurzobb2) | [70.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e0thck6a) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m8tdewb9) | 73.1% | ✅ Yes | — |
 
 > **Key observation**: HIPPD's 86.1% average is on raw Kaggle data without type-mention removal. On cleaned data, the gap to a properly tuned RoBERTa should be ~5–8 pp, not ~8+ pp.
 
@@ -475,9 +476,9 @@ This section compares our baselines against the latest published SOTA, including
 | DeepSeek-V3 zero-shot | 51.7% | ❌ Unclear | HIPPD (2025) |
 | GPT-4o zero-shot | 54.1% | ❌ Unclear | HIPPD (2025) |
 | **HIPPD (2025)** | **73.0%** | ❌ No | arXiv:2510.09893 |
-| **This repo — SVM** | 37.0% | ✅ Yes | — |
-| **This repo — DistilBERT** | 27.4% | ✅ Yes | — |
-| **This repo — LSTM** | 25.2% | ✅ Yes | — |
+| **This repo — SVM** | [37.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/jifrp1iq) | ✅ Yes | — |
+| **This repo — DistilBERT** | [27.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | ✅ Yes | — |
+| **This repo — LSTM** | [25.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | ✅ Yes | — |
 
 > **Conclusion**: HIPPD's 73% is on raw data. Even BERT (34.6%) and GPT-4o (54.1%) underperform HIPPD's specialized architecture. On cleaned Kaggle 16-class, 35–55% is the realistic ceiling for transformers.
 
@@ -491,9 +492,9 @@ This section compares our baselines against the latest published SOTA, including
 | IDGWOFS+feature sel. (2022) | 75.1% | 77.7% | 76.8% | 76.0% | 73.2% | 71.7% | Inf Proc Mgmt 2022 |
 | HPMN Hierarchical BERT (2023) | **80.9%** | — | — | — | — | — | Cited in arXiv:2307.03952 |
 | ChatGPT-4 CoT zero-shot (2023) | 57.8% | 65.7% | 53.2% | 49.2% | 60.9% | 60.1% | arXiv:2307.03952 |
-| **This repo — DistilBERT** | 57.3% | 61.2% | 57.1% | 57.4% | 56.1% | 54.4% | — |
-| **This repo — SVM** | 57.6% | 60.7% | 56.1% | 56.6% | 59.0% | 55.5% | — |
-| **This repo — LSTM** | 54.4% | 58.8% | 54.2% | 55.3% | 52.6% | 51.2% | — |
+| **This repo — DistilBERT** | 57.3% | [61.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/xjvpelpp) | [57.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/26o2n1nf) | [57.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nl7xpfdq) | [56.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/um7b331p) | [54.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/0zoj2f62) | — |
+| **This repo — SVM** | 57.6% | [60.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/fcje9771) | [56.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/1ues783u) | [56.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/4ab91ngw) | [59.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/p0cluw4k) | [55.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dmseork0) | — |
+| **This repo — LSTM** | 54.4% | [58.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/gymkvnw7) | [54.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/uiap1r27) | [55.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/n0jzrv0v) | [52.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e5r1p1v2) | [51.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/rf3sjhxy) | — |
 
 > **Our gap**: ~4 pp below Kazameini 2020 (59%), ~14 pp below IDGWOFS 2022 (75%), ~24 pp below HPMN 2023 (81%). HPMN uses hierarchical pooling — our 512-token truncation is a major contributor to the gap.
 
@@ -502,9 +503,9 @@ This section compares our baselines against the latest published SOTA, including
 | Method | O | C | E | A | N | Mean | Source |
 |--------|:-:|:-:|:-:|:-:|:-:|:----:|--------|
 | RoBERTa+MLP (2024) | 84% | **88%** | 61% | 79% | 62% | **75%** | arXiv:2406.16223 |
-| **This repo — SVM** | 67.2% | 58.2% | 62.9% | 59.1% | 56.5% | 60.8% | — |
-| **This repo — DistilBERT** | 67.6% | 63.8% | 64.2% | 61.3% | 60.5% | 61.5% | — |
-| **This repo — LSTM** | 63.4% | 62.1% | 64.2% | 62.5% | 52.6% | 62.1% | — |
+| **This repo — SVM** | [67.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o2o8vb3t) | [58.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/iprfaznj) | [62.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/eecxwn01) | [59.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vlowa974) | [56.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/r7qgupl1) | 60.8% | — |
+| **This repo — DistilBERT** | [67.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [63.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wilkgati) | [64.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7akqyhpb) | [61.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/fv432rwp) | [60.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nhowbwev) | 61.5% | — |
+| **This repo — LSTM** | [63.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/c3msl1nr) | [64.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/q2d8ca8v) | [62.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wcuz01lm) | [52.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/w4lucsei) | 62.1% | — |
 
 > **Gap**: ~15 pp below RoBERTa+MLP (2024). Their model uses more training data, larger batch, and MLP head on top of RoBERTa pooled representations. Our DistilBERT is a reasonable baseline given the 232-sample test set noise.
 
@@ -514,9 +515,9 @@ This section compares our baselines against the latest published SOTA, including
 |--------|:-:|:-:|:-:|:-:|:-:|:--------:|:-----:|--------|
 | GLM-32k fine-tuned (2024) | 81.8% | 86.1% | **95.8%** | 73.1% | 52.2% | **77.8%** | 40.3 | EMNLP 2024 |
 | Qwen-32k fine-tuned (2024) | — | — | — | — | — | 76.6% | 44.4 | EMNLP 2024 |
-| **This repo — DistilBERT (English)** | **89.5%** | **87.0%** | **97.5%** | 68.2% | 65.0% | 81.4% | — | — |
-| **This repo — SVM** | 90.3% | 86.6% | 97.5% | 68.2% | 62.1% | 80.9% | — | — |
-| **This repo — LSTM** | 89.5% | 87.0% | 97.5% | 68.2% | 60.7% | 80.5% | — | — |
+| **This repo — DistilBERT (English)** | [**89.5%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) | [**87.0%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cbm5ny1t) | [**97.5%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mucf7vq2) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ggjeg820) | [65.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dgs85426) | 81.4% | — | — |
+| **This repo — SVM** | [90.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9dvi75ja) | [86.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/bi8dlg7u) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/biyenbxo) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wrhrngpp) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m5iyicat) | 80.9% | — | — |
+| **This repo — LSTM** | [89.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) | [87.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/afczjjc1) | [97.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ccgfg091) | [68.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cncic9dx) | [60.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7c3j09a4) | 80.5% | — | — |
 
 > **Caveat**: High accuracy inflated by E-trait skew (97.5% HIGH). F1-Macro (~47–48%) is the honest metric. The paper's primary evaluation is evidence F1, not classification accuracy. Multilingual rerun with `distilbert-base-multilingual-cased` is pending.
 
