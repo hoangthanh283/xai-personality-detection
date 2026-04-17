@@ -311,13 +311,21 @@ class LSTMBaseline:
                 total_loss += loss.item()
 
             # Validate
+            avg_loss = total_loss / len(train_loader)
             val_acc, val_f1 = self._eval_epoch(val_loader, device)
             scheduler.step(val_acc)
             logger.info(
                 f"Epoch {epoch}/{self.config.num_epochs} | "
-                f"loss={total_loss / len(train_loader):.4f} | "
-                f"val_acc={val_acc:.4f} | val_f1={val_f1:.4f}"
+                f"loss={avg_loss:.4f} | val_acc={val_acc:.4f} | val_f1={val_f1:.4f}"
             )
+
+            try:
+                import wandb as _wandb
+                if _wandb.run:
+                    _wandb.log({"epoch": epoch, "train_loss": avg_loss,
+                                "eval_accuracy": val_acc, "eval_f1_macro": val_f1})
+            except Exception:
+                pass
 
             if val_acc > best_val_acc:
                 best_val_acc, best_epoch, patience_count = val_acc, epoch, 0

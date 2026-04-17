@@ -143,8 +143,8 @@ lstm:
   weight_decay: 1.0e-4
   num_epochs: 20
   early_stopping_patience: 5
-  loss_weighting: none
-  glove_path: null        # set to path of glove.6B.300d.txt to use pretrained embeddings
+  loss_weighting: sqrt_balanced  # needed for imbalanced tasks (16class, SN)
+  glove_path: data/embeddings/glove.6B.300d.txt  # download with scripts/download_embeddings.py
   freeze_embeddings: false
 
 output_dir: outputs/models/
