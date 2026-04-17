@@ -52,7 +52,6 @@ wandb/
 # Logs
 *.log
 logs/
-docs/
 outputs/
 assets/
 
