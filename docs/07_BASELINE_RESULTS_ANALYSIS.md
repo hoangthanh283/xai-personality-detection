@@ -437,7 +437,7 @@ The E-trait skew (97.5% HIGH) makes accuracy a misleading metric. The dataset is
 
 ### High Priority
 
-- [x] **RoBERTa full matrix** — Complete for MBTI 16-class, MBTI 4-dim, Essays OCEAN, and Pandora OCEAN. personality_evd OOM'd on first run; rerunning with batch=1 + grad_accum=32 + max_length=192.
+- [x] **RoBERTa full matrix** — Complete for MBTI 16-class, MBTI 4-dim, Essays OCEAN, and Pandora OCEAN (W&B links live in sections 3.x above). personality_evd (XLM-R) blocked by GPU contention with 3 concurrent RAG-XPR jobs; XLM-R-base has a 250K vocab that doesn't fit alongside them in the 5.6 GB GPU. Rerun available via `bash scripts/rerun_roberta_personality_evd.sh` (uses batch=1, grad_accum=32, gradient_checkpointing=true — will succeed once RAG-XPR jobs free the GPU).
 - [ ] **personality_evd multilingual rerun** — DistilBERT + XLM-R pending. DistilBERT currently uses `distilbert-base-uncased` (English-only) on Chinese dialogue. Must rerun with `distilbert-base-multilingual-cased` and `xlm-roberta-base` as configured in `baseline_config.yaml:107–110`.
 - [x] **LSTM full matrix** — BiLSTM+attention baseline complete for all 5 datasets (v1 random init + v2 GloVe).
 
