@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-04-18
 
-> Measured baseline numbers and SOTA comparison live in [07_BASELINE_RESULTS_ANALYSIS.md](./07_BASELINE_RESULTS_ANALYSIS.md). This document defines *how* metrics are computed; numbers are traceable to individual W&B runs.
+> This document defines *how* metrics are computed. Measured runs are traceable to individual W&B experiments.
 
 ## 1. Classification Metrics (Automated)
 

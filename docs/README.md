@@ -8,13 +8,6 @@ This project implements **RAG-based Explainable Personality Recognition (RAG-XPR
 
 ## Documentation Index
 
-### Start here
-| Document | Purpose |
-|----------|---------|
-| [PROJECT_STATUS.md](./PROJECT_STATUS.md) | **One-page dashboard of current state** — what's done, what's running, what's next, how to resume |
-| [PROGRESS_SLIDES.md](./PROGRESS_SLIDES.md) | 5-slide progress update for team + professor |
-
-### Design & reference
 | Document | Purpose |
 |----------|---------|
 | [01_CODEBASE_DESIGN.md](./01_CODEBASE_DESIGN.md) | Repository structure, module responsibilities, tech stack |
@@ -24,13 +17,6 @@ This project implements **RAG-based Explainable Personality Recognition (RAG-XPR
 | [05_EXPERIMENT_PLAN.md](./05_EXPERIMENT_PLAN.md) | Full experiment matrix, metrics, ablations |
 | [06_EVALUATION_PROTOCOL.md](./06_EVALUATION_PROTOCOL.md) | Classification + XAI metrics, statistical tests, human eval |
 | [08_DATA_ANALYSIS.md](./08_DATA_ANALYSIS.md) | Dataset statistics, label distributions, quality checks |
-
-### Results & reproducibility
-| Document | Purpose |
-|----------|---------|
-| [07_BASELINE_RESULTS_ANALYSIS.md](./07_BASELINE_RESULTS_ANALYSIS.md) | **All baseline results** with clickable W&B links on every cell; SOTA comparisons; root-cause analysis |
-| [WANDB_EXPERIMENT_INDEX.md](./WANDB_EXPERIMENT_INDEX.md) | Flat directory of every W&B run by model × dataset × task |
-| [BASELINE_RERUN_GUIDE.md](./BASELINE_RERUN_GUIDE.md) | Step-by-step commands to reproduce the full baseline matrix |
 
 ## Architecture Diagram
 
@@ -65,7 +51,7 @@ This project implements **RAG-based Explainable Personality Recognition (RAG-XPR
 | DistilBERT | All 5 datasets | 74.4% MBTI 4-dim |
 | RoBERTa | 4/5 datasets (personality_evd pending GPU) | 74.9% MBTI 4-dim |
 
-Every cell in [07_BASELINE_RESULTS_ANALYSIS.md](./07_BASELINE_RESULTS_ANALYSIS.md) is a clickable W&B link — numbers are fully auditable.
+Baseline runs are tracked in W&B, so reported numbers remain auditable at the run level.
 
 ### RAG-XPR pipeline — wired end-to-end, first evaluation runs in flight
 
@@ -96,7 +82,7 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
 # 5. Build knowledge base
 make kb-build
 
-# 6. Run baselines (see BASELINE_RERUN_GUIDE.md)
+# 6. Run baselines (see 03_BASELINE_MODELS.md)
 bash scripts/run_cpu_classical_baselines.sh
 bash scripts/run_gpu_transformer_baselines.sh
 
@@ -115,7 +101,7 @@ make evaluate
 - **scikit-learn** + **XGBoost** (classical ML baselines)
 - **Qdrant** (vector DB) + **sentence-transformers** (embeddings)
 - **LLM clients**: OpenAI / OpenRouter / local (provider-agnostic via `src/rag_pipeline/llm_client.py`)
-- **Weights & Biases** (every run tracked; see `WANDB_EXPERIMENT_INDEX.md`)
+- **Weights & Biases** (every run tracked with configs, metrics, and artifacts)
 - **Streamlit** demo UI (`app/demo.py`)
 - **Beads** for issue tracking (`bd ready`, `bd close`)
 

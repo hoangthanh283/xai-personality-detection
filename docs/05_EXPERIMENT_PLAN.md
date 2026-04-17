@@ -10,7 +10,7 @@ All experiments use seed=42. 3 random restarts planned for final paper numbers.
 
 **Goal:** Establish accuracy baselines WITHOUT explainability.
 
-**Status (2026-04-18):** 110+ W&B runs complete. Every result in `07_BASELINE_RESULTS_ANALYSIS.md` links to its W&B run.
+**Status (2026-04-18):** 110+ W&B runs complete and logged in W&B.
 
 **Matrix (8 model families × 5 datasets):**
 

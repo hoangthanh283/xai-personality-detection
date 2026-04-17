@@ -17,7 +17,7 @@ All baselines are run on **5 datasets**:
 - **Pandora Big5** (HuggingFace mirror) — OCEAN binary (1.65M records; partially trained)
 - **personality_evd** — OCEAN binary (Chinese dialogues; multilingual models required)
 
-> **Status:** All baselines complete with 110+ W&B runs. See `07_BASELINE_RESULTS_ANALYSIS.md` for all numbers with clickable W&B links on every cell.
+> **Status:** All baselines complete with 110+ W&B runs.
 
 > **Regime:** 100% leakage-free. MBTI type mentions stripped (0/8,675 users retain type keywords, verified). See `src/utils/text_utils.clean_text_pipeline`.
 
@@ -188,7 +188,7 @@ python scripts/train_baseline.py \
 | BiLSTM + Attn | **62.1%** | 44.8% |
 | **Published SOTA (RoBERTa+MLP, arXiv:2406.16223)** | **74.8%** | **68.0%** |
 
-Full numbers (every cell with W&B link): [07_BASELINE_RESULTS_ANALYSIS.md](./07_BASELINE_RESULTS_ANALYSIS.md).
+Full per-dataset runs are recorded in W&B for metric-level traceability.
 
 ---
 
