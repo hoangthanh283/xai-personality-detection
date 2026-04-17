@@ -266,6 +266,8 @@ class TransformerBaseline:
             "seed": self.config.seed,
             "logging_steps": 50,
         }
+        if getattr(self.config, "gradient_checkpointing", False):
+            training_args_kwargs["gradient_checkpointing"] = True
         training_args_params = inspect.signature(TrainingArguments.__init__).parameters
         if "evaluation_strategy" in training_args_params:
             training_args_kwargs["evaluation_strategy"] = "epoch"

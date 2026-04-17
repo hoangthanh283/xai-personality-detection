@@ -171,7 +171,7 @@ LSTM v2 = GloVe 300d + sqrt_balanced weights (in progress). LSTM v1 = random ini
 ## RoBERTa
 
 > Config: `roberta-base`, LR=1e-5, cosine scheduler, max_length=512, fp16, grad_accum=8, early stopping patience=5.  
-> personality_evd uses `xlm-roberta-base` (multilingual). personality_evd run may be incomplete — check W&B for final status.
+> personality_evd uses `xlm-roberta-base` (multilingual); OOM'd on 6 GB GPU at batch=2. Rerun with: `bash scripts/rerun_roberta_personality_evd.sh` (uses batch=1 + grad_accum=32 + max_length=128).
 
 | Run | Dataset / Task | W&B Link |
 |-----|---------------|----------|
