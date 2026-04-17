@@ -1,16 +1,58 @@
 sources:
-  - name: mbti_type_descriptions
+  # Legacy minimal definitions (kept for backward compatibility)
+  - name: mbti_type_descriptions_legacy
     path: data/knowledge_base/mbti_definitions.jsonl
     framework: mbti
     category: type_description
 
-  - name: ocean_trait_definitions
+  - name: ocean_trait_definitions_legacy
     path: data/knowledge_base/ocean_definitions.jsonl
     framework: ocean
     category: trait_definition
 
-  - name: few_shot_examples
+  - name: few_shot_examples_legacy
     path: data/knowledge_base/few_shot_examples.jsonl
+    framework: both
+    category: few_shot_example
+
+  # Expanded KB sources (research-backed, ~659 records)
+  - name: mbti_type_portraits
+    path: data/knowledge_base/sources/mbti_types.jsonl
+    framework: mbti
+    category: type_description
+
+  - name: mbti_cognitive_functions
+    path: data/knowledge_base/sources/mbti_cognitive_functions.jsonl
+    framework: mbti
+    category: cognitive_function
+
+  - name: ocean_trait_definitions
+    path: data/knowledge_base/sources/ocean_traits.jsonl
+    framework: ocean
+    category: trait_definition
+
+  - name: ocean_facet_definitions
+    path: data/knowledge_base/sources/ocean_facets.jsonl
+    framework: ocean
+    category: facet_definition
+
+  - name: behavioral_markers
+    path: data/knowledge_base/sources/behavioral_markers.jsonl
+    framework: both
+    category: behavioral_marker
+
+  - name: linguistic_correlates
+    path: data/knowledge_base/sources/linguistic_correlates.jsonl
+    framework: ocean
+    category: linguistic_correlate
+
+  - name: psychological_states
+    path: data/knowledge_base/sources/psychological_states.jsonl
+    framework: both
+    category: state_definition
+
+  - name: cope_few_shot_examples
+    path: data/knowledge_base/sources/cope_few_shot.jsonl
     framework: both
     category: few_shot_example
 
