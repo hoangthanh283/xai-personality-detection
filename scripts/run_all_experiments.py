@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Orchestrate the full experiment matrix.
 
 Usage:
@@ -7,10 +7,17 @@ Usage:
     python scripts/run_all_experiments.py --group ablations
     python scripts/run_all_experiments.py --group personality_evd
     python scripts/run_all_experiments.py --all --wandb_project rag-xpr
+
+Baseline experiments run CPU (classical ML) and GPU (transformer) queues in
+parallel via run_cpu_classical_baselines.sh and run_gpu_transformer_baselines.sh.
 """
 import argparse
+import os
+import signal
 import subprocess
 import sys
+import threading
+from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
@@ -18,6 +25,12 @@ from loguru import logger
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.logging_config import setup_logging  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _ts() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def run_command(cmd: list[str]) -> int:
@@ -28,45 +41,72 @@ def run_command(cmd: list[str]) -> int:
     return result.returncode
 
 
+def _stream(src, sinks: list) -> None:
+    for line in iter(src.readline, b""):
+        for sink in sinks:
+            sink.write(line)
+            sink.flush()
+    src.close()
+
+
+def _launch_queue(script: Path, log_path: Path, env: dict) -> subprocess.Popen:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_file = open(log_path, "wb")
+    proc = subprocess.Popen(
+        ["bash", str(script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
+    )
+    threading.Thread(
+        target=_stream,
+        args=(proc.stdout, [sys.stdout.buffer, log_file]),
+        daemon=True,
+    ).start()
+    return proc
+
+
 def run_baselines(args, seed: int) -> None:
-    """Run all baseline experiments (B1-B9)."""
-    wandb = ["--wandb_project", args.wandb_project] if args.wandb_project else []
-    base_cmd = [sys.executable, "scripts/train_baseline.py", "--seed", str(seed)]
+    """Run all baseline experiments in parallel CPU+GPU queues."""
+    cpu_script = REPO_ROOT / "scripts" / "run_cpu_classical_baselines.sh"
+    gpu_script = REPO_ROOT / "scripts" / "run_gpu_transformer_baselines.sh"
+    cpu_log = REPO_ROOT / "outputs" / "reports" / "cpu_classical_baselines.log"
+    gpu_log = REPO_ROOT / "outputs" / "reports" / "gpu_transformer_baselines.log"
 
-    experiments = [
-        # ML baselines
-        ["--model", "logistic_regression", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "svm", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "naive_bayes", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "xgboost", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "random_forest", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "all_ml", "--dataset", "mbti", "--task", "4dim"],
-        ["--model", "ensemble", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "ensemble", "--dataset", "mbti", "--task", "4dim"],
-        # Transformer baselines
-        ["--model", "distilbert", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "roberta", "--dataset", "mbti", "--task", "16class"],
-        ["--model", "distilbert", "--dataset", "mbti", "--task", "4dim"],
-        ["--model", "roberta", "--dataset", "mbti", "--task", "4dim"],
-        # Essays
-        ["--model", "all_ml", "--dataset", "essays", "--task", "ocean_binary"],
-        ["--model", "ensemble", "--dataset", "essays", "--task", "ocean_binary"],
-        ["--model", "distilbert", "--dataset", "essays", "--task", "ocean_binary"],
-        ["--model", "roberta", "--dataset", "essays", "--task", "ocean_binary"],
-        # Pandora Big5
-        ["--model", "all_ml", "--dataset", "pandora_big5", "--task", "ocean_binary"],
-        ["--model", "ensemble", "--dataset", "pandora_big5", "--task", "ocean_binary"],
-        ["--model", "distilbert", "--dataset", "pandora_big5", "--task", "ocean_binary"],
-        ["--model", "roberta", "--dataset", "pandora_big5", "--task", "ocean_binary"],
-        # Personality Evd (OCEAN only in converted data)
-        ["--model", "all_ml", "--dataset", "personality_evd", "--task", "ocean_binary"],
-        ["--model", "ensemble", "--dataset", "personality_evd", "--task", "ocean_binary"],
-        ["--model", "distilbert", "--dataset", "personality_evd", "--task", "ocean_binary"],
-        ["--model", "roberta", "--dataset", "personality_evd", "--task", "ocean_binary"],
-    ]
+    base_env = {**os.environ, "REPO_ROOT": str(REPO_ROOT), "SEED": str(seed)}
+    gpu_device = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+    gpu_env = {**base_env, "CUDA_VISIBLE_DEVICES": gpu_device}
 
-    for exp_args in experiments:
-        run_command(base_cmd + exp_args + wandb)
+    procs: list[subprocess.Popen] = []
+
+    def _terminate_all(signum=None, frame=None) -> None:
+        logger.warning("Stopping all baseline queues...")
+        for p in procs:
+            try:
+                p.terminate()
+            except OSError:
+                pass
+        for p in procs:
+            p.wait()
+        sys.exit(130)
+
+    signal.signal(signal.SIGINT, _terminate_all)
+    signal.signal(signal.SIGTERM, _terminate_all)
+
+    logger.info(f"[{_ts()}] Starting classical baseline queue → {cpu_log}")
+    procs.append(_launch_queue(cpu_script, cpu_log, base_env))
+
+    logger.info(f"[{_ts()}] Starting transformer baseline queue (CUDA={gpu_device}) → {gpu_log}")
+    procs.append(_launch_queue(gpu_script, gpu_log, gpu_env))
+
+    cpu_status = procs[0].wait()
+    gpu_status = procs[1].wait()
+
+    if cpu_status != 0 or gpu_status != 0:
+        logger.error(f"Baseline queues finished with failures — CPU:{cpu_status} GPU:{gpu_status}")
+        sys.exit(1)
+
+    logger.info(f"[{_ts()}] All baseline queues completed successfully.")
 
 
 def run_rag_xpr(args, seed: int) -> None:
@@ -82,7 +122,7 @@ def run_rag_xpr(args, seed: int) -> None:
         ["--dataset", "mbti"],
         ["--dataset", "mbti", "--llm_provider", "vllm", "--llm_model", "meta-llama/Llama-3.1-8B-Instruct"],
         ["--dataset", "essays", "--framework", "ocean"],
-        ["--dataset", "pandora_big5", "--framework", "ocean"],
+        ["--dataset", "pandora", "--framework", "ocean"],
         ["--dataset", "personality_evd"],
     ]
 
