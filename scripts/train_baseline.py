@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Train baseline models (ML and transformer).
+"""Train baseline models (ML, transformer, and LSTM).
 
 Usage:
     # ML baselines
@@ -11,6 +11,11 @@ Usage:
     python scripts/train_baseline.py --model distilbert --dataset mbti --task 16class
     python scripts/train_baseline.py --model roberta --dataset mbti --task 4dim
     python scripts/train_baseline.py --model distilbert --dataset essays --task ocean_binary
+
+    # LSTM baseline
+    python scripts/train_baseline.py --model lstm --dataset mbti --task 16class
+    python scripts/train_baseline.py --model lstm --dataset mbti --task 4dim
+    python scripts/train_baseline.py --model lstm --dataset essays --task ocean_binary
 """
 import argparse
 import json
@@ -36,6 +41,7 @@ from src.utils.seed import set_seed  # noqa: E402
 
 ML_MODELS = ["logistic_regression", "svm", "naive_bayes", "xgboost", "random_forest"]
 TRANSFORMER_MODELS = ["distilbert", "roberta"]
+LSTM_MODELS = ["lstm"]
 MBTI_DIMENSIONS = ["IE", "SN", "TF", "JP"]
 OCEAN_TRAITS = ["O", "C", "E", "A", "N"]
 
@@ -395,6 +401,65 @@ def _train_transformer_single(
     return metrics
 
 
+def _train_lstm_single(dataset: str, task: str, config: dict, args) -> dict:
+    """Train and evaluate one LSTM model for a single concrete task/dimension."""
+    import dataclasses
+    from src.baselines.lstm_baseline import LSTMBaseline, LSTMConfig
+
+    output_dir = args.output_dir or f"outputs/models/lstm_{dataset}_{task}"
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(
+        dataset, task, config
+    )
+
+    lstm_cfg_dict = config.get("lstm", {})
+    valid_fields = {f.name for f in dataclasses.fields(LSTMConfig)}
+    lstm_config = LSTMConfig(
+        **{k: v for k, v in lstm_cfg_dict.items() if k in valid_fields},
+        output_dir=output_dir,
+        seed=args.seed,
+    )
+
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    if wandb_project:
+        wandb.init(
+            project=wandb_project,
+            name=f"lstm_{dataset}_{task}",
+            config=vars(lstm_config),
+            tags=["lstm", dataset, task],
+            reinit=True,
+        )
+
+    trainer = LSTMBaseline(lstm_config)
+    trainer.train(train_texts, train_labels, val_texts, val_labels, output_dir=output_dir)
+
+    metrics = {
+        "train": trainer.evaluate(train_texts, train_labels),
+        "eval": trainer.evaluate(val_texts, val_labels),
+        "test": trainer.evaluate(test_texts, test_labels),
+    }
+    flat = {f"{split}_{k}": v for split, m in metrics.items() for k, v in m.items() if isinstance(v, float)}
+    logger.info(
+        f"lstm/{dataset}/{task} — "
+        f"test_acc={flat.get('test_accuracy', 0):.4f} "
+        f"test_f1={flat.get('test_f1_macro', 0):.4f}"
+    )
+
+    if wandb_project and wandb.run:
+        wandb.run.summary.update(flat)
+        wandb.finish()
+
+    return flat
+
+
+def train_lstm(dataset: str, task: str, config: dict, args) -> dict:
+    """Train LSTM baseline, expanding multi-task shortcuts when needed."""
+    if task == "4dim":
+        return {dim: _train_lstm_single(dataset, dim, config, args) for dim in MBTI_DIMENSIONS}
+    if task == "ocean_binary":
+        return {trait: _train_lstm_single(dataset, trait, config, args) for trait in OCEAN_TRAITS}
+    return _train_lstm_single(dataset, task, config, args)
+
+
 def train_transformer(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
     """Train a transformer baseline."""
     model_cfg = config.get("transformer", {}).get(model_name, {})
@@ -480,6 +545,8 @@ def main():
             try:
                 if model in TRANSFORMER_MODELS:
                     metrics = train_transformer(model, args.dataset, task, config, args)
+                elif model in LSTM_MODELS:
+                    metrics = train_lstm(args.dataset, task, config, args)
                 elif model == "ensemble":
                     metrics = train_ensemble(args.dataset, task, config, args)
                 else:

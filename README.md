@@ -336,6 +336,11 @@ $UV_RUN python scripts/train_baseline.py --model all_ml --dataset mbti --task 16
 # Single model
 $UV_RUN python scripts/train_baseline.py --model logistic_regression --dataset essays --task ocean_binary
 
+# LSTM
+$UV_RUN python scripts/train_baseline.py --model lstm --dataset mbti  --task 16class
+$UV_RUN python scripts/train_baseline.py --model lstm --dataset mbti  --task 4dim
+$UV_RUN python scripts/train_baseline.py --model lstm --dataset essays --task ocean_binary
+
 # Transformer
 $UV_RUN python scripts/train_baseline.py --model distilbert --dataset mbti --task 4dim
 $UV_RUN python scripts/train_baseline.py --model roberta    --dataset essays --task ocean_binary
@@ -369,8 +374,11 @@ Target ranges on cleaned data (no MBTI type-mention leakage):
 | Dataset / Task | Model | Target accuracy |
 |----------------|-------|----------------|
 | MBTI 16-class | LR / SVM | 50–70 % |
+| MBTI 16-class | LSTM | 45–65 % |
 | MBTI 16-class | DistilBERT / RoBERTa | 55–75 % |
+| MBTI 4-dim (per axis) | LSTM | 65–82 % |
 | MBTI 4-dim (per axis) | DistilBERT / RoBERTa | 70–88 % |
+| Essays OCEAN (per trait) | LSTM | 52–62 % |
 | Essays OCEAN (per trait) | DistilBERT / RoBERTa | 55–65 % |
 | Pandora OCEAN (per trait) | any | ~60 % (limited labels) |
 | Personality-Evd OCEAN | multilingual models | 55–65 % |

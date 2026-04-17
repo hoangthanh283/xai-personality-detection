@@ -24,7 +24,14 @@ run_baseline() {
   "${UV_RUN[@]}" scripts/train_baseline.py --wandb_project "$WANDB_PROJECT" "$@"
 }
 
-# ── MBTI ──────────────────────────────────────────────────────────────────────
+# ── LSTM ──────────────────────────────────────────────────────────────────────
+run_baseline --model lstm --dataset mbti    --task 16class
+run_baseline --model lstm --dataset mbti    --task 4dim
+run_baseline --model lstm --dataset essays  --task ocean_binary
+run_baseline --model lstm --dataset pandora --task ocean_binary
+run_baseline --model lstm --dataset personality_evd --task ocean_binary
+
+# ── DistilBERT / RoBERTa ──────────────────────────────────────────────────────
 run_baseline --model distilbert --dataset mbti --task 16class
 run_baseline --model roberta    --dataset mbti --task 16class
 

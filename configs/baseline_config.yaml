@@ -129,5 +129,23 @@ transformer:
       roberta:
         model_name: xlm-roberta-base
 
+lstm:
+  vocab_size: 30000
+  embed_dim: 300
+  hidden_dim: 256
+  num_layers: 2
+  bidirectional: true
+  dropout: 0.3
+  attention: true
+  max_length: 512
+  batch_size: 64
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-4
+  num_epochs: 20
+  early_stopping_patience: 5
+  loss_weighting: none
+  glove_path: null        # set to path of glove.6B.300d.txt to use pretrained embeddings
+  freeze_embeddings: false
+
 output_dir: outputs/models/
 seed: 42
