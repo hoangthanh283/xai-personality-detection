@@ -60,9 +60,9 @@ assets/
 *.db
 .beads-credential-key
 
-# Markdown docs: keep README files and numbered 0x_ notes trackable
+# Markdown docs: keep README files and numbered 0N_ notes trackable
 **/*.md
 !**/README.md
-!**/0x_*.md
+!**/0[0-9]_*.md
 
 docs/BASELINE_RERUN_GUIDE.md
