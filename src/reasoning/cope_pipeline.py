@@ -139,8 +139,7 @@ class CoPEPipeline:
                 evidence, kb_chunks, max_retries=self.max_retries
             )
             logger.info(f"Identified {len(states)} states")
-            if yield_steps:
-                yield "Step 2: Identifying Psychological States", states
+            yield "Step 2: Identifying Psychological States", states
 
         # ── Step 3: Trait Inference ───────────────────────────────────────────
         logger.info("Step 3: Inferring personality traits")
@@ -157,8 +156,7 @@ class CoPEPipeline:
             states, trait_kb, framework=framework, max_retries=self.max_retries
         )
         logger.info(f"Predicted: {result.predicted_label}")
-        if yield_steps:
-            yield "Step 3: Predicting Traits", result
+        yield "Step 3: Predicting Traits", result
 
         output = {
             "predicted_label": result.predicted_label,
@@ -188,7 +186,4 @@ class CoPEPipeline:
                 ],
             }
 
-        if yield_steps:
-            yield "Final Result", output
-
-        return output
+        yield "Final Result", output

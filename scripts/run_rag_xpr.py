@@ -16,6 +16,12 @@ from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+try:
+    from dotenv import load_dotenv  # noqa: E402
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed; rely on shell env vars
+
 from src.utils.logging_config import setup_logging  # noqa: E402
 from src.utils.seed import set_seed  # noqa: E402
 
