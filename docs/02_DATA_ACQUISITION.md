@@ -1,13 +1,28 @@
 # 02 — Data Acquisition & Preprocessing
 
+**Last updated:** 2026-04-18
+
 ## Dataset Summary
 
 | Dataset | Source | Size | Task | Format |
 |---------|--------|------|------|--------|
-| MBTI (Kaggle) | Personality Café / Twitter | ~8,600 users, 422K+ posts | 16-class MBTI | CSV |
-| Pandora | Reddit | 10K users, 17M comments | Big Five (OCEAN) | JSON |
-| Essays | Pennebaker & King (1999) | 2,468 essays | Big Five (OCEAN) | CSV |
-| Personality Evd | NLP benchmark (2024) | Dialogues w/ evidence | MBTI + explanations | JSON |
+| **MBTI** | Kaggle — Personality Café | ~8,600 users, 422K+ posts | 16-class MBTI + 4-dim binary | CSV |
+| **Pandora** | Reddit (Gjurković & Šnajder 2021) | ~10K users, 1,568 OCEAN-labeled | 16-class MBTI + OCEAN binary | JSON |
+| **Pandora Big5** | HuggingFace mirror `jingjietan/pandora-big5` | ~1.65M records | OCEAN binary | HF parquet |
+| **Essays** | Pennebaker & King (1999) | 2,468 essays | Big Five (OCEAN) binary | CSV |
+| **Personality Evd** | Sun et al. EMNLP 2024 | 1,846 dialogues, Chinese | OCEAN binary + evidence gold | JSON |
+
+## Embeddings (optional, for LSTM baseline)
+
+| Artifact | Size | Used by |
+|----------|------|---------|
+| GloVe 6B (300d) | ~1 GB | `lstm_baseline.py` with `glove_path` config |
+
+Download via:
+```bash
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/download_embeddings.py --dim 300
+```
 
 ---
 

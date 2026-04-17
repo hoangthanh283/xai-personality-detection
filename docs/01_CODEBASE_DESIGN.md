@@ -1,52 +1,49 @@
 # 01 — Codebase Design
 
-## Repository Structure
+**Last updated:** 2026-04-18
+
+## Repository Structure (as of current master)
 
 ```
-rag-xpr/
+xai-personality-detection/
 ├── configs/                        # All YAML configs
 │   ├── data_config.yaml            # Dataset paths, splits, preprocessing params
-│   ├── baseline_config.yaml        # Baseline model hyperparams
+│   ├── baseline_config.yaml        # Baseline model hyperparams (ML + LSTM + Transformer)
 │   ├── kb_config.yaml              # Knowledge base construction params
 │   ├── retrieval_config.yaml       # Qdrant, embedding model, search params
 │   ├── rag_xpr_config.yaml         # Full pipeline config (LLM, CoPE prompts)
-│   └── eval_config.yaml            # Evaluation settings
+│   └── evaluation_config.yaml      # Evaluation settings
 │
 ├── data/
 │   ├── raw/                        # Original downloaded datasets (gitignored)
-│   │   ├── mbti/
-│   │   ├── pandora/
-│   │   ├── essays/
-│   │   └── personality_evd/
+│   │   ├── mbti/                   # Kaggle Personality Café CSV
+│   │   ├── pandora/                # Reddit Pandora JSON
+│   │   ├── pandora_big5/           # HuggingFace jingjietan/pandora-big5 mirror
+│   │   ├── essays/                 # Pennebaker & King (1999) CSV
+│   │   └── personality_evd/        # Sun et al. EMNLP 2024 Chinese dialogues
 │   ├── processed/                  # Cleaned, split data ready for training
-│   │   ├── mbti/
-│   │   │   ├── train.jsonl
-│   │   │   ├── val.jsonl
-│   │   │   └── test.jsonl
-│   │   ├── pandora/
-│   │   ├── essays/
-│   │   └── personality_evd/
+│   │   ├── mbti/{train,val,test}.jsonl
+│   │   ├── pandora/{train,val,test}.jsonl
+│   │   ├── essays/{train,val,test}.jsonl
+│   │   └── personality_evd/{train,val,test}.jsonl
+│   ├── embeddings/                 # GloVe 6B.300d (gitignored; download via scripts/download_embeddings.py)
 │   └── knowledge_base/             # Psychology textbook chunks + embeddings
-│       ├── mbti_definitions.jsonl
-│       ├── ocean_definitions.jsonl
-│       └── few_shot_examples.jsonl
 │
 ├── src/
 │   ├── __init__.py
 │   ├── data/                       # Data loading & preprocessing
-│   │   ├── __init__.py
-│   │   ├── loader.py               # Unified DataLoader for all datasets
-│   │   ├── preprocessor.py         # Text cleaning (URL removal, normalization)
-│   │   ├── mbti_parser.py          # MBTI CSV → JSONL
-│   │   ├── pandora_parser.py       # Pandora Reddit → JSONL
-│   │   ├── essays_parser.py        # Essays dataset → JSONL
+│   │   ├── loader.py               # DatasetLoader: unified interface for all datasets
+│   │   ├── preprocessor.py         # Text cleaning pipeline
+│   │   ├── mbti_parser.py
+│   │   ├── pandora_parser.py
+│   │   ├── pandora_big5_parser.py  # HuggingFace mirror parser
+│   │   ├── essays_parser.py
 │   │   └── personality_evd_parser.py
 │   │
 │   ├── baselines/                  # Baseline model implementations
-│   │   ├── __init__.py
-│   │   ├── ml_baselines.py         # TF-IDF + LR/SVM/NB
-│   │   ├── transformer_baseline.py # DistilBERT / RoBERTa fine-tuning
-│   │   └── trainer.py              # Training loop with W&B logging
+│   │   ├── ml_baselines.py         # TF-IDF + LR/SVM/NB/XGBoost/RF (configurable char-ngram union)
+│   │   ├── lstm_baseline.py        # BiLSTM + attention pooling (GloVe-capable)
+│   │   └── transformer_baseline.py # DistilBERT / RoBERTa / XLM-R fine-tuning
 │   │
 │   ├── knowledge_base/             # KB construction
 │   │   ├── __init__.py
@@ -91,19 +88,20 @@ rag-xpr/
 │       └── text_utils.py           # Common text processing utilities
 │
 ├── scripts/                        # Entry-point scripts
-│   ├── download_data.py            # Download all datasets
-│   ├── preprocess_data.py          # Run preprocessing pipeline
+│   ├── download_data.py            # Download MBTI / Essays / Pandora
+│   ├── download_pandora_big5.py    # Download HuggingFace Big-5 mirror
+│   ├── download_embeddings.py      # Download GloVe 6B (50/100/200/300d)
+│   ├── preprocess_data.py          # Dataset preprocessing orchestrator
+│   ├── preprocess_pandora_big5.py  # HuggingFace mirror preprocessing
+│   ├── convert_personality_evd.py  # Convert EMNLP 2024 dialogues → JSONL
 │   ├── build_kb.py                 # Build & index knowledge base
-│   ├── train_baseline.py           # Train baseline models
-│   ├── run_rag_xpr.py             # Run RAG-XPR inference
+│   ├── train_baseline.py           # Train any baseline (ML / LSTM / Transformer)
+│   ├── run_rag_xpr.py              # Run RAG-XPR inference
 │   ├── evaluate.py                 # Run evaluation suite
-│   └── run_all_experiments.py      # Orchestrate full experiment matrix
-│
-├── notebooks/                      # EDA and analysis
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_baseline_analysis.ipynb
-│   ├── 03_retrieval_quality.ipynb
-│   └── 04_case_studies.ipynb
+│   ├── run_all_experiments.py      # Parallel CPU+GPU queue orchestrator
+│   ├── run_cpu_classical_baselines.sh    # Full classical ML matrix (CPU)
+│   ├── run_gpu_transformer_baselines.sh  # Full LSTM + DistilBERT + RoBERTa matrix (GPU)
+│   └── rerun_roberta_personality_evd.sh  # Low-memory rerun for GPU-constrained environments
 │
 ├── app/                            # Streamlit demo
 │   └── demo.py
@@ -158,14 +156,25 @@ Each parser converts raw dataset format → unified JSONL:
 **Owner: Huy & Phi Anh (Baseline & Model Training track)**
 
 `ml_baselines.py`:
-- `TFIDFClassifier`: TF-IDF (max_features=50000, ngram_range=(1,2)) + sklearn classifier
-- Supports: `LogisticRegression`, `SVM (LinearSVC)`, `MultinomialNB`, `XGBoost`, `RandomForest`
+- TF-IDF (configurable `max_features`, `ngram_range`, `min_df`, `max_df`, `sublinear_tf`) + sklearn classifier
+- Optional char-ngram `FeatureUnion` (off by default — was a major overfit driver at 80K features)
+- Supports: `logistic_regression`, `svm` (LinearSVC), `naive_bayes` (MultinomialNB), `xgboost`, `random_forest`
+- Class weighting: `null` for 16-class (avoids minority-class collapse), `balanced` for 4-dim binary
 - Grid search via `sklearn.model_selection.GridSearchCV`
 
+`lstm_baseline.py`:
+- `LSTMClassifier`: BiLSTM (2 layers, bidirectional, hidden=256) + attention pooling
+- `SimpleTokenizer`: top-N frequency vocab (default 30K), pickle save/load
+- Optional GloVe 6B embedding initialization (`glove_path` config)
+- `sqrt_balanced` class weighting (`w = sqrt(N / (K * n_c))` clipped to [0.5, 2.0]) for imbalanced tasks
+- Per-epoch W&B logging; gradient clipping + ReduceLROnPlateau
+
 `transformer_baseline.py`:
-- HuggingFace `Trainer`-based fine-tuning
-- Models: `distilbert-base-uncased`, `roberta-base`
-- Multi-label classification head for MBTI 4-dimension or 16-class
+- HuggingFace `Trainer`-based fine-tuning with fp16 + early stopping
+- Models: `distilbert-base-uncased`, `roberta-base`, `distilbert-base-multilingual-cased`, `xlm-roberta-base`
+- `WeightedClassificationTrainer` with `loss_weighting: {none, balanced, sqrt_balanced}`
+- Supports `gradient_checkpointing` flag for small-GPU training (≤6 GB)
+- Metric-for-best-model configurable (`eval_accuracy` for 16-class, `eval_f1_macro` for 4-dim)
 
 ### `src/knowledge_base/` — Psychology KB
 

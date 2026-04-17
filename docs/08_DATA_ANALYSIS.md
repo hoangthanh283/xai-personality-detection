@@ -1,4 +1,6 @@
-# 07 — Data Analysis & Statistics
+# 08 — Data Analysis & Statistics
+
+**Last updated:** 2026-04-18
 
 Comprehensive analysis and statistics for all ingested datasets, including raw data characteristics, preprocessing decisions, label distributions, and quality checks.
 

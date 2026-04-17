@@ -1,8 +1,8 @@
 # 07 — Baseline Results: Summary, Analysis & Gap Study
 
-**Last updated:** 2026-04-17  
+**Last updated:** 2026-04-18  
 **Branch:** master  
-**Status:** Classical ML + DistilBERT + LSTM (v1 random, v2 GloVe) + RoBERTa all complete. RoBERTa personality_evd rerunning with batch=2 + grad_accum=16 after earlier OOM.
+**Status:** Classical ML + DistilBERT + LSTM (v1 random, v2 GloVe) + RoBERTa all complete across 4/5 datasets. RoBERTa personality_evd (XLM-R) pending GPU availability — rerun script staged at `scripts/rerun_roberta_personality_evd.sh`.
 
 ---
 

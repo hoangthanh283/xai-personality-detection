@@ -1,33 +1,46 @@
 # 05 — Experiment Plan
 
+**Last updated:** 2026-04-18
+
 ## Experiment Matrix
 
-All experiments use seed=42, 3 random restarts for statistical significance.
+All experiments use seed=42. 3 random restarts planned for final paper numbers.
 
-### Experiment 1: Baseline Benchmarking
+### Experiment 1: Baseline Benchmarking — ✅ COMPLETE
 
-**Goal**: Establish accuracy baselines WITHOUT explainability.
+**Goal:** Establish accuracy baselines WITHOUT explainability.
 
-| ID | Model | Dataset | Task | Metric |
-|----|-------|---------|------|--------|
-| B1 | TF-IDF + LR | MBTI | 16-class | Acc, F1-macro, F1-weighted |
-| B2 | TF-IDF + SVM | MBTI | 16-class | Acc, F1-macro, F1-weighted |
-| B3 | TF-IDF + XGBoost | MBTI | 16-class | Acc, F1-macro, F1-weighted |
-| B4 | TF-IDF + Ensemble | MBTI | 16-class | Acc, F1-macro, F1-weighted |
-| B5 | DistilBERT | MBTI | 16-class | Acc, F1-macro, F1-weighted |
-| B6 | RoBERTa | MBTI | 16-class | Acc, F1-macro, F1-weighted |
-| B7 | DistilBERT | MBTI | 4-dim binary | Acc per dim, avg Acc |
-| B8 | DistilBERT | Essays | OCEAN binary | Acc per trait, avg Acc |
-| B9 | DistilBERT | Pandora | OCEAN binary | Acc per trait, avg Acc |
+**Status (2026-04-18):** 110+ W&B runs complete. Every result in `07_BASELINE_RESULTS_ANALYSIS.md` links to its W&B run.
 
+**Matrix (8 model families × 5 datasets):**
+
+| ID | Model | Datasets | Tasks | Status |
+|----|-------|----------|-------|--------|
+| B1 | TF-IDF + LR / SVM / NB / XGBoost / RF | MBTI, Essays, Pandora, personality_evd | 16-class + 4-dim + OCEAN binary | ✅ |
+| B2 | Ensemble (soft-vote) | MBTI | 16-class + 4-dim | ✅ |
+| B3 | BiLSTM + Attention (random init) | All 5 datasets | all tasks | ✅ |
+| B4 | BiLSTM + Attention (GloVe 300d + sqrt_balanced) | MBTI, Essays, Pandora | all tasks | ✅ |
+| B5 | DistilBERT | All 5 datasets | all tasks | ✅ |
+| B6 | DistilBERT (SN sqrt_balanced override) | MBTI | SN | ✅ (separate `_weighted` checkpoint) |
+| B7 | RoBERTa | MBTI, Essays, Pandora | all tasks | ✅ |
+| B8 | XLM-R | personality_evd | OCEAN binary | ⏳ pending GPU availability |
+
+**Reproduce:**
 ```bash
-# Run all baselines
-python scripts/run_all_experiments.py --group baselines
+bash scripts/run_cpu_classical_baselines.sh     # B1, B2 — CPU queue
+bash scripts/run_gpu_transformer_baselines.sh   # B3–B7 — GPU queue
+bash scripts/rerun_roberta_personality_evd.sh   # B8 — low-memory rerun
+```
+Or combined:
+```bash
+uv run ... python scripts/run_all_experiments.py
 ```
 
-### Experiment 2: LLM Direct (No RAG, No CoPE)
+### Experiment 2: LLM Direct (No RAG, No CoPE) — 📋 PLANNED
 
-**Goal**: Measure raw LLM performance as an upper bound for "no grounding."
+**Goal**: Measure raw LLM performance as the "no-grounding" reference point.
+
+**Status:** Not started. Waiting on API budget allocation.
 
 | ID | Model | Dataset | Prompting | Metric |
 |----|-------|---------|-----------|--------|
@@ -46,26 +59,30 @@ python scripts/run_rag_xpr.py --mode llm_direct --prompt few_shot --sample 500
 python scripts/run_rag_xpr.py --mode llm_direct --prompt cot_basic --sample 500
 ```
 
-### Experiment 3: RAG-XPR (Proposed Method)
+### Experiment 3: RAG-XPR (Proposed Method) — 🔄 IN PROGRESS
 
-**Goal**: Evaluate full pipeline with explainability.
+**Goal:** Evaluate full pipeline with explainability.
 
-| ID | Config | Dataset | LLM | Metric |
-|----|--------|---------|-----|--------|
-| R1 | RAG-XPR (full) | MBTI test | GPT-4o-mini | Acc, F1, XAI metrics |
-| R2 | RAG-XPR (full) | MBTI test | GPT-4o | Acc, F1, XAI metrics |
-| R3 | RAG-XPR (full) | MBTI test | Llama-3.1-8B | Acc, F1, XAI metrics |
-| R4 | RAG-XPR (full) | Essays test | GPT-4o-mini | Acc, F1, XAI metrics |
-| R5 | RAG-XPR (full) | Pandora test | GPT-4o-mini | Acc, F1, XAI metrics |
-| R6 | RAG-XPR (full) | Personality Evd test | GPT-4o-mini | Acc, F1, XAI metrics |
+**Status:** First 3 runs in flight (MBTI, Essays, personality_evd test splits on 150–200 samples).
+
+| ID | Config | Dataset | LLM | Metric | Status |
+|----|--------|---------|-----|--------|--------|
+| R1 | RAG-XPR (full) | MBTI test | Qwen (OpenRouter) | Acc, F1, XAI | 🔄 running |
+| R4 | RAG-XPR (full) | Essays test | Qwen | Acc, F1, XAI | 🔄 running |
+| R6 | RAG-XPR (full) | personality_evd test | Qwen | Acc, F1, XAI | 🔄 running |
+| R2 | RAG-XPR (full) | MBTI test | GPT-4o-mini | Acc, F1, XAI | 📋 queued |
+| R3 | RAG-XPR (full) | MBTI test | Llama-3.1-8B | Acc, F1, XAI | 📋 queued |
+| R5 | RAG-XPR (full) | Pandora test | Qwen | Acc, F1, XAI | 📋 queued |
 
 ```bash
 python scripts/run_all_experiments.py --group rag_xpr
 ```
 
-### Experiment 4: Ablation Studies
+### Experiment 4: Ablation Studies — 📋 PLANNED
 
 **Goal**: Quantify contribution of each component.
+
+**Status:** Not started. Depends on Experiment 3 R1 completing first (validates full pipeline).
 
 | ID | Ablation | What's Removed | Expected Impact |
 |----|----------|----------------|-----------------|
@@ -90,9 +107,11 @@ python scripts/run_rag_xpr.py --config configs/rag_xpr_config.yaml \
 python scripts/run_all_experiments.py --group ablations
 ```
 
-### Experiment 5: Personality Evd — Explainability Benchmark
+### Experiment 5: Personality Evd — Explainability Benchmark — 📋 PLANNED
 
 **Goal**: Evaluate on the dataset specifically designed for explainable personality recognition.
+
+**Status:** Classification baselines ✅ done; evidence-F1 and state-acc pending pipeline runs.
 
 | ID | Method | Evidence F1 | State Acc | Trait Acc |
 |----|--------|-------------|-----------|-----------|
@@ -114,18 +133,25 @@ python scripts/run_all_experiments.py --group personality_evd
 Follow this order to manage dependencies and costs:
 
 ```
-Week 1: Data preprocessing (all datasets)
-         ↓
-Week 2: Exp 1 (Baselines B1-B9) — no API cost, CPU/GPU only
-         ↓
-Week 3: KB construction + Retrieval system setup
-         ↓
-Week 4: Exp 2 (LLM Direct L1-L6) — small sample first
-         Exp 3 (RAG-XPR R1-R6) — start with R1 on MBTI
-         ↓
-Week 5: Exp 4 (Ablations A1-A8)
-         Exp 5 (Personality Evd E1-E4)
-         Human evaluation campaign
+Past sprints (complete):
+  ✅ Data preprocessing — all 5 datasets (incl. cleaned MBTI with verified 0 leakage)
+  ✅ Exp 1 — Baselines across 8 model families × 5 datasets (110+ W&B runs)
+  ✅ KB construction + retrieval engine + CoPE pipeline
+  ✅ Evaluation harness (classification + XAI metrics)
+
+Current sprint (in progress):
+  🔄 Exp 3 R1/R4/R6 — RAG-XPR on 150–200-sample test splits
+
+Next 1–2 weeks:
+  - Finish Exp 3 full test-set evaluation (all R1–R6)
+  - Launch Exp 2 (LLM-Direct baselines) once API budget approved
+  - Launch Exp 4 (ablations A1–A8)
+  - personality_evd multilingual rerun (XLM-R once GPU clears)
+
+Following 1–2 weeks:
+  - Exp 5 (explainability benchmark: evidence-F1, state-grounding)
+  - Human evaluation campaign (N=100, 2 raters)
+  - Paper draft writing
          ↓
 Week 6: Final full-scale runs, statistical tests, report
 ```

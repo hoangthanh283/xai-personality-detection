@@ -1,5 +1,9 @@
 # 06 — Evaluation Protocol
 
+**Last updated:** 2026-04-18
+
+> Measured baseline numbers and SOTA comparison live in [07_BASELINE_RESULTS_ANALYSIS.md](./07_BASELINE_RESULTS_ANALYSIS.md). This document defines *how* metrics are computed; numbers are traceable to individual W&B runs.
+
 ## 1. Classification Metrics (Automated)
 
 ### Implementation: `src/evaluation/classification_metrics.py`
