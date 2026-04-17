@@ -444,11 +444,29 @@ def main():
     parser.add_argument("--ensemble_members", help="Comma-separated list for ensemble")
     parser.add_argument("--resume_from", help="Resume transformer from checkpoint")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--set", metavar="KEY=VALUE", action="append", dest="overrides", default=[],
+        help="Override a config value using dot-path notation, e.g. --set transformer.distilbert.loss_weighting=sqrt_balanced",
+    )
     args = parser.parse_args()
 
     setup_logging()
     set_seed(args.seed)
     config = load_config(args.config)
+
+    for override in args.overrides:
+        if "=" not in override:
+            raise ValueError(f"--set requires KEY=VALUE format, got: {override!r}")
+        key_path, _, raw_value = override.partition("=")
+        keys = key_path.split(".")
+        node = config
+        for k in keys[:-1]:
+            node = node.setdefault(k, {})
+        try:
+            import ast
+            node[keys[-1]] = ast.literal_eval(raw_value)
+        except (ValueError, SyntaxError):
+            node[keys[-1]] = raw_value
 
     tasks = expand_tasks(args.dataset, args.task)
     models = ML_MODELS if args.model == "all_ml" else [args.model]
