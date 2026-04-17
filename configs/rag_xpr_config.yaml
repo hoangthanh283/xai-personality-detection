@@ -1,19 +1,19 @@
 _base: retrieval_config.yaml
 
 llm:
-  provider: ollama                       # openrouter | openai | vllm | ollama
-  model: qwen2.5:7b                      # local Ollama model (Q4_K_M, ~4.4 GB VRAM)
-  base_url: http://localhost:11434/api/chat
+  provider: openrouter                   # openrouter | openai | vllm | ollama
+  model: qwen/qwen-2.5-7b-instruct       # overridden by LLM_MODEL_NAME env var if set
+  base_url: https://openrouter.ai/api/v1
   temperature: 0.1
   max_tokens: 2048
-  timeout: 120                           # local inference needs more time
-  retry_attempts: 3
+  timeout: 90
+  retry_attempts: 5
 
-  # Fallback: uncomment to use free OpenRouter tier when offline
-  # provider: openrouter
-  # model: qwen/qwen3-8b:free
-  # base_url: https://openrouter.ai/api/v1
-  # timeout: 60
+  # Fallback: local Ollama backend (uncomment if offline)
+  # provider: ollama
+  # model: qwen2.5:7b
+  # base_url: http://localhost:11434/api/chat
+  # timeout: 120
 
 retrieval:
   embedding_model: BAAI/bge-base-en-v1.5

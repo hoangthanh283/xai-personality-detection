@@ -43,8 +43,35 @@ class CoPEPipeline:
     ) -> dict | Any:
         """
         Run the 3-step reasoning chain.
-        If yield_steps=True, acts as a generator yielding (step_name, current_result).
+        If yield_steps=True, returns a generator yielding (step_name, current_result).
+        Otherwise returns a dict directly.
         """
+        if yield_steps:
+            return self._run_stream(text, candidate_evidence, framework, save_intermediate)
+        return self._run_collect(text, candidate_evidence, framework, save_intermediate)
+
+    def _run_collect(
+        self,
+        text: str,
+        candidate_evidence: list[EvidenceSentence],
+        framework: str,
+        save_intermediate: bool,
+    ) -> dict:
+        """Non-streaming: run all steps and return final dict."""
+        last: dict = {}
+        for _, payload in self._run_stream(text, candidate_evidence, framework, save_intermediate):
+            if isinstance(payload, dict) and "predicted_label" in payload:
+                last = payload
+        return last
+
+    def _run_stream(
+        self,
+        text: str,
+        candidate_evidence: list[EvidenceSentence],
+        framework: str = "mbti",
+        save_intermediate: bool = True,
+    ):
+        """Generator version — yields (step_name, payload) tuples."""
         # ── Step 1: Evidence Extraction ──────────────────────────────────────
         logger.info("Step 1: Extracting behavioral evidence")
         evidence: list[ExtractedEvidence] = self.evidence_extractor.extract(
@@ -54,8 +81,7 @@ class CoPEPipeline:
             max_retries=self.max_retries,
         )
         logger.info(f"Extracted {len(evidence)} evidence items")
-        if yield_steps:
-            yield "Step 1: Extracting Evidence", evidence
+        yield "Step 1: Extracting Evidence", evidence
 
         # ── Step 2: State Identification ─────────────────────────────────────
         if 2 in self.skip_steps and 3 in self.skip_steps:
@@ -76,7 +102,6 @@ class CoPEPipeline:
                 data = json.loads(response.strip().strip("```json").strip("```"))
                 pred = data.get("prediction", {}).get("type", "UNKNOWN")
                 expl = data.get("explanation", "")
-                expl = data.get("explanation", "")
             except Exception:
                 pred = "UNKNOWN"
                 expl = response
@@ -87,7 +112,8 @@ class CoPEPipeline:
                 "explanation": expl,
                 "evidence_chain": [],
             }
-            return output
+            yield "Final Result", output
+            return
 
         if 2 in self.skip_steps:
             logger.info("Skipping Step 2: Extracting state directly from evidence")
