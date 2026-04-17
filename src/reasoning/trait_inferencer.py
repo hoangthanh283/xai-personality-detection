@@ -92,7 +92,16 @@ class TraitInferencer:
                 evidence_chain = result_data.get("evidence_chain", [])
 
                 if framework == "mbti":
-                    label = prediction.get("type") or self._extract_mbti_label(prediction)
+                    # Prefer computed label from dimensions (more reliable than LLM's "type" field).
+                    # Fall back to LLM's "type" only if dimensions are missing/invalid.
+                    computed = self._extract_mbti_label(prediction)
+                    llm_type = (prediction.get("type") or "").strip().upper()
+                    if "?" not in computed and len(computed) == 4:
+                        label = computed
+                    elif len(llm_type) == 4 and all(c in "IESNTFJP" for c in llm_type):
+                        label = llm_type
+                    else:
+                        label = computed  # "INTP" default
                 else:
                     label = self._extract_ocean_label(prediction)
 

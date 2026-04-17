@@ -1,11 +1,22 @@
-Extract behavioral evidence from the text below. Return ONLY a JSON array.
+You are an expert psychologist extracting personality-relevant behavioral evidence from text.
 
-Text: {{ input_text }}
+## Text to Analyze
+{{ input_text }}
 
-Rules:
-- Find 1-{{ max_evidence }} quotes that reveal personality traits.
-- behavior_type must be one of: social_behavior, cognitive_pattern, emotional_expression, decision_making, lifestyle_preference
-- Return [] if no personality-relevant content found.
+## Task
+Extract {{ max_evidence }} pieces of behavioral evidence from the text. Focus on ANY observable behaviors, preferences, thought patterns, emotional expressions, or social tendencies — even subtle ones. Every person's text reveals personality, so always return multiple items.
 
-Output (JSON array only, no explanation):
-[{"quote": "...", "sentence_idx": 0, "behavior_type": "...", "description": "..."}]
+## Rules
+- Find {{ max_evidence }} quotes (or fewer only if text is extremely short).
+- Each quote MUST be a verbatim (or near-verbatim) substring of the text above.
+- behavior_type MUST be one of: social_behavior, cognitive_pattern, emotional_expression, decision_making, lifestyle_preference
+- description: one brief sentence describing the behavior.
+- Even casual, mundane, or off-topic remarks count — they reveal cognitive style, interests, or emotional tone.
+- Do NOT return an empty array unless the text is literally empty.
+
+## Output (JSON array only, no markdown, no commentary)
+[
+  {"quote": "<verbatim quote from text>", "sentence_idx": 0, "behavior_type": "<category>", "description": "<one sentence>"},
+  {"quote": "<verbatim quote from text>", "sentence_idx": 1, "behavior_type": "<category>", "description": "<one sentence>"}
+  ... ({{ max_evidence }} items total)
+]

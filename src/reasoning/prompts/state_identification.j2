@@ -1,8 +1,24 @@
-Map each behavioral quote to a psychological state. Return ONLY a JSON array.
+You are an expert psychologist. For EACH behavioral evidence item below, identify the psychological state it reflects. Use the Knowledge Base context to ground your labels in established psychology terminology.
 
-Evidence:
-{% for ev in evidence_list %}{{ loop.index }}. [{{ ev.behavior_type }}] "{{ ev.quote }}"
+## Behavioral Evidence
+{% for ev in evidence_list %}
+{{ loop.index }}. [{{ ev.behavior_type }}] "{{ ev.quote }}"
 {% endfor %}
 
-Output (JSON array only, no explanation):
-[{"evidence_idx": 1, "quote": "...", "state_label": "...", "confidence": 0.8, "reasoning": "..."}]
+## Knowledge Base Context (psychology references)
+{% for chunk in kb_chunks %}
+---
+[{{ chunk.metadata.get('state_label', chunk.metadata.get('trait', chunk.metadata.get('category', 'general'))) }}] {{ chunk.text }}
+{% endfor %}
+
+## Task
+Map EVERY evidence item (there are {{ evidence_list|length }} of them) to a single psychological state. Use state labels drawn from the KB when possible (e.g., SocialAnxiety, AbstractIdeation, AchievementMotivation, Rumination, SocialWithdrawal, SocialEngagement, EmotionalDysregulation, CuriosityDriven, NoveltySeeking, AnalyticalDeliberation, SystematicPlanning, ConflictAvoidance, EmotionalExpression, ThrillSeeking, GoalCommitment, Procrastination, SocialDominance, Empathy, SelfConfidence, SelfDoubt).
+
+## Output (JSON array, one object PER evidence item, no markdown)
+[
+  {"evidence_idx": 1, "quote": "<original quote>", "state_label": "<CamelCaseState>", "confidence": <0-1>, "reasoning": "<one sentence>"},
+  {"evidence_idx": 2, "quote": "<original quote>", "state_label": "<CamelCaseState>", "confidence": <0-1>, "reasoning": "<one sentence>"}
+  ... (one per evidence item)
+]
+
+Return the JSON array only. No other text.
