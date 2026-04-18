@@ -2,6 +2,18 @@ You are an expert psychologist making a final personality assessment.
 
 ## Task
 Based on the identified psychological states, determine the personality {{ framework | upper }} classification.
+{% if roberta_prior %}
+
+## Supervised Baseline Prior (strong hint)
+A fine-tuned RoBERTa classifier (trained on labeled personality data) predicts:
+{% for dim, pair in roberta_prior.items() %}- {{ dim }}: {{ pair[0] }} (confidence: {{ pair[1] }})
+{% endfor %}
+Use this as a strong prior. Defer to it UNLESS the identified psychological states
+contain **clear, direct counter-evidence** for a specific dimension. When your
+reasoning aligns with the prior, cite states that confirm it. When you override
+the prior on some dimension, explicitly justify the override in the `explanation`
+field with the specific states that contradict it.
+{% endif %}
 
 ## Identified States
 {% for state in states %}

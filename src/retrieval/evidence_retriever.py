@@ -36,11 +36,18 @@ class EvidenceRetriever:
     """
     Extracts candidate evidence sentences from input text.
     Pre-filters noise BEFORE sending to LLM, reducing token cost.
+
+    Supports three scorers:
+        - "keyword": legacy LIWC-style keyword counting (fast, weak)
+        - "roberta": supervised RoBERTaEvidenceScorer (strong, slower)
+        - "hybrid": combine both via max(keyword_score, roberta_score)
     """
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict | None = None, roberta_scorer=None):
         self.config = config or {}
         self.top_k = self.config.get("top_k", 10)
+        self.scorer_type = self.config.get("scorer", "keyword")
+        self.roberta_scorer = roberta_scorer  # may be None even if type is "roberta"
         self._nlp = None
 
     @property
@@ -89,7 +96,27 @@ class EvidenceRetriever:
         sentences = self.split_sentences(text)
         if not sentences:
             return []
-        scored = self.score_sentences(sentences)
-        # Sort by score descending, take top-k
+
+        if self.scorer_type in ("roberta", "hybrid") and self.roberta_scorer is not None:
+            roberta_scored = self.roberta_scorer.score_sentences(sentences)
+            # Convert to EvidenceSentence with score attached
+            scored = [
+                EvidenceSentence(
+                    text=rs.text,
+                    sentence_idx=rs.sentence_idx,
+                    score=rs.score,
+                    matched_keywords=[],
+                )
+                for rs in roberta_scored
+            ]
+            if self.scorer_type == "hybrid":
+                # Blend with keyword score (weight 0.7 RoBERTa + 0.3 keyword)
+                kw_scored = {s.sentence_idx: s.score for s in self.score_sentences(sentences)}
+                for s in scored:
+                    s.score = 0.7 * s.score + 0.3 * kw_scored.get(s.sentence_idx, 0.0)
+        else:
+            # Legacy keyword-only
+            scored = self.score_sentences(sentences)
+
         sorted_sents = sorted(scored, key=lambda s: s.score, reverse=True)
         return sorted_sents[:top_k]

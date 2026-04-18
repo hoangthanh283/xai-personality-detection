@@ -27,17 +27,28 @@ retrieval:
   collection: psych_kb
 
 cope:
-  num_evidence: 10        # max evidence to extract in Step 1
-  num_kb_chunks: 5        # KB chunks per evidence in Step 2
+  num_evidence: 6          # max evidence to extract in Step 1 (reduced for local LLM speed)
+  num_kb_chunks: 3         # KB chunks per evidence in Step 2 (reduced)
   framework: mbti          # mbti | ocean
   max_retries_per_step: 2  # retry on JSON parse failure
   aggregation: llm_aggregate   # majority | weighted | llm_aggregate
 
 evidence_retrieval:
-  method: hybrid           # semantic | keyword | hybrid
+  method: hybrid           # semantic | keyword | hybrid  (KB retrieval mode)
   alpha: 0.7              # weight for semantic in hybrid
-  pre_filter: true         # use keyword pre-filter before LLM
-  top_k: 10
+  pre_filter: true         # use pre-filter before LLM
+  top_k: 6                 # number of candidate sentences to feed Step 1
+
+  # Supervised sentence scorer (uses fine-tuned RoBERTa baselines).
+  scorer: roberta          # keyword | roberta | hybrid
+  use_roberta_prior: true  # inject doc-level RoBERTa prediction into Step-3 prompt
+  roberta_device: cpu      # cpu | cuda  (cpu avoids VRAM conflict with local LLM)
+  roberta_batch_size: 16
+  # roberta_checkpoints:   # (optional override — defaults chosen by framework)
+  #   IE: outputs/models/roberta_mbti_IE
+  #   SN: outputs/models/roberta_mbti_SN
+  #   TF: outputs/models/roberta_mbti_TF
+  #   JP: outputs/models/roberta_mbti_JP
 
 output:
   save_intermediate: true  # save step 1/2/3 outputs for debugging

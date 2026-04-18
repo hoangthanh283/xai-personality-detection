@@ -7,6 +7,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader
 from loguru import logger
 
+from src.rag_pipeline.llm_client import extract_json
 from src.reasoning.state_identifier import IdentifiedState
 from src.retrieval.kb_retriever import KBChunkResult
 
@@ -37,9 +38,15 @@ class TraitInferencer:
         states: list[IdentifiedState],
         trait_kb_chunks: list[KBChunkResult],
         framework: str,
+        roberta_prior: dict | None = None,
     ) -> str:
         template = self.env.get_template("trait_inference.j2")
-        return template.render(states=states, trait_kb_chunks=trait_kb_chunks, framework=framework)
+        return template.render(
+            states=states,
+            trait_kb_chunks=trait_kb_chunks,
+            framework=framework,
+            roberta_prior=roberta_prior,
+        )
 
     def _extract_mbti_label(self, prediction_details: dict) -> str:
         """Extract full MBTI label from dimension predictions."""
@@ -65,27 +72,33 @@ class TraitInferencer:
         trait_kb_chunks: list[KBChunkResult],
         framework: str = "mbti",
         max_retries: int = 2,
+        roberta_prior: dict | None = None,
     ) -> PredictionResult:
         """Infer personality traits from states and KB definitions."""
         if not states:
+            # If we have a RoBERTa prior, fall back to it rather than UNKNOWN.
+            if roberta_prior:
+                fallback = _prior_to_label(roberta_prior, framework)
+                if fallback:
+                    return PredictionResult(
+                        predicted_label=fallback,
+                        prediction_details={"type": fallback, "source": "roberta_prior_fallback"},
+                        explanation="CoPE found no states; using RoBERTa baseline prior as fallback.",
+                        framework=framework,
+                    )
             return PredictionResult(
                 predicted_label="UNKNOWN",
                 explanation="No psychological states were identified.",
                 framework=framework,
             )
 
-        prompt = self._render_prompt(states, trait_kb_chunks, framework)
+        prompt = self._render_prompt(states, trait_kb_chunks, framework, roberta_prior=roberta_prior)
         messages = [{"role": "user", "content": prompt}]
 
         for attempt in range(max_retries + 1):
             try:
                 response = self.llm.generate(messages)
-                content = response.strip()
-                if content.startswith("```"):
-                    content = content.split("```")[1]
-                    if content.startswith("json"):
-                        content = content[4:]
-
+                content = extract_json(response)
                 result_data: dict[str, Any] = json.loads(content)
                 prediction = result_data.get("prediction", {})
                 explanation = result_data.get("explanation", "")
@@ -116,8 +129,41 @@ class TraitInferencer:
                 logger.warning(f"Trait inference attempt {attempt + 1} failed: {e}")
                 if attempt == max_retries:
                     logger.error("All trait inference attempts failed, returning fallback prediction")
+                    # Use RoBERTa prior as final fallback if available.
+                    if roberta_prior:
+                        fallback = _prior_to_label(roberta_prior, framework)
+                        if fallback:
+                            return PredictionResult(
+                                predicted_label=fallback,
+                                prediction_details={"type": fallback, "source": "roberta_prior_fallback"},
+                                explanation="Step-3 JSON parse failed; using RoBERTa prior as fallback.",
+                                framework=framework,
+                            )
                     return PredictionResult(
                         predicted_label="UNKNOWN",
                         explanation="Inference failed due to parsing errors.",
                         framework=framework,
                     )
+
+
+def _prior_to_label(roberta_prior: dict, framework: str) -> str | None:
+    """Convert a RoBERTa doc-level prior dict to the final label string."""
+    if not roberta_prior:
+        return None
+    if framework == "mbti":
+        # Expect keys IE, SN, TF, JP → each (label, conf)
+        parts = []
+        for dim in ["IE", "SN", "TF", "JP"]:
+            pair = roberta_prior.get(dim)
+            if not pair or not pair[0]:
+                return None
+            parts.append(pair[0])
+        return "".join(parts)
+    else:
+        parts = []
+        for trait in ["O", "C", "E", "A", "N"]:
+            pair = roberta_prior.get(trait)
+            if not pair or not pair[0]:
+                return None
+            parts.append(f"{trait}:{pair[0]}")
+        return ",".join(parts)

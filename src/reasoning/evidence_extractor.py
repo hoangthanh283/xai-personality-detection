@@ -6,6 +6,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from loguru import logger
 
+from src.rag_pipeline.llm_client import extract_json
 from src.retrieval.evidence_retriever import EvidenceSentence
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
@@ -54,16 +55,17 @@ class EvidenceExtractor:
         for attempt in range(max_retries + 1):
             try:
                 response = self.llm.generate(messages)
-                # Parse JSON response
-                # Strip markdown code blocks if present
-                content = response.strip()
-                if content.startswith("```"):
-                    content = content.split("```")[1]
-                    if content.startswith("json"):
-                        content = content[4:]
-
-                evidence_list = json.loads(content)
-                if not isinstance(evidence_list, list):
+                content = extract_json(response)
+                parsed = json.loads(content)
+                # Accept either a bare list or {"data":[...]} style wrapper
+                if isinstance(parsed, list):
+                    evidence_list = parsed
+                elif isinstance(parsed, dict):
+                    # Find the first list value in the dict
+                    evidence_list = next(
+                        (v for v in parsed.values() if isinstance(v, list)), []
+                    )
+                else:
                     evidence_list = []
 
                 return [

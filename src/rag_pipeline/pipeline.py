@@ -38,7 +38,14 @@ class RAGXPRPipeline:
 
         # Build components
         self.preprocessor = TextPreprocessor(PreprocessorConfig())
-        self.evidence_retriever = EvidenceRetriever(evidence_config)
+
+        # Optional RoBERTa scorer for supervised evidence selection + Step-3 prior.
+        self.roberta_scorer = self._build_roberta_scorer(
+            evidence_config, cope_config.get("framework", "mbti")
+        )
+        self.use_roberta_prior = evidence_config.get("use_roberta_prior", False) and self.roberta_scorer is not None
+
+        self.evidence_retriever = EvidenceRetriever(evidence_config, roberta_scorer=self.roberta_scorer)
 
         # KB retriever (semantic, BM25, or hybrid)
         skip_kb = retrieval_config.get("skip_kb", False)
@@ -69,6 +76,35 @@ class RAGXPRPipeline:
         self.framework = cope_config.get("framework", "mbti")
         self.save_intermediate = config.get("output", {}).get("save_intermediate", True)
 
+    def _build_roberta_scorer(self, evidence_config: dict, framework: str):
+        """Instantiate RoBERTaEvidenceScorer if configured, else return None."""
+        scorer_type = evidence_config.get("scorer", "keyword")
+        use_prior = evidence_config.get("use_roberta_prior", False)
+        if scorer_type not in ("roberta", "hybrid") and not use_prior:
+            return None
+        try:
+            from src.retrieval.roberta_scorer import (RoBERTaEvidenceScorer,
+                                                      default_mbti_checkpoints,
+                                                      default_ocean_checkpoints)
+        except ImportError as e:
+            logger.warning(f"RoBERTa scorer unavailable ({e}); falling back to keyword")
+            return None
+
+        ckpts = evidence_config.get("roberta_checkpoints")
+        if not ckpts:
+            dataset_hint = evidence_config.get("roberta_dataset", "essays")
+            ckpts = (default_mbti_checkpoints() if framework == "mbti"
+                     else default_ocean_checkpoints(dataset=dataset_hint))
+        try:
+            return RoBERTaEvidenceScorer(
+                checkpoint_dirs=ckpts,
+                device=evidence_config.get("roberta_device"),
+                batch_size=evidence_config.get("roberta_batch_size", 32),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load RoBERTa scorer: {e}; falling back to keyword")
+            return None
+
     def predict(self, text: str, yield_steps: bool = False) -> dict | Any:
         """
         Run the full RAG-XPR pipeline on a single text.
@@ -88,6 +124,15 @@ class RAGXPRPipeline:
             candidate_evidence = [EvidenceSentence(text=clean_text[:2000], sentence_idx=0, score=1.0)]
             logger.debug("Skipping evidence pre-filter (ablation)")
 
+        # Optional: doc-level RoBERTa prior for Step 3
+        roberta_prior = None
+        if self.use_roberta_prior and self.roberta_scorer is not None:
+            try:
+                roberta_prior = self.roberta_scorer.predict_doc_level(clean_text)
+                logger.debug(f"RoBERTa prior: {roberta_prior}")
+            except Exception as e:
+                logger.warning(f"RoBERTa prior failed: {e}")
+
         # 3 + 4. CoPE reasoning (retrieves KB context internally)
         if yield_steps:
             return self.cope_pipeline.run(
@@ -95,7 +140,8 @@ class RAGXPRPipeline:
                 candidate_evidence,
                 framework=self.framework,
                 save_intermediate=self.save_intermediate,
-                yield_steps=True
+                yield_steps=True,
+                roberta_prior=roberta_prior,
             )
 
         result = self.cope_pipeline.run(
@@ -103,7 +149,10 @@ class RAGXPRPipeline:
             candidate_evidence,
             framework=self.framework,
             save_intermediate=self.save_intermediate,
+            roberta_prior=roberta_prior,
         )
+        if roberta_prior is not None and isinstance(result, dict):
+            result.setdefault("roberta_prior", roberta_prior)
         return result
 
     def predict_batch(self, texts: list[str], show_progress: bool = True) -> list[dict]:

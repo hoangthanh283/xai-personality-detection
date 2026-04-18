@@ -204,6 +204,19 @@ def main():
         config["retrieval"]["collection"] = config["retrieval"].get("collection", "psych_kb") + "_small"
     elif args.ablation == "large_kb":
         config["retrieval"]["collection"] = config["retrieval"].get("collection", "psych_kb") + "_large"
+    # RoBERTa scorer / prior ablations
+    elif args.ablation == "keyword-only":
+        config["evidence_retrieval"]["scorer"] = "keyword"
+        config["evidence_retrieval"]["use_roberta_prior"] = False
+    elif args.ablation == "roberta-scorer":
+        config["evidence_retrieval"]["scorer"] = "roberta"
+        config["evidence_retrieval"]["use_roberta_prior"] = False
+    elif args.ablation == "roberta-prior":
+        config["evidence_retrieval"]["scorer"] = "keyword"
+        config["evidence_retrieval"]["use_roberta_prior"] = True
+    elif args.ablation == "roberta-both":
+        config["evidence_retrieval"]["scorer"] = "roberta"
+        config["evidence_retrieval"]["use_roberta_prior"] = True
 
     if args.mode == "llm_direct":
         run_llm_direct(args, config)

@@ -1,10 +1,42 @@
 """Unified LLM interface supporting OpenRouter/OpenAI, vLLM, and Ollama backends."""
 import json
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 
 from loguru import logger
+
+
+def extract_json(text: str) -> str:
+    """Robustly extract a JSON value (array or object) from an LLM response.
+
+    Strips markdown code fences, prose before/after JSON, and handles nested structures.
+    Returns the raw JSON string, ready for json.loads().
+    """
+    s = text.strip()
+    # Strip ```json or ``` fences
+    if s.startswith("```"):
+        # remove opening fence
+        s = re.sub(r"^```(?:json)?\s*", "", s)
+        # remove trailing fence
+        s = re.sub(r"\s*```\s*$", "", s)
+        s = s.strip()
+    # Find first JSON start character
+    first_brace = s.find("{")
+    first_bracket = s.find("[")
+    candidates = [c for c in (first_brace, first_bracket) if c >= 0]
+    if not candidates:
+        return s  # let json.loads fail with original
+    start = min(candidates)
+    # Find matching last close
+    opener = s[start]
+    closer = "}" if opener == "{" else "]"
+    # Walk from end to find last closer
+    last = s.rfind(closer)
+    if last <= start:
+        return s
+    return s[start : last + 1]
 
 
 class LLMClient(ABC):
@@ -239,14 +271,17 @@ class OllamaClient(LLMClient):
         self._requests = requests
 
     def generate(self, messages: list[dict], **kwargs) -> str:
+        start = time.perf_counter()
         payload = {
             "model": self.model,
             "messages": messages,
             "stream": False,
             "options": {"temperature": self.temperature},
         }
-        response = self._requests.post(self.base_url, json=payload, timeout=120)
+        response = self._requests.post(self.base_url, json=payload, timeout=kwargs.get("timeout", 180))
         response.raise_for_status()
+        latency = time.perf_counter() - start
+        logger.info(f"LLM [{self.model}] responded in {latency:.2f}s")
         return response.json()["message"]["content"]
 
 
@@ -254,7 +289,13 @@ def build_llm_client(config: dict) -> LLMClient:
     """Factory function to build an LLM client from config."""
     # DEFAULT TO LOCAL if not specified
     provider = config.get("provider", "local")
-    model = os.getenv("LLM_MODEL_NAME") or config.get("model", "microsoft/Phi-3.5-mini-instruct")
+    # LLM_MODEL_NAME env var only overrides API-based providers, not local Ollama/vLLM
+    # (where the model string is a local name, not an API identifier).
+    api_providers = {"openrouter", "openai"}
+    if provider in api_providers:
+        model = os.getenv("LLM_MODEL_NAME") or config.get("model", "microsoft/Phi-3.5-mini-instruct")
+    else:
+        model = config.get("model", "microsoft/Phi-3.5-mini-instruct")
     temperature = config.get("temperature", 0.1)
     max_tokens = config.get("max_tokens", 2048)
     api_key = _resolve_api_key(provider, config.get("api_key"))

@@ -6,6 +6,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from loguru import logger
 
+from src.rag_pipeline.llm_client import extract_json
 from src.reasoning.evidence_extractor import ExtractedEvidence
 from src.retrieval.kb_retriever import KBChunkResult
 
@@ -56,14 +57,15 @@ class StateIdentifier:
         for attempt in range(max_retries + 1):
             try:
                 response = self.llm.generate(messages)
-                content = response.strip()
-                if content.startswith("```"):
-                    content = content.split("```")[1]
-                    if content.startswith("json"):
-                        content = content[4:]
-
-                states_list = json.loads(content)
-                if not isinstance(states_list, list):
+                content = extract_json(response)
+                parsed = json.loads(content)
+                if isinstance(parsed, list):
+                    states_list = parsed
+                elif isinstance(parsed, dict):
+                    states_list = next(
+                        (v for v in parsed.values() if isinstance(v, list)), []
+                    )
+                else:
                     states_list = []
 
                 return [

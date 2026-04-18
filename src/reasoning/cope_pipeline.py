@@ -40,6 +40,7 @@ class CoPEPipeline:
         framework: str = "mbti",
         save_intermediate: bool = True,
         yield_steps: bool = False,
+        roberta_prior: dict | None = None,
     ) -> dict | Any:
         """
         Run the 3-step reasoning chain.
@@ -47,8 +48,8 @@ class CoPEPipeline:
         Otherwise returns a dict directly.
         """
         if yield_steps:
-            return self._run_stream(text, candidate_evidence, framework, save_intermediate)
-        return self._run_collect(text, candidate_evidence, framework, save_intermediate)
+            return self._run_stream(text, candidate_evidence, framework, save_intermediate, roberta_prior)
+        return self._run_collect(text, candidate_evidence, framework, save_intermediate, roberta_prior)
 
     def _run_collect(
         self,
@@ -56,10 +57,11 @@ class CoPEPipeline:
         candidate_evidence: list[EvidenceSentence],
         framework: str,
         save_intermediate: bool,
+        roberta_prior: dict | None = None,
     ) -> dict:
         """Non-streaming: run all steps and return final dict."""
         last: dict = {}
-        for _, payload in self._run_stream(text, candidate_evidence, framework, save_intermediate):
+        for _, payload in self._run_stream(text, candidate_evidence, framework, save_intermediate, roberta_prior):
             if isinstance(payload, dict) and "predicted_label" in payload:
                 last = payload
         return last
@@ -70,6 +72,7 @@ class CoPEPipeline:
         candidate_evidence: list[EvidenceSentence],
         framework: str = "mbti",
         save_intermediate: bool = True,
+        roberta_prior: dict | None = None,
     ):
         """Generator version — yields (step_name, payload) tuples."""
         # ── Step 1: Evidence Extraction ──────────────────────────────────────
@@ -147,13 +150,14 @@ class CoPEPipeline:
         if self.kb is not None:
             trait_kb = self.kb.search(
                 f"{framework} personality trait definitions",
-                top_k=10,
+                top_k=5,
                 framework=framework,
                 category="trait_definition",
             )
 
         result: PredictionResult = self.trait_inferencer.infer(
-            states, trait_kb, framework=framework, max_retries=self.max_retries
+            states, trait_kb, framework=framework, max_retries=self.max_retries,
+            roberta_prior=roberta_prior,
         )
         logger.info(f"Predicted: {result.predicted_label}")
         yield "Step 3: Predicting Traits", result
