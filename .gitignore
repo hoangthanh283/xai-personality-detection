@@ -66,3 +66,5 @@ assets/
 !**/0[0-9]_*.md
 
 docs/BASELINE_RERUN_GUIDE.md
+.beads
+.claude
