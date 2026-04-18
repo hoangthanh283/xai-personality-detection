@@ -134,28 +134,29 @@ def run_full_evaluation(args, config: dict) -> None:
                     gold_evs.append(gold_ev)
             xai["evidence_relevance_f1"] = evidence_relevance_f1(pred_evs, gold_evs)
 
-        # Explanation Consistency & Faithfulness
-        try:
-            from src.evaluation.xai_metrics import (explanation_consistency,
-                                                    faithfulness_score)
-            from src.rag_pipeline.llm_client import build_llm_client
-            from src.rag_pipeline.pipeline import RAGXPRPipeline
+        # Explanation Consistency & Faithfulness (both call LLM — can be slow)
+        if not getattr(args, "skip_llm_xai", False):
+            try:
+                from src.evaluation.xai_metrics import (explanation_consistency,
+                                                        faithfulness_score)
+                from src.rag_pipeline.llm_client import build_llm_client
+                from src.rag_pipeline.pipeline import RAGXPRPipeline
 
-            # Try to build LLM for consistency checking
-            llm_config = config.get("llm", {"provider": "openrouter", "model": "qwen/qwen3.6-plus-preview:free"})
-            llm_client = build_llm_client(llm_config)
+                # Try to build LLM for consistency checking
+                llm_config = config.get("llm", {"provider": "openrouter", "model": "qwen/qwen3.6-plus-preview:free"})
+                llm_client = build_llm_client(llm_config)
 
-            # Check consistency
-            xai["explanation_consistency"] = explanation_consistency(predictions, llm_client)
-            # For faithfulness, we need the pipeline instantiated.
-            # We ONLY run faithfulness for RAG-XPR (which generates evidence chains).
-            if "rag_xpr" in pred_file.stem and any(p.get("evidence_chain") for p in predictions):
-                rag_cfg_path = "configs/rag_xpr_config.yaml"
-                if Path(rag_cfg_path).exists():
-                    pipeline = RAGXPRPipeline.from_config_file(rag_cfg_path)
-                    xai["faithfulness"] = faithfulness_score(pipeline, predictions, n_samples=min(20, len(predictions)))
-        except Exception as e:
-            logger.warning(f"Could not compute LLM-based XAI metrics for {pred_file.stem}: {e}")
+                # Check consistency
+                xai["explanation_consistency"] = explanation_consistency(predictions, llm_client)
+                # For faithfulness, we need the pipeline instantiated.
+                # We ONLY run faithfulness for RAG-XPR (which generates evidence chains).
+                if "rag_xpr" in pred_file.stem and any(p.get("evidence_chain") for p in predictions):
+                    rag_cfg_path = "configs/rag_xpr_config.yaml"
+                    if Path(rag_cfg_path).exists():
+                        pipeline = RAGXPRPipeline.from_config_file(rag_cfg_path)
+                        xai["faithfulness"] = faithfulness_score(pipeline, predictions, n_samples=min(20, len(predictions)))
+            except Exception as e:
+                logger.warning(f"Could not compute LLM-based XAI metrics for {pred_file.stem}: {e}")
 
         # Store XAI back to metrics, and also into dedicated dict
         for k, v in xai.items():
@@ -395,6 +396,8 @@ def main():
     parser.add_argument("--n_samples", type=int, default=50)
     parser.add_argument("--methods", help="Comma-separated method names for human eval")
     parser.add_argument("--wandb_project", help="W&B project name (overrides WANDB_PROJECT env var)")
+    parser.add_argument("--skip_llm_xai", action="store_true",
+                        help="Skip slow LLM-based XAI metrics (explanation_consistency, faithfulness)")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
