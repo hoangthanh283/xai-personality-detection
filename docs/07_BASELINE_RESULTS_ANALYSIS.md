@@ -30,12 +30,15 @@ All results use **cleaned data** — MBTI type mentions are stripped from text b
 | DistilBERT | [27.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | [74.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [57.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/xjvpelpp) | [61.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [81.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) |
 | LSTM | [25.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | [73.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [54.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/gymkvnw7) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [80.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) |
 | RoBERTa | [29.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ynppgj5t) | [74.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [55.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/esjjr4hp) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/rcly26xs) | — |
+| **RoBERTa+MLP**² | **34.3%** | **76.4%** | **56.0%** | **59.9%** | — |
+| **Frozen-BERT+SVM**² | 29.7% | 70.8% | 49.6% | **56.8%** | — |
 | **RAG-XPR (keyword-only)**¹ | [**15.3%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**68.1%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
 | **RAG-XPR (roberta-both)**¹ | [**28.6%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**73.4%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
 
 > LSTM results: random-init BiLSTM with attention pooling, vocab_size=30K, max_length=512, 20 epochs, early stopping patience=5.
 > RoBERTa personality_evd was OOM'd on first run; rerun in progress with reduced batch.
 > ¹ RAG-XPR results are on a **random 100-sample subset** of the MBTI test split (vs. full 1,301 for baselines). Pipeline: Gemma-4-E2B local LLM + CoPE 3-step reasoning + KB retrieval over 698 psychology chunks. `roberta-both` additionally uses 4 fine-tuned RoBERTa binaries to (a) score sentence relevance and (b) inject a doc-level supervised prior into the Step-3 trait-inference prompt. Unlike baselines, both RAG-XPR variants also output a grounded `evidence_chain` (96.4% grounding) and natural-language `explanation` per prediction.
+> ² **Frozen-encoder paradigms (NEW)** — published SOTA-style baselines that address the "fine-tuning overfits on small data" failure mode documented in Section 5.5. **RoBERTa+MLP** adapts Gao et al. 2024 (arXiv:2406.16223): frozen `roberta-base` `[CLS]` → 2-layer MLP head (`768→256→C`, GELU+Dropout+LayerNorm) trained with AdamW lr=1e-3 + sqrt_balanced CrossEntropy + early stopping. **Frozen-BERT+SVM** adapts Kazameini et al. 2020 (arXiv:2010.01309): frozen `roberta-base` (mean of last 4 hidden layers) → `BaggingClassifier(LinearSVC, n_estimators=10)`. Both use the same chunking strategy (512-token windows, stride 256, mean-pool across chunks). **Key findings**: RoBERTa+MLP **beats end-to-end RoBERTa on every task** (MBTI 16-class +4.6pp, 4-dim mean +1.5pp, F1 +2.8pp); Frozen-BERT+SVM has **highest 4-dim F1 (66.0%)** — doesn't collapse to majority class — and on Pandora reaches **55.0% F1-macro vs RoBERTa's 37.8%** (+17pp). PersonalityEvd runs pending.
 
 ### 2.2 F1-Macro (mean across tasks/traits where applicable)
 
@@ -49,6 +52,8 @@ All results use **cleaned data** — MBTI type mentions are stripped from text b
 | DistilBERT | [13.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | [55.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [56.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/xjvpelpp) | [40.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [48.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) |
 | LSTM | [7.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | [55.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [53.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/gymkvnw7) | [44.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [45.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) |
 | RoBERTa | [9.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ynppgj5t) | [55.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [54.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/esjjr4hp) | [37.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/rcly26xs) | — |
+| **RoBERTa+MLP**² | **20.0%** | **58.7%** | **54.7%** | **44.5%** | — |
+| **Frozen-BERT+SVM**² | **21.1%** | **66.0%** | 34.4% | **55.0%** | — |
 | **RAG-XPR (keyword-only)**¹ | [**5.7%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**51.0%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
 | **RAG-XPR (roberta-both)**¹ | [**14.9%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**58.8%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
 
@@ -68,6 +73,8 @@ All results use **cleaned data** — MBTI type mentions are stripped from text b
 | [DistilBERT](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | 27.4% | 13.0% |
 | [LSTM](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | 25.2% | 7.3% |
 | [RoBERTa](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ynppgj5t) | 29.7% | 9.9% |
+| **RoBERTa+MLP**² | **34.3%** | **20.0%** |
+| **Frozen-BERT+SVM**² | 29.7% | **21.1%** |
 | [**RAG-XPR (keyword-only)**¹](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | **15.3%** | **5.7%** |
 | [**RAG-XPR (roberta-both)**¹](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | **28.6%** | **14.9%** |
 
@@ -95,6 +102,8 @@ Each dimension is a separate binary classifier (I vs E, S vs N, T vs F, J vs P).
 | DistilBERT | [76.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [86.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/p3rb4wpp) | [73.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/yet39xow) | [61.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e9brdohm) | [74.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) |
 | LSTM | [75.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [86.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nurzobb2) | [70.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e0thck6a) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m8tdewb9) | [73.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) |
 | RoBERTa | [77.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [86.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/73ylr7s9) | [74.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/5oq39nlc) | [61.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/1v6h3kl2) | [74.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) |
+| **RoBERTa+MLP**² | **77.0%** | **86.2%** | **76.5%** | **65.8%** | **76.4%** |
+| **Frozen-BERT+SVM**² | **68.4%** | **73.0%** | **77.2%** | **64.6%** | **70.8%** |
 | **RAG-XPR (keyword-only)**¹ | [**73.6%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**88.5%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**56.3%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**54.0%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**68.1%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) |
 | **RAG-XPR (roberta-both)**¹ | [**69.2%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**89.0%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**73.6%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**61.5%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**73.4%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) |
 
@@ -110,6 +119,8 @@ Each dimension is a separate binary classifier (I vs E, S vs N, T vs F, J vs P).
 | DistilBERT | [44.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [46.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/p3rb4wpp) | [72.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/yet39xow) | [58.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e9brdohm) | [55.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) |
 | LSTM | [49.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [47.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nurzobb2) | [69.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/e0thck6a) | [55.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/m8tdewb9) | [55.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) |
 | RoBERTa | [50.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [46.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/73ylr7s9) | [73.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/5oq39nlc) | [53.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/1v6h3kl2) | [55.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) |
+| **RoBERTa+MLP**² | **52.6%** | **47.4%** | **76.3%** | **58.7%** | **58.7%** |
+| **Frozen-BERT+SVM**² | **63.0%** | **59.7%** | **77.1%** | **64.0%** | **66.0%** |
 | **RAG-XPR (keyword-only)**¹ | [**58.9%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**55.2%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**37.7%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**52.2%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**51.0%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) |
 | **RAG-XPR (roberta-both)**¹ | [**46.9%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**55.4%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**73.6%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**59.2%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**58.8%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) |
 
