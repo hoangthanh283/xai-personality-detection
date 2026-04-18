@@ -16,34 +16,32 @@ All results use **cleaned data** — MBTI type mentions are stripped from text b
 
 ## 2. Overall Summary Tables
 
-### 2.1 Accuracy (mean across tasks/traits where applicable)
+### Metric policy
 
-> Each cell links to the **first** (O / IE / 16-class) W&B run of that group; full per-trait runs are in sections 3.x.
+We report **all** standard averaging variants (accuracy / micro / macro / weighted
+F1 + balanced accuracy + per-class P/R/F1) for transparency, but **Macro F1 is the
+primary metric** for ranking and decision-making. Rationale:
 
-| Model | MBTI 16-class | MBTI 4-dim (mean) | Essays OCEAN (mean) | Pandora OCEAN (mean) | PerEvd OCEAN (mean) |
-|-------|:-------------:|:-----------------:|:-------------------:|:--------------------:|:-------------------:|
-| LR | [32.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nne33xb7) | [74.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9f22l57b) | [57.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/oihghckr) | [59.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wew490j9) | [61.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o0zyruc3) |
-| SVM | [37.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/jifrp1iq) | [77.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/av3cme4u) | [57.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/fcje9771) | [60.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o2o8vb3t) | [80.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9dvi75ja) |
-| NB | [26.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/jzgoam13) | [74.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cb9lyrqg) | [55.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/pzju9f5y) | [61.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2oy5fh5s) | [80.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/6l0c5xrj) |
-| XGBoost | [33.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/iitutgfe) | [76.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dc2x5vrh) | [55.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mb63hkkb) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vzrsv5u2) | [80.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/f0zgnp8r) |
-| RF | [27.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/5yfzufn8) | [74.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/l8i6yeh0) | [56.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ucsdammc) | [60.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2fl7f0if) | [80.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/eb2xcz83) |
-| DistilBERT | [27.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | [74.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [57.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/xjvpelpp) | [61.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [81.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) |
-| LSTM | [25.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | [73.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [54.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/gymkvnw7) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [80.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) |
-| RoBERTa | [29.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ynppgj5t) | [74.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [55.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/esjjr4hp) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/rcly26xs) | — |
-| **RoBERTa+MLP**² | **34.3%** | **76.4%** | **56.0%** | **59.9%** | **80.9%** |
-| **Frozen-BERT+SVM**² | 29.7% | 70.8% | 49.6% | **56.8%** | **78.4%** |
-| **RAG-XPR (keyword-only)**¹ | [**15.3%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**68.1%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
-| **RAG-XPR (roberta-both)**¹ | [**28.6%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**73.4%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
+- **Macro F1** — arithmetic mean of per-class F1. Each class weighted equally.
+  Honest on imbalanced tasks (MBTI SN is 86:14, IE is 77:23, OCEAN Pandora
+  traits skew 60–85% majority). Section 2.2 presents this as the headline.
+- **Accuracy** (= micro F1 for single-label) — inflated by majority guessing on
+  imbalanced data. SVM 86.9% on MBTI SN is only +0.8 pp over the "always predict
+  N" dummy baseline. Section 2.3 keeps it for reference only.
+- **Weighted F1** — majority-dominated; do not use for ranking.
+- **Balanced Accuracy** — mean recall per class; intuitive twin of macro F1.
+- **Per-class drill-down** — see `docs/CLASSIFICATION_REPORTS.md` (regenerated
+  via `$UV_RUN python scripts/detailed_classification_report.py`).
 
-> LSTM results: random-init BiLSTM with attention pooling, vocab_size=30K, max_length=512, 20 epochs, early stopping patience=5.
-> RoBERTa personality_evd was OOM'd on first run; rerun in progress with reduced batch.
-> ¹ RAG-XPR results are on a **random 100-sample subset** of the MBTI test split (vs. full 1,301 for baselines). Pipeline: Gemma-4-E2B local LLM + CoPE 3-step reasoning + KB retrieval over 698 psychology chunks. `roberta-both` additionally uses 4 fine-tuned RoBERTa binaries to (a) score sentence relevance and (b) inject a doc-level supervised prior into the Step-3 trait-inference prompt. Unlike baselines, both RAG-XPR variants also output a grounded `evidence_chain` (96.4% grounding) and natural-language `explanation` per prediction.
-> ² **Frozen-encoder paradigms (NEW)** — published SOTA-style baselines that address the "fine-tuning overfits on small data" failure mode documented in Section 5.5. **RoBERTa+MLP** adapts Gao et al. 2024 (arXiv:2406.16223): frozen `roberta-base` `[CLS]` → 2-layer MLP head (`768→256→C`, GELU+Dropout+LayerNorm) trained with AdamW lr=1e-3 + sqrt_balanced CrossEntropy + early stopping. **Frozen-BERT+SVM** adapts Kazameini et al. 2020 (arXiv:2010.01309): frozen `roberta-base` (mean of last 4 hidden layers) → `BaggingClassifier(LinearSVC, n_estimators=10)`. Both use the same chunking strategy (512-token windows, stride 256, mean-pool across chunks). **Key findings across full 5-dataset matrix**:
-- **RoBERTa+MLP beats end-to-end RoBERTa on every task**: MBTI 16-class acc +4.6pp, 4-dim mean +1.5pp, 16-class F1 +10.1pp, 4-dim F1 +2.8pp, Essays matches, Pandora +6.9pp F1, PEvd acc 80.9% (filled vacancy).
-- **Frozen-BERT+SVM has highest F1-macro** on 4/5 datasets — no class collapse on imbalanced OCEAN: Pandora F1 55.0% (vs RoBERTa 37.8%, +17pp), PEvd F1 56.6% (vs all baselines ≤48%), MBTI 4-dim F1 66.0% (highest across all models).
-- **Both match or beat classical SVM+TF-IDF on accuracy** while producing transformer-quality representations that downstream RAG-XPR uses — bridging the "fine-tuning overfits" and "classical ML lacks semantic features" gaps.
+**Decision rule**: when two models' accuracies differ by < 5 pp but macro F1
+differs by > 3 pp, trust macro F1.
 
-### 2.2 F1-Macro (mean across tasks/traits where applicable)
+---
+
+### 2.1 Macro F1 — PRIMARY metric (mean across tasks/traits)
+
+> Best value per column in **bold**. Each cell links to the first (O / IE / 16-class)
+> W&B run of that group; per-trait cells live in Sections 3.x.
 
 | Model | MBTI 16-class | MBTI 4-dim (mean) | Essays OCEAN (mean) | Pandora OCEAN (mean) | PerEvd OCEAN (mean) |
 |-------|:-------------:|:-----------------:|:-------------------:|:--------------------:|:-------------------:|
@@ -55,10 +53,94 @@ All results use **cleaned data** — MBTI type mentions are stripped from text b
 | DistilBERT | [13.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | [55.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [56.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/xjvpelpp) | [40.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [48.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) |
 | LSTM | [7.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | [55.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [53.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/gymkvnw7) | [44.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [45.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) |
 | RoBERTa | [9.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ynppgj5t) | [55.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [54.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/esjjr4hp) | [37.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/rcly26xs) | — |
-| **RoBERTa+MLP**² | **20.0%** | **58.7%** | **54.7%** | **44.5%** | **48.2%** |
+| **RoBERTa+MLP**² | 20.0% | 58.7% | 54.7% | 44.5% | 48.2% |
 | **Frozen-BERT+SVM**² | **21.1%** | **66.0%** | 34.4% | **55.0%** | **56.6%** |
-| **RAG-XPR (keyword-only)**¹ | [**5.7%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**51.0%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
-| **RAG-XPR (roberta-both)**¹ | [**14.9%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [**58.8%**](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
+| **RAG-XPR (keyword-only)**¹ | [5.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [51.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
+| **RAG-XPR (roberta-both)**¹ | [14.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [58.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
+
+**Macro F1 ranking (MBTI 4-dim, 5 datasets average of applicable tasks)**: Frozen-BERT+SVM
+and LR are jointly the strongest balanced classifiers; all transformer-based models and
+SVM+TFIDF cluster ~10 pp below on Pandora/PEvd where class imbalance is highest. Naive
+Bayes, Random Forest, and XGBoost exhibit **majority-class collapse** on MBTI SN/IE
+(minority recall ≈ 0 — see `docs/CLASSIFICATION_REPORTS.md`). Frozen-BERT+SVM wins
+4/5 dataset columns; its single loss (Essays 34.4%) is the paradigm-mismatch case —
+Kazameini's bagged-SVM needs more samples than Essays' 1.7K train split offers.
+
+---
+
+### 2.2 Balanced Accuracy — reference (mean recall per class)
+
+Balanced accuracy = mean recall across classes. Intuitive twin of Macro F1; tracks it
+closely. Useful sanity-check for "is this model detecting minority classes at all?".
+
+| Model | MBTI 16-class | MBTI 4-dim (mean) | Essays OCEAN (mean) | Pandora OCEAN (mean) | PerEvd OCEAN (mean) |
+|-------|:-------------:|:-----------------:|:-------------------:|:--------------------:|:-------------------:|
+| LR | 24.8% | 68.7% | 57.0% | 55.5% | 55.9% |
+| SVM | 17.1% | 64.1% | 57.5% | 52.9% | 51.4% |
+| NB | 8.7% | 56.2% | 55.2% | 50.5% | 50.6% |
+| XGBoost | 12.6% | 60.7% | 54.8% | 52.9% | 50.4% |
+| RF | 9.0% | 55.5% | 56.5% | 50.6% | 51.2% |
+| DistilBERT | 11.3% | — | — | — | 50.0% |
+| LSTM | — | — | — | — | — |
+| RoBERTa | 11.2% | — | — | — | — |
+| **RoBERTa+MLP**² | 19.5% | 60.1% | 55.7% | 52.1% | 51.6% |
+| **Frozen-BERT+SVM**² | **25.4%** | **68.8%** | 50.0% | **55.3%** | **56.3%** |
+
+**Ranking matches Macro F1**: Frozen-BERT+SVM and LR tie for highest per-class recall
+across the imbalanced tasks. Models with balanced-accuracy ≈ 50% on OCEAN PEvd
+(DistilBERT, SVM, NB) are essentially random at minority detection — they hit
+accuracy 80% only because the test set has 80% majority class.
+
+---
+
+### 2.3 Accuracy (= Micro F1) — descriptive only, **do not use to rank**
+
+> Inflated by majority-class guessing on imbalanced tasks. Kept for comparability with
+> prior literature. Equal to micro F1 in single-label classification. See Section 5.5
+> (RCA) and `docs/CLASSIFICATION_REPORTS.md` for per-class recall showing which models
+> are actually learning vs. collapsing to majority.
+
+| Model | MBTI 16-class | MBTI 4-dim (mean) | Essays OCEAN (mean) | Pandora OCEAN (mean) | PerEvd OCEAN (mean) |
+|-------|:-------------:|:-----------------:|:-------------------:|:--------------------:|:-------------------:|
+| LR | [32.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/nne33xb7) | [74.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9f22l57b) | [57.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/oihghckr) | [59.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/wew490j9) | [61.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o0zyruc3) |
+| SVM | [37.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/jifrp1iq) | [77.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/av3cme4u) | [57.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/fcje9771) | [60.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/o2o8vb3t) | [80.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9dvi75ja) |
+| NB | [26.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/jzgoam13) | [74.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/cb9lyrqg) | [55.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/pzju9f5y) | [61.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2oy5fh5s) | [80.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/6l0c5xrj) |
+| XGBoost | [33.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/iitutgfe) | [76.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/dc2x5vrh) | [55.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/mb63hkkb) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/vzrsv5u2) | [80.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/f0zgnp8r) |
+| RF | [27.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/5yfzufn8) | [74.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/l8i6yeh0) | [56.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ucsdammc) | [60.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/2fl7f0if) | [80.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/eb2xcz83) |
+| DistilBERT | [27.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/i3wmr5k7) | [74.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/9ezs2qbf) | [57.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/xjvpelpp) | [61.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/7rfdcvzj) | [81.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/8o4ze4l3) |
+| LSTM | [25.2%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/aoxtxqh7) | [73.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/57zekktf) | [54.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/gymkvnw7) | [62.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lckpn1ec) | [80.5%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/v2zbyx9c) |
+| RoBERTa | [29.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/ynppgj5t) | [74.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/lbyah4xj) | [55.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/esjjr4hp) | [60.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/rcly26xs) | — |
+| **RoBERTa+MLP**² | 34.3% | 76.4% | 56.0% | 59.9% | 80.9% |
+| **Frozen-BERT+SVM**² | 29.7% | 70.8% | 49.6% | 56.8% | 78.4% |
+| **RAG-XPR (keyword-only)**¹ | [15.3%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [68.1%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
+| **RAG-XPR (roberta-both)**¹ | [28.6%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [73.4%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
+
+> LSTM results: random-init BiLSTM with attention pooling, vocab_size=30K, max_length=512, 20 epochs, early stopping patience=5.
+> RoBERTa personality_evd was OOM'd on first run; rerun in progress with reduced batch.
+> ¹ RAG-XPR results are on a **random 100-sample subset** of the MBTI test split (vs. full 1,301 for baselines). Pipeline: Gemma-4-E2B local LLM + CoPE 3-step reasoning + KB retrieval over 698 psychology chunks. `roberta-both` additionally uses 4 fine-tuned RoBERTa binaries to (a) score sentence relevance and (b) inject a doc-level supervised prior into the Step-3 trait-inference prompt. Unlike baselines, both RAG-XPR variants also output a grounded `evidence_chain` (96.4% grounding) and natural-language `explanation` per prediction.
+> ² **Frozen-encoder paradigms (NEW)** — published SOTA-style baselines that address the "fine-tuning overfits on small data" failure mode documented in Section 5.5. **RoBERTa+MLP** adapts Gao et al. 2024 (arXiv:2406.16223): frozen `roberta-base` `[CLS]` → 2-layer MLP head (`768→256→C`, GELU+Dropout+LayerNorm) trained with AdamW lr=1e-3 + sqrt_balanced CrossEntropy + early stopping. **Frozen-BERT+SVM** adapts Kazameini et al. 2020 (arXiv:2010.01309): frozen `roberta-base` (mean of last 4 hidden layers) → `BaggingClassifier(LinearSVC, n_estimators=10)`. Both use the same chunking strategy (512-token windows, stride 256, mean-pool across chunks).
+>
+> **Key findings across full 5-dataset matrix (ranked by the primary Macro F1 metric)**:
+> - **Frozen-BERT+SVM has highest Macro F1** on 4/5 datasets — no class collapse on imbalanced OCEAN: Pandora Macro F1 55.0% (vs end-to-end RoBERTa 37.8%, +17 pp), PEvd 56.6% (vs all baselines ≤48%), MBTI 4-dim 66.0% (highest across all models).
+> - **RoBERTa+MLP beats end-to-end RoBERTa on every task**: MBTI 16-class Macro F1 +10.1 pp (20.0% vs 9.9%), 4-dim mean Macro F1 +2.8 pp, Pandora +6.7 pp F1, PEvd 80.9% acc (fills the end-to-end RoBERTa vacancy).
+> - **The accuracy story is misleading**: SVM+TFIDF "wins" the accuracy column on 3/5 datasets but drops to 2nd–5th in Macro F1 because its wins are majority-guessing. See Section 5.5 RCA and `docs/CLASSIFICATION_REPORTS.md`.
+
+---
+
+### 2.4 Per-class and Weighted F1 drill-down
+
+For each dataset × task combination, the full breakdown (Macro F1 / Micro F1 /
+Weighted F1 / Balanced Accuracy / per-class Precision / Recall / F1 / support) is
+available in [`docs/CLASSIFICATION_REPORTS.md`](CLASSIFICATION_REPORTS.md). Generate
+or refresh via:
+
+```bash
+$UV_RUN python scripts/detailed_classification_report.py
+```
+
+This is the source of truth for **majority-class collapse detection** — e.g., a model
+with 86% accuracy but minority-class recall ≈ 0 on MBTI SN is exposed by the
+per-class table, but hidden by the summary accuracy column alone.
 
 ---
 
@@ -510,6 +592,19 @@ Only 1,087 OCEAN-labeled train samples out of 7,180 total. Test set has 232 samp
 
 The E-trait skew (97.5% HIGH) makes accuracy a misleading metric. The dataset is designed for explainability evaluation (evidence spans), and the multilingual nature (Chinese dialogue) makes English models unsuitable. Results should be reported with F1-Macro as primary metric.
 
+### 5.5 Why our new baselines don't "beat" SVM+TFIDF on accuracy — and why that's the wrong question
+
+RoBERTa+MLP (76.4%) and Frozen-BERT+SVM (70.8%) come in slightly below SVM+TFIDF (77.2%) on MBTI 4-dim **accuracy**. The per-class drill-down (`docs/CLASSIFICATION_REPORTS.md`) explains why:
+
+- **SVM+TFIDF's MBTI SN accuracy (86.9%) is only +0.8 pp over the majority-baseline** (always predict "N" = 86.1%). Its minority-class recall is **9%** — it predicts "S" 23 times out of 1,301 test samples. This is majority-guessing, not learned signal.
+- **Naive Bayes and Random Forest predict 0% of the minority** on MBTI SN. Their 86% accuracy is literally the majority-baseline. Zero S predictions.
+- **RoBERTa+MLP predicts minority only 1%** on SN (S F1 = 0.022). Slightly better than NB/RF, still effectively collapsed.
+- **Frozen-BERT+SVM predicts minority 56%** on SN (S F1 = 0.365). Genuine balanced learning — at the cost of 14 pp "accuracy" (73.0% vs 86.9%).
+
+**The honest answer**: SVM's apparent accuracy win is majority-class guessing. On **Macro F1 — our primary metric (Section 2.1) — Frozen-BERT+SVM ties or beats SVM on 4/5 datasets**: MBTI 4-dim 66.0% vs 64.5%, Pandora 55.0% vs 49.2%, PEvd 56.6% vs 48.0%. The accuracy column in Section 2.3 is retained for literature comparability, but ranking by it on imbalanced tasks systematically rewards majority-class guessers over genuine learners.
+
+This is why we adopt Macro F1 as the primary metric for paper analysis, with Balanced Accuracy (Section 2.2) as an intuitive cross-check.
+
 ---
 
 ## 6. Key Findings
@@ -524,7 +619,7 @@ The E-trait skew (97.5% HIGH) makes accuracy a misleading metric. The dataset is
 
 5. **personality_evd accuracy is dominated by class skew** — E trait 97.5% accuracy is meaningless; F1-Macro (~49%) is the correct metric and indicates near-chance detection.
 
-6. **SVM is the best classical model overall** — highest MBTI 4-dim and personality_evd accuracy; comparable to DistilBERT on Essays; faster to train.
+6. **By Macro F1 (primary metric), the strongest baselines are LR and Frozen-BERT+SVM** — both hit ~66–69% MBTI 4-dim Macro F1 (vs SVM 64.5%). The apparent SVM+TFIDF accuracy lead on Sections 2.3 is majority-class guessing: per-class recall drill-down (`docs/CLASSIFICATION_REPORTS.md`) shows SVM's minority recall is only 9% on MBTI SN (vs Frozen-BERT+SVM 56%). SVM remains the fastest classical model to train and a reasonable baseline when class balance is not a concern.
 
 7. **DistilBERT edges SVM on Essays** — 57.3% vs 57.6% (SVM wins marginally), but DistilBERT shows more balanced per-trait performance without collapsing on A and N.
 
