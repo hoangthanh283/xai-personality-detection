@@ -147,5 +147,56 @@ lstm:
   glove_path: data/embeddings/glove.6B.300d.txt  # download with scripts/download_embeddings.py
   freeze_embeddings: false
 
+# ---------------------------------------------------------------------------
+# Frozen-encoder transformer baselines (published paradigms)
+# ---------------------------------------------------------------------------
+
+# Baseline A — Kazameini et al. 2020 (arXiv:2010.01309):
+#   Frozen BERT/RoBERTa + bagged LinearSVC over doc-level pooled embeddings.
+frozen_bert_svm:
+  encoder:
+    model_name: roberta-base
+    pooling: mean_last4       # mean of last 4 hidden layers over non-pad tokens
+    chunk_size: 512
+    stride: 256
+    batch_size: 16
+  classifier:
+    n_estimators: 10
+    max_samples: 0.8
+    n_jobs: 1
+    svc:
+      C: 1.0
+      class_weight: balanced
+      max_iter: 10000
+  dataset_overrides:
+    personality_evd:
+      encoder:
+        model_name: xlm-roberta-base
+
+# Baseline B — Gao et al. 2024 (arXiv:2406.16223) paradigm:
+#   Frozen RoBERTa + 2-layer MLP head trained with AdamW + early stopping.
+roberta_mlp:
+  encoder:
+    model_name: roberta-base
+    pooling: cls              # [CLS] token pooled output
+    chunk_size: 512
+    stride: 256
+    batch_size: 16
+  head:
+    hidden_dim: 256
+    dropout: 0.3
+  training:
+    learning_rate: 1.0e-3     # MLP-only; much larger than fine-tuning's 1e-5
+    weight_decay: 0.01
+    batch_size: 128
+    num_epochs: 30
+    early_stopping_patience: 5
+    loss_weighting: sqrt_balanced   # match existing baselines
+    metric_for_best_model: eval_accuracy
+  dataset_overrides:
+    personality_evd:
+      encoder:
+        model_name: xlm-roberta-base
+
 output_dir: outputs/models/
 seed: 42

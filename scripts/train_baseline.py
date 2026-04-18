@@ -40,7 +40,8 @@ from src.utils.logging_config import setup_logging  # noqa: E402
 from src.utils.seed import set_seed  # noqa: E402
 
 ML_MODELS = ["logistic_regression", "svm", "naive_bayes", "xgboost", "random_forest"]
-TRANSFORMER_MODELS = ["distilbert", "roberta"]
+TRANSFORMER_MODELS = ["distilbert", "roberta"]  # legacy end-to-end fine-tuning — kept for reproducibility
+FROZEN_MODELS = ["frozen_bert_svm", "roberta_mlp"]  # new published paradigms
 LSTM_MODELS = ["lstm"]
 MBTI_DIMENSIONS = ["IE", "SN", "TF", "JP"]
 OCEAN_TRAITS = ["O", "C", "E", "A", "N"]
@@ -401,6 +402,118 @@ def _train_transformer_single(
     return metrics
 
 
+def _train_frozen_single(
+    model_name: str,
+    dataset: str,
+    task: str,
+    config: dict,
+    args,
+    extra_tags: list[str] | None = None,
+) -> dict:
+    """Train and evaluate one frozen-encoder baseline for a single task.
+
+    Supports ``frozen_bert_svm`` (Kazameini 2020) and ``roberta_mlp`` (Gao 2024).
+    Embeddings are cached to outputs/embeddings/{encoder}/{dataset}_{split}.npy so
+    encoding cost amortises over the 4 MBTI binary tasks + 16-class.
+    """
+    from src.baselines.frozen_transformer_baselines import (
+        FrozenBertSvmBaseline, RobertaMlpBaseline)
+
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    output_dir = args.output_dir or f"outputs/models/{model_name}_{dataset}_{task}"
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(dataset, task, config)
+
+    base_cfg = dict(config.get(model_name, {}) or {})
+    # Allow per-dataset overrides mirroring the transformer/lstm pattern
+    dataset_override = (base_cfg.get("dataset_overrides", {}) or {}).get(dataset, {})
+    if dataset_override:
+        base_cfg = {**base_cfg, **dataset_override}
+    base_cfg.pop("dataset_overrides", None)
+    base_cfg["seed"] = args.seed
+
+    # Cache keys — tied to encoder+dataset+split (task-agnostic so embeddings reuse)
+    enc_name = (base_cfg.get("encoder", {}) or {}).get("model_name", "roberta-base")
+    enc_slug = enc_name.replace("/", "__")
+    ck_train = f"{dataset}_train"
+    ck_val = f"{dataset}_val"
+    ck_test = f"{dataset}_test"
+
+    run = None
+    if wandb_project:
+        tags = ["frozen", model_name, dataset, task] + (extra_tags or [])
+        run = wandb.init(
+            project=wandb_project,
+            name=f"{model_name}_{dataset}_{task}",
+            config={
+                **base_cfg,
+                "model": model_name,
+                "encoder_model": enc_name,
+                "dataset": dataset,
+                "task": task,
+                "seed": args.seed,
+                "train_size": len(train_texts),
+                "val_size": len(val_texts),
+                "test_size": len(test_texts),
+            },
+            tags=tags,
+            reinit=True,
+        )
+
+    if model_name == "frozen_bert_svm":
+        trainer = FrozenBertSvmBaseline(config=base_cfg, model_name=model_name)
+        trainer.fit(train_texts, train_labels, cache_key_train=ck_train)
+    elif model_name == "roberta_mlp":
+        trainer = RobertaMlpBaseline(config=base_cfg, model_name=model_name)
+        trainer.fit(
+            train_texts, train_labels,
+            val_texts=val_texts, val_labels=val_labels,
+            cache_key_train=ck_train, cache_key_val=ck_val,
+        )
+    else:
+        raise ValueError(f"Unknown frozen baseline: {model_name}")
+
+    logger.info("Evaluating on train/eval/test splits...")
+    split_metrics = {
+        "train": trainer.evaluate(train_texts, train_labels, cache_key=ck_train),
+        "eval": trainer.evaluate(val_texts, val_labels, cache_key=ck_val),
+        "test": trainer.evaluate(test_texts, test_labels, cache_key=ck_test),
+    }
+    metrics = _build_split_metrics(
+        split_metrics["train"],
+        split_metrics["eval"],
+        split_metrics["test"],
+    )
+
+    if run:
+        logged_metrics = _log_split_metrics_to_wandb(split_metrics, log_test_table=True)
+        run.summary.update({k: v for k, v in logged_metrics.items() if isinstance(v, (int, float))})
+        run.finish()
+
+    preds = trainer.predict(test_texts, cache_key=ck_test).tolist()
+    save_predictions(test_texts, test_labels, preds, model_name, dataset, task)
+
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    model_path = f"{output_dir}/model.pt" if model_name == "roberta_mlp" else f"{output_dir}/model.pkl"
+    trainer.save(model_path)
+
+    return metrics
+
+
+def train_frozen(model_name: str, dataset: str, task: str, config: dict, args) -> dict:
+    """Expand multi-task shortcuts (4dim, ocean_binary) for frozen baselines."""
+    if task == "4dim":
+        return {
+            dim: _train_frozen_single(model_name, dataset, dim, config, args, extra_tags=["4dim"])
+            for dim in MBTI_DIMENSIONS
+        }
+    if task == "ocean_binary":
+        return {
+            trait: _train_frozen_single(model_name, dataset, trait, config, args, extra_tags=["ocean"])
+            for trait in OCEAN_TRAITS
+        }
+    return _train_frozen_single(model_name, dataset, task, config, args)
+
+
 def _train_lstm_single(dataset: str, task: str, config: dict, args) -> dict:
     """Train and evaluate one LSTM model for a single concrete task/dimension."""
     import dataclasses
@@ -545,6 +658,8 @@ def main():
             try:
                 if model in TRANSFORMER_MODELS:
                     metrics = train_transformer(model, args.dataset, task, config, args)
+                elif model in FROZEN_MODELS:
+                    metrics = train_frozen(model, args.dataset, task, config, args)
                 elif model in LSTM_MODELS:
                     metrics = train_lstm(args.dataset, task, config, args)
                 elif model == "ensemble":
