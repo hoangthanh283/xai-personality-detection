@@ -57,3 +57,4 @@ max-line-length = 400
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+pythonpath = ["."]

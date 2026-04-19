@@ -39,16 +39,19 @@ evidence_retrieval:
   pre_filter: true         # use pre-filter before LLM
   top_k: 6                 # number of candidate sentences to feed Step 1
 
-  # Supervised sentence scorer (uses fine-tuned RoBERTa baselines).
-  scorer: roberta          # keyword | roberta | hybrid
-  use_roberta_prior: true  # inject doc-level RoBERTa prediction into Step-3 prompt
+  # Supervised sentence scorer backbone.
+  # "frozen_svm" (default): FrozenBertSvmBaseline — balanced class weights, strong minority recall
+  # "roberta":              Fine-tuned RoBERTa — legacy; majority-class collapse on imbalanced dims
+  backbone: frozen_svm
+  scorer: roberta          # keyword | roberta (roberta = use backbone for sentence scoring)
+  use_roberta_prior: true  # inject doc-level backbone prediction into Step-3 prompt
   roberta_device: cpu      # cpu | cuda  (cpu avoids VRAM conflict with local LLM)
   roberta_batch_size: 16
-  # roberta_checkpoints:   # (optional override — defaults chosen by framework)
-  #   IE: outputs/models/roberta_mbti_IE
-  #   SN: outputs/models/roberta_mbti_SN
-  #   TF: outputs/models/roberta_mbti_TF
-  #   JP: outputs/models/roberta_mbti_JP
+  # frozen_svm_checkpoints:  # (optional override — defaults chosen by framework)
+  #   IE: outputs/models/frozen_bert_svm_mbti_IE/model.pkl
+  #   SN: outputs/models/frozen_bert_svm_mbti_SN/model.pkl
+  #   TF: outputs/models/frozen_bert_svm_mbti_TF/model.pkl
+  #   JP: outputs/models/frozen_bert_svm_mbti_JP/model.pkl
 
 output:
   save_intermediate: true  # save step 1/2/3 outputs for debugging

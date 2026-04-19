@@ -387,6 +387,39 @@ All four variants share the same LLM (Gemma-4-E2B local, Q6_K), KB (698 chunks),
 
 This matches the explainability-vs-accuracy trade-off hypothesized in the proposal and documented across the 2024–2025 XPR literature (Section 4/8).
 
+#### 3.6.4 Backbone comparison — Fine-tuned RoBERTa vs Frozen-BERT+SVM
+
+**Motivation**: Section 5.5 RCA showed fine-tuned RoBERTa checkpoints are majority-class guessers on imbalanced MBTI dims (SN minority recall = 1%). We swapped the supervised backbone from RoBERTa to Frozen-BERT+SVM (Kazameini 2020 paradigm — `class_weight='balanced'`, BaggingClassifier) to test whether a balanced prior improves LLM minority-class coverage.
+
+Both runs use the same 100-sample MBTI test subset, the same Gemma-4-E2B LLM, the same CoPE 3-step chain, and the same KB.
+
+**16-class summary:**
+
+| Variant | N | Acc | Macro F1 ⭐ | Weighted F1 | Bal Acc |
+|---|---:|---:|---:|---:|---:|
+| roberta-both (prior work) | 91 | **28.6%** | **14.9%** | 27.3% | 14.6% |
+| frozen-svm-both (this work) | 92 | 17.4% | 10.1% | 18.5% | **21.8%** |
+
+**Per-dim breakdown (4-dim binary Macro F1 + minority recall):**
+
+| Dim | Minority | roberta-both F1 | roberta-both minority recall | frozen-svm-both F1 | frozen-svm-both minority recall |
+|---|:---:|---:|---:|---:|---:|
+| IE | E | 46.9% | 11.8% | 54.6% | **22.2%** |
+| SN | S | **55.4%** | 10.0% | 47.6% | **42.9%** |
+| TF | F | 73.6% | 64.2% | 70.6% | 63.5% |
+| JP | P | **59.2%** | 65.0% | 51.3% | 69.5% |
+| **Mean 4-dim** | — | **58.8%** | 37.8% | 56.0% | **49.5%** |
+
+**Findings:**
+
+1. **Balanced accuracy favors Frozen-SVM**: BalAcc 21.8% vs 14.6% (+7.2 pp) — confirms minority classes get more coverage.
+2. **Minority recall improves on IE and SN**: E-recall +10.4 pp, S-recall +32.9 pp — these are precisely the dims where RoBERTa was collapsing.
+3. **16-class Macro F1 is lower (10.1% vs 14.9%)**: The LLM needs a 16-class accurate prior. The Frozen-SVM 4-dim Macro F1 (66.0% on full dataset) doesn't translate linearly to 16-class accuracy when the LLM must still compose 4 binary decisions into a 4-letter type — prediction errors compound.
+4. **16-class accuracy is lower (17.4% vs 28.6%)**: RoBERTa's prior — even though biased toward majority classes — happens to *match* the test set's majority-class label distribution more often, inflating exact-match count. Frozen-SVM produces more balanced predictions, which *reduces* exact matches against a majority-skewed label distribution.
+5. **TF/JP dims slightly worse**: These dims are more balanced to begin with; the `class_weight='balanced'` penalty hurts rather than helps.
+
+**Conclusion**: The Frozen-SVM backbone improves minority-recall substantially (SN +33 pp) and balanced accuracy (+7 pp), confirming the hypothesis that a balanced prior injects less majority-class bias. However, it does **not** improve 16-class Macro F1 or accuracy — the compound error of 4 imperfect binary priors plus LLM stochasticity means the majority-biased RoBERTa prior accidentally aligns better with the skewed test distribution. **Recommendation**: Keep `roberta-both` as the RAG-XPR configuration for 16-class MBTI Macro F1/accuracy. Use `frozen-svm-both` when per-dim balanced recall is the target metric (e.g., per-trait analysis, clinical use cases where false negatives on minority types are costly).
+
 ---
 
 ## 4. Comparison Against Published Benchmarks

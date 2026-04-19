@@ -215,6 +215,20 @@ def main():
         config["evidence_retrieval"]["scorer"] = "keyword"
         config["evidence_retrieval"]["use_roberta_prior"] = True
     elif args.ablation == "roberta-both":
+        config["evidence_retrieval"]["backbone"] = "roberta"
+        config["evidence_retrieval"]["scorer"] = "roberta"
+        config["evidence_retrieval"]["use_roberta_prior"] = True
+    # Frozen-BERT+SVM backbone ablations
+    elif args.ablation == "frozen-svm-only":
+        config["evidence_retrieval"]["backbone"] = "frozen_svm"
+        config["evidence_retrieval"]["scorer"] = "roberta"
+        config["evidence_retrieval"]["use_roberta_prior"] = False
+    elif args.ablation == "frozen-svm-prior":
+        config["evidence_retrieval"]["backbone"] = "frozen_svm"
+        config["evidence_retrieval"]["scorer"] = "keyword"
+        config["evidence_retrieval"]["use_roberta_prior"] = True
+    elif args.ablation == "frozen-svm-both":
+        config["evidence_retrieval"]["backbone"] = "frozen_svm"
         config["evidence_retrieval"]["scorer"] = "roberta"
         config["evidence_retrieval"]["use_roberta_prior"] = True
 
