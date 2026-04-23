@@ -40,6 +40,12 @@ def load_config(config_path: str) -> dict:
     return cfg
 
 
+def _format_gold_ocean(ocean_dict: dict | None) -> str:
+    if not ocean_dict:
+        return ""
+    return ",".join(f"{t}:{ocean_dict[t]}" for t in ["O", "C", "E", "A", "N"] if t in ocean_dict)
+
+
 def run_full_pipeline(args, config: dict) -> None:
     """Run the full RAG-XPR pipeline on a dataset split."""
     from src.data.loader import DataLoader
@@ -75,7 +81,13 @@ def run_full_pipeline(args, config: dict) -> None:
         for i, record in enumerate(records):
             try:
                 text = record.get("text", "")
-                gold_label = record.get("label_mbti") or str(record.get("label_ocean", ""))
+                framework = config.get("cope", {}).get("framework", "mbti")
+                if framework == "ocean":
+                    gold_label = _format_gold_ocean(record.get("label_ocean")) or record.get("label_mbti", "")
+                else:
+                    gold_label = record.get("label_mbti") or _format_gold_ocean(record.get("label_ocean"))
+                if not gold_label:
+                    continue
                 result = pipeline.predict(text)
                 output_record = {
                     "id": record.get("id", f"sample_{i}"),
@@ -186,6 +198,10 @@ def main():
         config["llm"]["model"] = args.llm_model
     if args.framework:
         config["cope"]["framework"] = args.framework
+
+    # Wire dataset name into evidence_retrieval so frozen-SVM loads correct OCEAN checkpoints
+    if args.dataset and args.dataset not in ("mbti", "pandora_big5"):
+        config.setdefault("evidence_retrieval", {})["roberta_dataset"] = args.dataset
 
     # Apply ablation overrides
     if args.ablation == "no_kb":

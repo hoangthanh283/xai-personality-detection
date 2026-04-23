@@ -31,6 +31,21 @@ from src.utils.logging_config import setup_logging  # noqa: E402
 from src.utils.seed import set_seed  # noqa: E402
 
 
+def _decompose_ocean_predictions(predictions: list[dict]) -> dict[str, dict]:
+    """Split 'O:HIGH,C:LOW,...' labels into per-trait y_true/y_pred lists."""
+    def parse(s: str) -> dict:
+        return {p.split(":")[0].strip(): p.split(":")[1].strip() for p in str(s).split(",") if ":" in p}
+    trait_data: dict[str, dict] = {t: {"y_true": [], "y_pred": []} for t in "OCEAN"}
+    for p in predictions:
+        gold = parse(p.get("gold_label", ""))
+        pred = parse(p.get("predicted_label", ""))
+        for t in "OCEAN":
+            if t in gold and t in pred:
+                trait_data[t]["y_true"].append(gold[t])
+                trait_data[t]["y_pred"].append(pred[t])
+    return trait_data
+
+
 def load_predictions(path: str) -> list[dict]:
     """Load predictions from a JSONL file."""
     predictions = []
@@ -116,6 +131,24 @@ def run_full_evaluation(args, config: dict) -> None:
 
         # Classification metrics
         metrics = compute_classification_metrics(list(y_true), list(y_pred))
+
+        # OCEAN per-trait breakdown (when labels are in 'O:HIGH,C:LOW,...' format)
+        sample_label = y_true[0] if y_true else ""
+        if "O:" in sample_label or (":" in sample_label and any(t + ":" in sample_label for t in "OCEAN")):
+            trait_data = _decompose_ocean_predictions(predictions)
+            per_trait = {}
+            for trait, data in trait_data.items():
+                if data["y_true"]:
+                    t_m = compute_classification_metrics(data["y_true"], data["y_pred"])
+                    per_trait[trait] = {"accuracy": t_m["accuracy"], "f1_macro": t_m["f1_macro"]}
+            if per_trait:
+                import numpy as np
+                metrics["ocean_per_trait"] = per_trait
+                metrics["ocean_avg_f1_macro"] = float(np.mean([v["f1_macro"] for v in per_trait.values()]))
+                metrics["ocean_avg_accuracy"] = float(np.mean([v["accuracy"] for v in per_trait.values()]))
+                logger.info(f"  OCEAN avg F1: {metrics['ocean_avg_f1_macro']:.4f} | avg acc: {metrics['ocean_avg_accuracy']:.4f}")
+                for t, tm in per_trait.items():
+                    logger.info(f"    {t}: acc={tm['accuracy']:.4f}  f1_macro={tm['f1_macro']:.4f}")
 
         # XAI metrics
         xai: Dict[str, Any] = {}

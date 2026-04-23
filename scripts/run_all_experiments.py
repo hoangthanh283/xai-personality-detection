@@ -123,7 +123,7 @@ def run_rag_xpr(args, seed: int) -> None:
         ["--dataset", "mbti", "--llm_provider", "vllm", "--llm_model", "meta-llama/Llama-3.1-8B-Instruct"],
         ["--dataset", "essays", "--framework", "ocean"],
         ["--dataset", "pandora", "--framework", "ocean"],
-        ["--dataset", "personality_evd"],
+        ["--dataset", "personality_evd", "--framework", "ocean"],
     ]
 
     for exp_args in experiments:
@@ -160,18 +160,18 @@ def run_personality_evd(args, seed: int) -> None:
     """Run Personality Evd experiments (E1-E4)."""
     # E1: RAG-XPR (full)
     run_command([sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
-                 "--dataset", "personality_evd", "--seed", str(seed),
+                 "--dataset", "personality_evd", "--framework", "ocean", "--seed", str(seed),
                  "--output", "outputs/predictions/evd_E1_rag_xpr.jsonl"])
 
     # E2: LLM + CoPE (no RAG)
     run_command([sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
-                 "--dataset", "personality_evd", "--seed", str(seed), "--ablation", "no_kb",
+                 "--dataset", "personality_evd", "--framework", "ocean", "--seed", str(seed), "--ablation", "no_kb",
                  "--output", "outputs/predictions/evd_E2_no_rag.jsonl"])
 
     # E3: LLM zero-shot
     run_command([sys.executable, "scripts/run_rag_xpr.py", "--config", "configs/rag_xpr_config.yaml",
                  "--mode", "llm_direct", "--prompt", "zero_shot",
-                 "--dataset", "personality_evd", "--seed", str(seed),
+                 "--dataset", "personality_evd", "--framework", "ocean", "--seed", str(seed),
                  "--output", "outputs/predictions/evd_E3_llm_direct.jsonl"])
 
     # E4: DistilBERT OCEAN baseline

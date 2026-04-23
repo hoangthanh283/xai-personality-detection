@@ -59,19 +59,33 @@ class FrozenSvmEvidenceScorer:
         """
         self.batch_size = batch_size
         self.baselines: dict[str, FrozenBertSvmBaseline] = {}
+
+        # Build shared encoder once upfront (respects encoder_cfg device override).
+        # This avoids each FrozenBertSvmBaseline.load() creating its own GPU encoder.
         shared_encoder: FrozenTransformerEncoder | None = None
+        if encoder_cfg is not None and checkpoint_paths:
+            shared_encoder = FrozenTransformerEncoder(encoder_cfg)
 
         for dim, ckpt_path in checkpoint_paths.items():
             if not Path(ckpt_path).exists():
                 logger.warning(f"FrozenSVM checkpoint missing for {dim}: {ckpt_path} (skipping)")
                 continue
             logger.info(f"Loading FrozenBertSvmBaseline[{dim}] from {ckpt_path}")
-            baseline = FrozenBertSvmBaseline.load(ckpt_path)
+            # Patch device into saved config before constructing encoder to avoid CUDA OOM.
+            import pickle
+            with open(ckpt_path, "rb") as _f:
+                state = pickle.load(_f)
+            if encoder_cfg is not None and "device" in encoder_cfg:
+                enc_cfg = dict(state["config"].get("encoder") or {})
+                enc_cfg["device"] = encoder_cfg["device"]
+                state["config"] = {**state["config"], "encoder": enc_cfg}
+            baseline = FrozenBertSvmBaseline(config=state["config"])
+            baseline.bag = state["bag"]
+            baseline._label_encoder = state["label_encoder"]
+            baseline.is_fitted = True
 
             # Share encoder across dims to avoid loading roberta-base 4× times.
             if shared_encoder is None:
-                if encoder_cfg is not None:
-                    baseline.encoder = FrozenTransformerEncoder(encoder_cfg)
                 shared_encoder = baseline.encoder
             else:
                 baseline.encoder = shared_encoder

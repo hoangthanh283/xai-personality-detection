@@ -6,7 +6,7 @@ llm:
   base_url: http://localhost:11434/api/chat
   temperature: 0.1
   max_tokens: 2048
-  timeout: 120
+  timeout: 300
   retry_attempts: 3
 
   # Alternative: larger local Qwen for accuracy

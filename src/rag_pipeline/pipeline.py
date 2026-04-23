@@ -109,9 +109,12 @@ class RAGXPRPipeline:
             dataset_hint = evidence_config.get("roberta_dataset", "essays")
             ckpts = (default_mbti_svm_checkpoints() if framework == "mbti"
                      else default_ocean_svm_checkpoints(dataset=dataset_hint))
+        device = evidence_config.get("roberta_device", "cpu")
+        encoder_cfg = {"device": device} if device else None
         try:
             return FrozenSvmEvidenceScorer(
                 checkpoint_paths=ckpts,
+                encoder_cfg=encoder_cfg,
                 batch_size=evidence_config.get("roberta_batch_size", 32),
             )
         except Exception as e:
