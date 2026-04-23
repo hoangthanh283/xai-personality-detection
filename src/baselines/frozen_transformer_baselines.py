@@ -337,6 +337,7 @@ class RobertaMlpBaseline:
         best_metric = -np.inf
         best_state: dict | None = None
         waited = 0
+        global_step = 0
 
         for epoch in range(1, max_epochs + 1):
             self.head.train()
@@ -349,13 +350,52 @@ class RobertaMlpBaseline:
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item() * xb.size(0)
+                global_step += 1
+                try:
+                    import wandb as _wandb
+                    if _wandb.run:
+                        _wandb.log({"train/loss_step": loss.item(), "train/global_step": global_step}, step=global_step)
+                except Exception:
+                    pass
             train_loss = total_loss / len(ds)
 
-            val_acc = self._eval_on_encoded(X_val, y_val) if X_val is not None else None
-            msg = f"epoch {epoch:02d} | train_loss={train_loss:.4f}"
-            if val_acc is not None:
-                msg += f" | val_acc={val_acc:.4f}"
+            # Compute train metrics (from cached X_train to avoid re-encoding)
+            with torch.no_grad():
+                train_logits = self.head(torch.from_numpy(X_train).to(self.device))
+                train_preds = train_logits.argmax(dim=-1).cpu().numpy()
+            train_acc = float((train_preds == y_train).mean())
+            train_f1 = float(f1_score(y_train, train_preds, average="macro", zero_division=0))
+
+            val_metrics = self._eval_on_encoded_full(X_val, y_val) if X_val is not None else {}
+            val_acc = val_metrics.get("accuracy")
+            current_lr = optimizer.param_groups[0]["lr"]
+
+            msg = f"epoch {epoch:02d} | lr={current_lr:.2e} | train_loss={train_loss:.4f} | train_acc={train_acc:.4f} | train_f1={train_f1:.4f}"
+            if val_metrics:
+                msg += f" | val_acc={val_acc:.4f} | val_f1={val_metrics.get('f1_macro', 0):.4f}"
             logger.info(msg)
+
+            try:
+                import wandb as _wandb
+                if _wandb.run:
+                    log_dict = {
+                        "epoch": epoch,
+                        "train/loss": train_loss,
+                        "train/accuracy": train_acc,
+                        "train/f1_macro": train_f1,
+                        "train/learning_rate": current_lr,
+                    }
+                    if val_metrics:
+                        log_dict.update({
+                            "eval/accuracy": val_metrics.get("accuracy", 0),
+                            "eval/f1_macro": val_metrics.get("f1_macro", 0),
+                            "eval/f1_weighted": val_metrics.get("f1_weighted", 0),
+                            "eval/precision_macro": val_metrics.get("precision_macro", 0),
+                            "eval/recall_macro": val_metrics.get("recall_macro", 0),
+                        })
+                    _wandb.log(log_dict, step=global_step)
+            except Exception:
+                pass
 
             # Early stop on val acc if provided, else train loss (negated)
             metric = val_acc if val_acc is not None else -train_loss
@@ -375,11 +415,20 @@ class RobertaMlpBaseline:
         return self
 
     def _eval_on_encoded(self, X: np.ndarray, y: np.ndarray) -> float:
+        return self._eval_on_encoded_full(X, y).get("accuracy", 0.0)
+
+    def _eval_on_encoded_full(self, X: np.ndarray, y: np.ndarray) -> dict:
         self.head.eval()
         with torch.no_grad():
             logits = self.head(torch.from_numpy(X).to(self.device))
             preds = logits.argmax(dim=-1).cpu().numpy()
-        return float((preds == y).mean())
+        return {
+            "accuracy": float((preds == y).mean()),
+            "f1_macro": float(f1_score(y, preds, average="macro", zero_division=0)),
+            "f1_weighted": float(f1_score(y, preds, average="weighted", zero_division=0)),
+            "precision_macro": float(precision_score(y, preds, average="macro", zero_division=0)),
+            "recall_macro": float(recall_score(y, preds, average="macro", zero_division=0)),
+        }
 
     # ---- inference --------------------------------------------------------
 

@@ -51,6 +51,27 @@ class TransformerConfig:
 
 
 if HAS_TRANSFORMERS:
+    from transformers import TrainerCallback
+
+    class _LRLoggerCallback(TrainerCallback):
+        """Log learning rate and step-level train loss to W&B at each logging step."""
+
+        def on_log(self, args, state, control, logs=None, **kwargs):
+            if logs is None:
+                return
+            try:
+                import wandb as _wandb
+                if not _wandb.run:
+                    return
+                step_log = {"train/global_step": state.global_step}
+                if "learning_rate" in logs:
+                    step_log["train/learning_rate"] = logs["learning_rate"]
+                if "loss" in logs:
+                    step_log["train/loss_step"] = logs["loss"]
+                if step_log:
+                    _wandb.log(step_log, step=state.global_step)
+            except Exception:
+                pass
 
     class WeightedClassificationTrainer(Trainer):
         """Trainer that applies label-frequency class weights for single-label classification."""
@@ -170,7 +191,7 @@ class TransformerBaseline:
 
         logits, labels = eval_pred
         preds = np.argmax(logits, axis=-1)
-        return {
+        metrics = {
             "accuracy": accuracy_score(labels, preds),
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
@@ -181,6 +202,12 @@ class TransformerBaseline:
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
         }
+        logger.info(
+            f"eval | acc={metrics['accuracy']:.4f} | f1_macro={metrics['f1_macro']:.4f} | "
+            f"f1_weighted={metrics['f1_weighted']:.4f} | prec_macro={metrics['precision_macro']:.4f} | "
+            f"rec_macro={metrics['recall_macro']:.4f}"
+        )
+        return metrics
 
     def train(
         self,
@@ -265,6 +292,7 @@ class TransformerBaseline:
             "run_name": f"{Path(output_dir).name}",
             "seed": self.config.seed,
             "logging_steps": 50,
+            "logging_first_step": True,
         }
         if getattr(self.config, "gradient_checkpointing", False):
             training_args_kwargs["gradient_checkpointing"] = True
@@ -277,7 +305,8 @@ class TransformerBaseline:
         training_args = TrainingArguments(**training_args_kwargs)
 
         callbacks = [
-            EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience)
+            EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience),
+            _LRLoggerCallback(),
         ]
         trainer = WeightedClassificationTrainer(
             model=self.model,

@@ -558,6 +558,19 @@ def _train_lstm_single(dataset: str, task: str, config: dict, args) -> dict:
     )
 
     if wandb_project and wandb.run:
+        # Log final split metrics as a summary step for easy comparison
+        final_metrics = {
+            "final/train_accuracy": flat.get("train_accuracy", 0),
+            "final/train_f1_macro": flat.get("train_f1_macro", 0),
+            "final/eval_accuracy": flat.get("eval_accuracy", 0),
+            "final/eval_f1_macro": flat.get("eval_f1_macro", 0),
+            "final/test_accuracy": flat.get("test_accuracy", 0),
+            "final/test_f1_macro": flat.get("test_f1_macro", 0),
+            "final/test_precision_macro": flat.get("test_precision_macro", 0),
+            "final/test_recall_macro": flat.get("test_recall_macro", 0),
+            "final/test_f1_weighted": flat.get("test_f1_weighted", 0),
+        }
+        wandb.log(final_metrics)
         wandb.run.summary.update(flat)
         wandb.finish()
 

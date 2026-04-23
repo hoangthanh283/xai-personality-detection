@@ -295,6 +295,7 @@ class LSTMBaseline:
         val_loader = self._make_loader(val_texts, val_labels, shuffle=False)
 
         best_val_acc, best_epoch, patience_count = -1.0, 0, 0
+        global_step = 0
 
         for epoch in range(1, self.config.num_epochs + 1):
             # Train
@@ -309,21 +310,42 @@ class LSTMBaseline:
                 nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 optimizer.step()
                 total_loss += loss.item()
+                global_step += 1
+                try:
+                    import wandb as _wandb
+                    if _wandb.run:
+                        _wandb.log({"train/loss_step": loss.item(), "train/global_step": global_step}, step=global_step)
+                except Exception:
+                    pass
 
             # Validate
             avg_loss = total_loss / len(train_loader)
-            val_acc, val_f1 = self._eval_epoch(val_loader, device)
+            train_acc, train_f1, train_prec, train_rec = self._eval_epoch_full(train_loader, device)
+            val_acc, val_f1, val_prec, val_rec = self._eval_epoch_full(val_loader, device)
             scheduler.step(val_acc)
+            current_lr = optimizer.param_groups[0]["lr"]
             logger.info(
-                f"Epoch {epoch}/{self.config.num_epochs} | "
-                f"loss={avg_loss:.4f} | val_acc={val_acc:.4f} | val_f1={val_f1:.4f}"
+                f"Epoch {epoch}/{self.config.num_epochs} | lr={current_lr:.2e} | "
+                f"loss={avg_loss:.4f} | train_acc={train_acc:.4f} | train_f1={train_f1:.4f} | "
+                f"val_acc={val_acc:.4f} | val_f1={val_f1:.4f}"
             )
 
             try:
                 import wandb as _wandb
                 if _wandb.run:
-                    _wandb.log({"epoch": epoch, "train_loss": avg_loss,
-                                "eval_accuracy": val_acc, "eval_f1_macro": val_f1})
+                    _wandb.log({
+                        "epoch": epoch,
+                        "train/loss": avg_loss,
+                        "train/accuracy": train_acc,
+                        "train/f1_macro": train_f1,
+                        "train/precision_macro": train_prec,
+                        "train/recall_macro": train_rec,
+                        "train/learning_rate": current_lr,
+                        "eval/accuracy": val_acc,
+                        "eval/f1_macro": val_f1,
+                        "eval/precision_macro": val_prec,
+                        "eval/recall_macro": val_rec,
+                    }, step=global_step)
             except Exception:
                 pass
 
@@ -347,6 +369,10 @@ class LSTMBaseline:
             json.dump(cfg_dict, f, indent=2)
 
     def _eval_epoch(self, loader: "DataLoader", device: "torch.device") -> tuple[float, float]:
+        acc, f1, _, _ = self._eval_epoch_full(loader, device)
+        return acc, f1
+
+    def _eval_epoch_full(self, loader: "DataLoader", device: "torch.device") -> tuple[float, float, float, float]:
         self.model.eval()
         all_preds, all_labels = [], []
         with torch.no_grad():
@@ -357,7 +383,9 @@ class LSTMBaseline:
                 all_labels.extend(labels_t.numpy())
         acc = accuracy_score(all_labels, all_preds)
         f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
-        return acc, f1
+        prec = precision_score(all_labels, all_preds, average="macro", zero_division=0)
+        rec = recall_score(all_labels, all_preds, average="macro", zero_division=0)
+        return acc, f1, prec, rec
 
     def predict(self, texts: list[str], batch_size: int = 64) -> list[str]:
         if self.model is None:
