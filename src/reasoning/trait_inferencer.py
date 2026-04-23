@@ -57,12 +57,27 @@ class TraitInferencer:
             type_str += label
         return type_str if "?" not in type_str else "INTP"  # safe default
 
-    def _extract_ocean_label(self, prediction_details: dict) -> str:
-        """Extract a combined OCEAN label string."""
+    _VALID_OCEAN_LABELS = {"HIGH", "LOW"}
+
+    def _normalize_ocean_label(self, label: str, prior_label: str | None = None) -> str:
+        normalized = str(label).strip().upper()
+        if normalized in self._VALID_OCEAN_LABELS:
+            return normalized
+        return prior_label or "HIGH"
+
+    def _extract_ocean_label(
+        self, prediction_details: dict, roberta_prior: dict | None = None
+    ) -> str:
+        """Extract a combined OCEAN label string, normalizing invalid values."""
         traits = prediction_details.get("traits", {})
         parts = []
         for t in ["O", "C", "E", "A", "N"]:
-            label = traits.get(t, {}).get("label", "?")
+            raw = traits.get(t, {}).get("label", "?")
+            prior_label = None
+            if roberta_prior and t in roberta_prior:
+                p = roberta_prior[t]
+                prior_label = str(p[0]) if isinstance(p, (list, tuple)) else str(p)
+            label = self._normalize_ocean_label(raw, prior_label)
             parts.append(f"{t}:{label}")
         return ",".join(parts)
 
@@ -116,7 +131,7 @@ class TraitInferencer:
                     else:
                         label = computed  # "INTP" default
                 else:
-                    label = self._extract_ocean_label(prediction)
+                    label = self._extract_ocean_label(prediction, roberta_prior=roberta_prior)
 
                 return PredictionResult(
                     predicted_label=label,

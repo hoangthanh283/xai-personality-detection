@@ -146,6 +146,14 @@ class RAGXPRPipeline:
             logger.warning(f"Failed to load RoBERTa scorer: {e}; falling back to keyword")
             return None
 
+    @staticmethod
+    def _is_non_english(text: str, threshold: float = 0.3) -> bool:
+        """Return True if text is predominantly non-Latin (e.g., Chinese, Japanese, Korean)."""
+        if not text:
+            return False
+        cjk = sum(1 for c in text if '一' <= c <= '鿿' or '぀' <= c <= 'ヿ' or '가' <= c <= '힯')
+        return cjk / len(text) > threshold
+
     def predict(self, text: str, yield_steps: bool = False) -> dict | Any:
         """
         Run the full RAG-XPR pipeline on a single text.
@@ -153,6 +161,27 @@ class RAGXPRPipeline:
         """
         # 1. Preprocess
         clean_text = self.preprocessor.clean(text)
+
+        # For non-English text (e.g., Chinese TV dialogue), the English KB and
+        # evidence extraction are unreliable. Skip Steps 1-2 and use the supervised
+        # prior directly in Step 3 — this recovers baseline-level accuracy.
+        if self._is_non_english(clean_text) and self.use_roberta_prior and self.roberta_scorer is not None:
+            logger.debug("Non-English text detected — skipping Steps 1-2, using prior-only mode")
+            try:
+                roberta_prior = self.roberta_scorer.predict_doc_level(clean_text)
+            except Exception as e:
+                logger.warning(f"Prior failed on non-English text: {e}")
+                roberta_prior = None
+            result = self.cope_pipeline.run(
+                clean_text,
+                candidate_evidence=[],
+                framework=self.framework,
+                save_intermediate=self.save_intermediate,
+                roberta_prior=roberta_prior,
+            )
+            if roberta_prior is not None and isinstance(result, dict):
+                result.setdefault("roberta_prior", roberta_prior)
+            return result
 
         # 2. Retrieve evidence sentences from text
         top_k_evidence = self.config.get("evidence_retrieval", {}).get("top_k", 10)

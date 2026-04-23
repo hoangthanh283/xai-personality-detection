@@ -4,15 +4,16 @@ You are an expert psychologist making a final personality assessment.
 Based on the identified psychological states, determine the personality {{ framework | upper }} classification.
 {% if roberta_prior %}
 
-## Supervised Baseline Prior (strong hint)
-A fine-tuned RoBERTa classifier (trained on labeled personality data) predicts:
-{% for dim, pair in roberta_prior.items() %}- {{ dim }}: {{ pair[0] }} (confidence: {{ pair[1] }})
+## Supervised Classifier Prediction (treat as near-certain baseline)
+A Frozen-BERT+SVM classifier trained on labeled personality data predicts:
+{% for dim, pair in roberta_prior.items() %}- {{ dim }}: **{{ pair[0] }}** (confidence: {{ "%.0f"|format(pair[1]*100) }}%){% if pair[1] >= 0.75 %} ← HIGH CONFIDENCE{% endif %}
+
 {% endfor %}
-Use this as a strong prior. Defer to it UNLESS the identified psychological states
-contain **clear, direct counter-evidence** for a specific dimension. When your
-reasoning aligns with the prior, cite states that confirm it. When you override
-the prior on some dimension, explicitly justify the override in the `explanation`
-field with the specific states that contradict it.
+**Instructions for using this prior:**
+- For dimensions with confidence ≥75%: treat as ground truth. Your job is to CONFIRM with evidence, not to debate it. Only override if you find ≥2 identified states that DIRECTLY and EXPLICITLY contradict this prediction.
+- For dimensions with confidence 50–74%: use as a strong default. Override only if the MAJORITY of identified states point the other direction.
+- When you follow the prior, cite which states support it in `supporting_states`.
+- When you override the prior, you MUST explicitly state in `explanation`: "Override: prior predicted X but states [i, j] show Y because..."
 {% endif %}
 
 ## Identified States
@@ -51,13 +52,31 @@ Look for ENERGY SOURCE, not talkativeness. The text sample itself is from a foru
 - **J signals**: planning, structure, schedules, deadlines mentioned positively, decisiveness, closure-seeking, organized lists, "should" and "must" statements, preference for settled matters.
 - **P signals**: spontaneity, adaptability, last-minute changes, multiple options open, exploratory tone, starting many projects, dislike of rigid plans, "maybe" and "we'll see", flexibility prized.
 {% elif framework == "ocean" %}
-## Big Five (OCEAN) Classification
-For each trait, determine HIGH or LOW based on the aggregated states:
-- Openness: curiosity, creativity, openness to new experiences
-- Conscientiousness: organization, dependability, self-discipline
-- Extraversion: sociability, assertiveness, positive emotions
-- Agreeableness: cooperation, trust, empathy
-- Neuroticism: anxiety, moodiness, emotional instability
+## Big Five (OCEAN) Classification — Detailed Trait Guidance
+
+### O — Openness to Experience
+- **HIGH signals**: curiosity about ideas, creative expression, metaphorical/philosophical language, interest in arts/culture, hypothetical thinking ("what if..."), novel experiences sought, unconventional views, intellectual exploration, imagination/fantasy references.
+- **LOW signals**: preference for routine, concrete practical focus, conventional opinions, resistance to change, factual/literal language, comfort with familiar things, distrust of abstract ideas.
+
+### C — Conscientiousness
+- **HIGH signals**: planning, goal-setting language, schedules/deadlines, self-discipline references, organized lists, reliability statements ("I always/never"), achievement orientation, thoroughness, responsibility emphasis.
+- **LOW signals**: procrastination mentioned, impulsive decisions, disorganized descriptions, difficulty finishing tasks, spontaneous lifestyle, careless attitude.
+
+### E — Extraversion
+- **HIGH signals**: social energy, mentions of friends/parties/groups, seeks social stimulation, talkative style, enthusiastic language, action-oriented, dislikes being alone, quick decisions, positive emotion words.
+- **LOW signals**: preference for solitude, drained by socializing, quiet environments preferred, few social references, reflective/reserved tone, deep one-on-one over groups.
+- **Note**: speakers actively engaged in dialogue or conversation tend HIGH E by default — only label LOW E if explicit withdrawal or isolation is stated.
+
+### A — Agreeableness
+- **HIGH signals**: empathy expressions, concern for others' feelings, cooperative language, conflict avoidance, trust in people, helping behaviors, politeness, forgiveness.
+- **LOW signals**: critical of others, competitive/adversarial language, distrust, blunt/harsh tone, prioritizes own interests, skepticism about others' motives.
+
+### N — Neuroticism
+- **HIGH signals**: anxiety/worry expressions, mood swings, self-doubt, stress language, emotional instability, rumination, catastrophizing, irritability, sensitivity to criticism.
+- **LOW signals**: calm/stable tone, confident language, emotional regulation, resilience, relaxed about problems, low reactivity.
+
+**Important**: Each trait label MUST be exactly "HIGH" or "LOW". Do NOT use MODERATE, MEDIUM, NEUTRAL, or any other value. If genuinely uncertain, defer to the supervised prior above.
+**Class balance**: HIGH/LOW split is roughly 50/50 per trait in most datasets. Do not default to HIGH — ground your decision in the evidence and prior.
 {% endif %}
 
 ## Output Format (JSON — schema, NOT an example to copy)
