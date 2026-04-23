@@ -263,11 +263,13 @@ class OllamaClient(LLMClient):
         model: str = "llama3.1:8b",
         base_url: str = "http://localhost:11434/api/chat",
         temperature: float = 0.1,
+        timeout: int = 300,
     ):
         import requests
         self.model = model
         self.base_url = base_url
         self.temperature = temperature
+        self.timeout = timeout
         self._requests = requests
 
     def generate(self, messages: list[dict], **kwargs) -> str:
@@ -278,7 +280,7 @@ class OllamaClient(LLMClient):
             "stream": False,
             "options": {"temperature": self.temperature},
         }
-        response = self._requests.post(self.base_url, json=payload, timeout=kwargs.get("timeout", 180))
+        response = self._requests.post(self.base_url, json=payload, timeout=kwargs.get("timeout", self.timeout))
         response.raise_for_status()
         latency = time.perf_counter() - start
         logger.info(f"LLM [{self.model}] responded in {latency:.2f}s")
@@ -338,6 +340,7 @@ def build_llm_client(config: dict) -> LLMClient:
             model=model,
             base_url=config.get("base_url", "http://localhost:11434/api/chat"),
             temperature=temperature,
+            timeout=config.get("timeout", 300),
         )
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")
