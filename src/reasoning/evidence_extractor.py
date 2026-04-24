@@ -1,5 +1,6 @@
 """Step 1: Extract behavioral evidence from input text using LLM."""
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,6 +29,34 @@ class EvidenceExtractor:
         self.config = config or {}
         self.env = Environment(loader=FileSystemLoader(str(PROMPTS_DIR)))
 
+    @staticmethod
+    def _salvage_json_candidates(response: str) -> list:
+        """Best-effort recovery for malformed JSON-like list outputs."""
+        if not response:
+            return []
+
+        # First try the shared extractor.
+        try:
+            parsed = json.loads(extract_json(response))
+            if isinstance(parsed, list):
+                return parsed
+            if isinstance(parsed, dict):
+                return next((v for v in parsed.values() if isinstance(v, list)), [])
+        except Exception:
+            pass
+
+        # Try to find individual object literals and parse them one by one.
+        matches = re.findall(r"\{.*?\}", response, flags=re.DOTALL)
+        recovered = []
+        for m in matches:
+            try:
+                item = json.loads(m)
+                if isinstance(item, dict):
+                    recovered.append(item)
+            except Exception:
+                continue
+        return recovered
+
     def _render_prompt(
         self,
         text: str,
@@ -50,23 +79,23 @@ class EvidenceExtractor:
     ) -> list[ExtractedEvidence]:
         """Extract behavioral evidence from text using LLM."""
         prompt = self._render_prompt(text, candidate_sentences, max_evidence)
-        messages = [{"role": "user", "content": prompt}]
+        base_messages = [{"role": "user", "content": prompt}]
+        repair_suffix = (
+            "\n\nYour previous reply was not valid JSON. "
+            "Return ONLY a JSON array of objects with keys: "
+            "quote, sentence_idx, behavior_type, description. "
+            "No markdown, no commentary, no extra text."
+        )
 
+        last_response = ""
         for attempt in range(max_retries + 1):
             try:
+                messages = base_messages if attempt == 0 else [
+                    {"role": "user", "content": prompt + repair_suffix}
+                ]
                 response = self.llm.generate(messages)
-                content = extract_json(response)
-                parsed = json.loads(content)
-                # Accept either a bare list or {"data":[...]} style wrapper
-                if isinstance(parsed, list):
-                    evidence_list = parsed
-                elif isinstance(parsed, dict):
-                    # Find the first list value in the dict
-                    evidence_list = next(
-                        (v for v in parsed.values() if isinstance(v, list)), []
-                    )
-                else:
-                    evidence_list = []
+                last_response = response
+                evidence_list = self._salvage_json_candidates(response)
 
                 return [
                     ExtractedEvidence(
@@ -76,10 +105,25 @@ class EvidenceExtractor:
                         description=item.get("description", ""),
                     )
                     for item in evidence_list
-                    if item.get("quote")
+                    if isinstance(item, dict) and item.get("quote")
                 ]
-            except (json.JSONDecodeError, KeyError) as e:
+            except (json.JSONDecodeError, KeyError, AttributeError, TypeError) as e:
                 logger.warning(f"Evidence extraction attempt {attempt + 1} failed: {e}")
                 if attempt == max_retries:
+                    salvaged = self._salvage_json_candidates(last_response)
+                    if salvaged:
+                        logger.warning(
+                            f"Recovered {len(salvaged)} evidence items from malformed JSON response"
+                        )
+                        return [
+                            ExtractedEvidence(
+                                quote=item.get("quote", ""),
+                                sentence_idx=item.get("sentence_idx", -1),
+                                behavior_type=item.get("behavior_type", "general"),
+                                description=item.get("description", ""),
+                            )
+                            for item in salvaged
+                            if isinstance(item, dict) and item.get("quote")
+                        ]
                     logger.error("All evidence extraction attempts failed, returning empty list")
                     return []

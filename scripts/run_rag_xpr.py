@@ -63,9 +63,6 @@ def run_full_pipeline(args, config: dict) -> None:
         records = random.sample(records, min(args.sample, len(records)))
         logger.info(f"Sampling {len(records)} records")
 
-    logger.info("Initializing RAG-XPR pipeline...")
-    pipeline = RAGXPRPipeline(config)
-
     # Determine output path
     output_path = args.output or config.get("output", {}).get("output_dir", "outputs/predictions/")
     output_file = (
@@ -75,17 +72,38 @@ def run_full_pipeline(args, config: dict) -> None:
     )
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Running inference on {len(records)} records...")
+    completed_ids = set()
     results = []
-    with open(output_file, "w", encoding="utf-8") as f_out:
+    if args.resume and output_file.exists():
+        with open(output_file, encoding="utf-8") as f_in:
+            for line in f_in:
+                try:
+                    row = json.loads(line)
+                    results.append(row)
+                    if row.get("id") is not None:
+                        completed_ids.add(row["id"])
+                except json.JSONDecodeError:
+                    logger.warning("Skipping malformed existing output line during resume")
+        before = len(records)
+        records = [r for r in records if r.get("id") not in completed_ids]
+        logger.info(
+            f"Resuming from existing output: {len(completed_ids)} completed rows, "
+            f"{len(records)} remaining out of {before}"
+        )
+
+    logger.info("Initializing RAG-XPR pipeline...")
+    pipeline = RAGXPRPipeline(config)
+
+    logger.info(f"Running inference on {len(records)} records...")
+    with open(output_file, "a" if args.resume else "w", encoding="utf-8") as f_out:
         for i, record in enumerate(records):
             try:
                 text = record.get("text", "")
                 framework = config.get("cope", {}).get("framework", "mbti")
                 if framework == "ocean":
-                    gold_label = _format_gold_ocean(record.get("label_ocean")) or record.get("label_mbti", "")
+                    gold_label = _format_gold_ocean(record.get("label_ocean"))
                 else:
-                    gold_label = record.get("label_mbti") or _format_gold_ocean(record.get("label_ocean"))
+                    gold_label = record.get("label_mbti")
                 if not gold_label:
                     continue
                 result = pipeline.predict(text)
@@ -96,9 +114,10 @@ def run_full_pipeline(args, config: dict) -> None:
                     **result,
                 }
                 f_out.write(json.dumps(output_record, ensure_ascii=False) + "\n")
+                f_out.flush()
                 results.append(output_record)
                 if (i + 1) % 10 == 0:
-                    logger.info(f"Processed {i + 1}/{len(records)}")
+                    logger.info(f"Processed {i + 1}/{len(records)} remaining records")
             except Exception as e:
                 logger.error(f"Failed on record {record.get('id', i)}: {e}")
 
@@ -181,6 +200,7 @@ def main():
     parser.add_argument("--framework", choices=["mbti", "ocean"])
     parser.add_argument("--dry_run", type=int, help="Process only N samples")
     parser.add_argument("--sample", type=int, help="Random sample N records")
+    parser.add_argument("--resume", action="store_true", help="Resume from an existing JSONL output file by skipping completed ids")
     parser.add_argument("--mode", choices=["full", "llm_direct"], default="full")
     parser.add_argument("--prompt", choices=["zero_shot", "few_shot", "cot_basic"])
     parser.add_argument("--ablation", help="Ablation config override name")
