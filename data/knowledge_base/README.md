@@ -1,0 +1,97 @@
+# RAG-XPR Psychology Knowledge Base
+
+This directory contains the citable psychology KB used by RAG-XPR retrieval and CoPE reasoning.
+
+Current build:
+- KB version: `psych_kb_ocean_v1`
+- Qdrant collection: `psych_kb_ocean_v1`
+- Embedding model: `BAAI/bge-base-en-v1.5`
+- Embedding shape: `[718, 768]`
+- Primary role: OCEAN-first KB for PersonalityEvd explainability evaluation
+
+## Directory Map
+
+| Path | Purpose |
+|------|---------|
+| `sources/` | Human-curated source JSONL files |
+| `chunks.jsonl` | Parsed KB chunks consumed by BM25/hybrid retrieval |
+| `embeddings.npy` | Dense embeddings for Qdrant indexing |
+| `kb_manifest.json` | Reproducibility manifest: config hash, chunks hash, counts, validation |
+| `eval_queries/ocean_retrieval_gold.jsonl` | Lightweight retrieval QA queries |
+| `reports/` | Audit, retrieval metrics, and visual dashboard |
+
+## Build From Scratch
+
+Use the repo-standard `uv` command pattern:
+
+```bash
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/build_kb.py --step parse --config configs/kb_config.yaml
+
+CUDA_VISIBLE_DEVICES="" OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+TOKENIZERS_PARALLELISM=false nice -n 15 ionice -c3 \
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/build_kb.py --step embed --config configs/kb_config.yaml
+```
+
+The safe embedding command is CPU-only and low-priority, so it is less likely to disturb active GPU
+or LLM jobs.
+
+## Load Into Qdrant
+
+Start Qdrant first, then index:
+
+```bash
+curl -sf http://localhost:6333/collections
+
+CUDA_VISIBLE_DEVICES="" OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+TOKENIZERS_PARALLELISM=false nice -n 15 ionice -c3 \
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/build_kb.py --step index --config configs/kb_config.yaml
+```
+
+This creates or updates `psych_kb_ocean_v1`. The legacy `psych_kb` collection may still exist for
+running jobs; do not delete/swap it while experiments are active.
+
+Verify:
+
+```bash
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/build_kb.py --step verify --config configs/kb_config.yaml
+```
+
+## Audit And Retrieval QA
+
+```bash
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/audit_kb.py
+
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/evaluate_kb_retrieval.py --method bm25
+
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/generate_kb_dashboard.py
+```
+
+Outputs are written to `data/knowledge_base/reports/`.
+
+## Visual Review
+
+Open this file in a browser:
+
+```text
+data/knowledge_base/reports/kb_dashboard.html
+```
+
+Or read the Markdown summary:
+
+```text
+data/knowledge_base/reports/kb_summary.md
+```
+
+## Important Notes
+
+- The KB uses English text and is intended to pair with English-normalized PersonalityEvd inputs.
+- Do not copy long copyrighted manual passages into source files; use short paraphrases plus citation metadata.
+- Do not add test-split evidence text to `sources/`; audit includes an exact held-out leakage check.
+- `configs/rag_xpr_config.yaml` and `configs/retrieval_config.yaml` now point to `psych_kb_ocean_v1` for future runs.

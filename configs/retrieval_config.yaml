@@ -6,7 +6,7 @@ embedding:
 
 qdrant:
   url: http://localhost:6333
-  collection_name: psych_kb
+  collection_name: psych_kb_ocean_v1
   top_k: 5
 
 hybrid:

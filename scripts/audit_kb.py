@@ -147,8 +147,8 @@ def write_markdown(report: dict, path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Audit built psychology KB chunks")
     parser.add_argument("--chunks", default="data/knowledge_base/chunks.jsonl")
-    parser.add_argument("--json-output", default="outputs/kb/kb_audit.json")
-    parser.add_argument("--md-output", default="outputs/kb/kb_audit.md")
+    parser.add_argument("--json-output", default="data/knowledge_base/reports/kb_audit.json")
+    parser.add_argument("--md-output", default="data/knowledge_base/reports/kb_audit.md")
     parser.add_argument("--leakage-test-jsonl", default="data/raw/personality_evd/test.jsonl")
     args = parser.parse_args()
 

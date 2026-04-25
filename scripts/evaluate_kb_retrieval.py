@@ -117,7 +117,7 @@ def main() -> None:
     )
     parser.add_argument("--method", choices=["bm25", "hybrid"], default="bm25")
     parser.add_argument("--top-k", type=int, default=5)
-    parser.add_argument("--output", default="outputs/kb/retrieval_eval.json")
+    parser.add_argument("--output", default="data/knowledge_base/reports/retrieval_eval.json")
     args = parser.parse_args()
 
     queries = load_jsonl(Path(args.queries))

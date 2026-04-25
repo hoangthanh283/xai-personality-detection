@@ -1,0 +1,41 @@
+# Psychology KB Summary
+
+- KB version: `psych_kb_ocean_v1`
+- Qdrant collection: `psych_kb_ocean_v1`
+- Embedding model: `BAAI/bge-base-en-v1.5`
+- Embeddings shape: `[718, 768]`
+- Chunks: `718`
+- Invalid chunks: `0`
+- Duplicate chunk IDs: `0`
+- Retrieval Recall@5: `0.840`
+- Retrieval MRR: `0.519`
+
+## Quality Tier
+- `A`: 473
+- `B`: 130
+- `C`: 115
+
+## Category Coverage
+- `behavioral_marker`: 220
+- `cognitive_function`: 32
+- `facet_definition`: 60
+- `few_shot_example`: 51
+- `linguistic_correlate`: 123
+- `state_definition`: 103
+- `trait_definition`: 25
+- `type_description`: 104
+
+## OCEAN Retrieval Recall@5
+- `A`: 0.800
+- `C`: 0.800
+- `E`: 0.800
+- `N`: 1.000
+- `O`: 0.800
+
+## Visual Dashboard
+
+Open `data/knowledge_base/reports/kb_dashboard.html` in a browser.
+
+## Audit Details
+
+See `data/knowledge_base/reports/kb_audit.md` and `data/knowledge_base/reports/retrieval_eval.json`.

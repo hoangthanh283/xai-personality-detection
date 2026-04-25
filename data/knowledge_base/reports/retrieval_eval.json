@@ -1,0 +1,199 @@
+{
+  "num_queries": 25,
+  "recall_at_3": 0.56,
+  "recall_at_5": 0.84,
+  "mrr": 0.5193333333333333,
+  "by_trait": {
+    "A": {
+      "total": 5,
+      "recall_at_5": 0.8
+    },
+    "C": {
+      "total": 5,
+      "recall_at_5": 0.8
+    },
+    "E": {
+      "total": 5,
+      "recall_at_5": 0.8
+    },
+    "N": {
+      "total": 5,
+      "recall_at_5": 1.0
+    },
+    "O": {
+      "total": 5,
+      "recall_at_5": 0.8
+    }
+  },
+  "misses": [
+    {
+      "query": "organized goal directed and reliable follow through",
+      "expected_trait": "C",
+      "expected_category": "trait_definition",
+      "top_results": [
+        {
+          "chunk_id": "ocean_facets_00020",
+          "score": 9.164525332648887,
+          "trait": "C",
+          "category": "facet_definition",
+          "state_label": null
+        },
+        {
+          "chunk_id": "psychological_states_00080",
+          "score": 8.868735935297874,
+          "trait": "N",
+          "category": "state_definition",
+          "state_label": "HopefulAnticipation"
+        },
+        {
+          "chunk_id": "ocean_c_marker_deadlines_001",
+          "score": 8.640129570089567,
+          "trait": "C",
+          "category": "behavioral_marker",
+          "state_label": null
+        },
+        {
+          "chunk_id": "linguistic_correlates_00081",
+          "score": 8.507468221933122,
+          "trait": "E",
+          "category": "linguistic_correlate",
+          "state_label": null
+        },
+        {
+          "chunk_id": "linguistic_correlates_00023",
+          "score": 8.220099683836283,
+          "trait": "O",
+          "category": "linguistic_correlate",
+          "state_label": null
+        }
+      ]
+    },
+    {
+      "query": "initiates conversations and enjoys group energy",
+      "expected_trait": "E",
+      "expected_category": "trait_definition",
+      "top_results": [
+        {
+          "chunk_id": "behavioral_markers_00021",
+          "score": 11.988537260209505,
+          "trait": "E",
+          "category": "behavioral_marker",
+          "state_label": null
+        },
+        {
+          "chunk_id": "behavioral_markers_00024",
+          "score": 11.683814130822382,
+          "trait": null,
+          "category": "behavioral_marker",
+          "state_label": null
+        },
+        {
+          "chunk_id": "psychological_states_00014",
+          "score": 11.219894405606912,
+          "trait": "E",
+          "category": "state_definition",
+          "state_label": "SocialEngagement"
+        },
+        {
+          "chunk_id": "behavioral_markers_00007",
+          "score": 10.509919622133987,
+          "trait": "A",
+          "category": "behavioral_marker",
+          "state_label": null
+        },
+        {
+          "chunk_id": "behavioral_markers_00003",
+          "score": 10.277557592238415,
+          "trait": "E",
+          "category": "behavioral_marker",
+          "state_label": null
+        }
+      ]
+    },
+    {
+      "query": "curious about abstract ideas and what if questions",
+      "expected_trait": "O",
+      "expected_category": "state_definition",
+      "top_results": [
+        {
+          "chunk_id": "cope_few_shot_00021_c0",
+          "score": 13.151144040871069,
+          "trait": null,
+          "category": "few_shot_example",
+          "state_label": null
+        },
+        {
+          "chunk_id": "linguistic_correlates_00029",
+          "score": 11.888624331841468,
+          "trait": "O",
+          "category": "linguistic_correlate",
+          "state_label": null
+        },
+        {
+          "chunk_id": "ocean_traits_00001",
+          "score": 11.20232308090079,
+          "trait": "O",
+          "category": "trait_definition",
+          "state_label": null
+        },
+        {
+          "chunk_id": "linguistic_correlates_00055",
+          "score": 9.997445092210715,
+          "trait": "O",
+          "category": "linguistic_correlate",
+          "state_label": null
+        },
+        {
+          "chunk_id": "linguistic_correlates_00089",
+          "score": 9.718342907649955,
+          "trait": "C",
+          "category": "linguistic_correlate",
+          "state_label": null
+        }
+      ]
+    },
+    {
+      "query": "compassion trust politeness cooperation welfare",
+      "expected_trait": "A",
+      "expected_category": "trait_definition",
+      "top_results": [
+        {
+          "chunk_id": "linguistic_correlates_00050",
+          "score": 6.999854567220995,
+          "trait": "A",
+          "category": "linguistic_correlate",
+          "state_label": null
+        },
+        {
+          "chunk_id": "ocean_facets_00036",
+          "score": 6.776300353965423,
+          "trait": "A",
+          "category": "facet_definition",
+          "state_label": null
+        },
+        {
+          "chunk_id": "ocean_facets_00042",
+          "score": 6.635929228309013,
+          "trait": "A",
+          "category": "facet_definition",
+          "state_label": null
+        },
+        {
+          "chunk_id": "psychological_states_00086",
+          "score": 4.771848587041616,
+          "trait": "A",
+          "category": "state_definition",
+          "state_label": "AltruisticActivation"
+        },
+        {
+          "chunk_id": "ocean_facets_00037",
+          "score": 4.7547513172458515,
+          "trait": "A",
+          "category": "facet_definition",
+          "state_label": null
+        }
+      ]
+    }
+  ],
+  "method": "bm25"
+}

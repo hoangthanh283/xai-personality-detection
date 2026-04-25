@@ -1,0 +1,129 @@
+{
+  "summary": {
+    "num_chunks": 718,
+    "framework": {
+      "mbti": 168,
+      "ocean": 255,
+      "both": 295
+    },
+    "category": {
+      "type_description": 104,
+      "trait_definition": 25,
+      "few_shot_example": 51,
+      "cognitive_function": 32,
+      "state_definition": 103,
+      "behavioral_marker": 220,
+      "linguistic_correlate": 123,
+      "facet_definition": 60
+    },
+    "quality_tier": {
+      "C": 115,
+      "B": 130,
+      "A": 473
+    },
+    "trait": {
+      "I": 1,
+      "E": 89,
+      "S": 1,
+      "N": 121,
+      "T": 1,
+      "F": 1,
+      "J": 1,
+      "P": 1,
+      "O": 116,
+      "C": 115,
+      "A": 90,
+      "<missing>": 181
+    },
+    "pole": {
+      "<missing>": 623,
+      "BOTH": 11,
+      "HIGH": 47,
+      "LOW": 37
+    },
+    "source_id": {
+      "mbti_type_descriptions_legacy": 8,
+      "ocean_trait_definitions_legacy": 5,
+      "few_shot_examples_legacy": 1,
+      "gifts_differing_myers": 40,
+      "myersbriggs_foundation": 32,
+      "keirsey_temperament": 32,
+      "jung_psychological_types": 8,
+      "beebe_function_model": 16,
+      "neo_pi_r_costa_mccrae": 69,
+      "big_five_inventory_john": 3,
+      "handbook_personality_john": 3,
+      "bfi2_soto_john": 5,
+      "personality_evd_task_definition": 1,
+      "carver_scheier_self_regulation": 15,
+      "costa_mccrae_1992": 15,
+      "apa_dictionary_psychology": 36,
+      "yarkoni_2010_100k_words": 71,
+      "goldberg_ipip": 1,
+      "mairesse_2007_linguistic_cues": 76,
+      "park_2015_automatic_personality": 36,
+      "pennebaker_king_1999": 64,
+      "tausczik_pennebaker_2010_liwc": 22,
+      "schwartz_2013_social_media": 73,
+      "watson_clark_1984_negative_affectivity": 9,
+      "mcadams_life_story_2006": 20,
+      "gross_emotion_regulation_2002": 7,
+      "synthetic_textbook_example": 50
+    }
+  },
+  "validation": {
+    "num_invalid": 0,
+    "errors": {},
+    "duplicate_chunk_ids": [],
+    "short_chunks": [],
+    "long_chunks": [],
+    "min_words": 15,
+    "max_words": 272
+  },
+  "ocean_trait_category_coverage": {
+    "<missing>": {
+      "few_shot_example": 18
+    },
+    "A": {
+      "trait_definition": 5,
+      "state_definition": 1,
+      "behavioral_marker": 2,
+      "linguistic_correlate": 24,
+      "facet_definition": 12
+    },
+    "C": {
+      "trait_definition": 5,
+      "state_definition": 1,
+      "behavioral_marker": 8,
+      "linguistic_correlate": 25,
+      "facet_definition": 12
+    },
+    "E": {
+      "trait_definition": 5,
+      "state_definition": 1,
+      "behavioral_marker": 2,
+      "linguistic_correlate": 24,
+      "facet_definition": 12
+    },
+    "N": {
+      "trait_definition": 5,
+      "state_definition": 1,
+      "behavioral_marker": 7,
+      "linguistic_correlate": 24,
+      "facet_definition": 12
+    },
+    "O": {
+      "trait_definition": 5,
+      "state_definition": 1,
+      "behavioral_marker": 5,
+      "linguistic_correlate": 26,
+      "facet_definition": 12
+    }
+  },
+  "leakage": {
+    "checked": true,
+    "dataset_path": "data/raw/personality_evd/test.jsonl",
+    "num_heldout_strings": 2299,
+    "matches": []
+  }
+}
