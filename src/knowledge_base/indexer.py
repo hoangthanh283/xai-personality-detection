@@ -1,4 +1,5 @@
 """Index KB chunks into Qdrant."""
+
 from uuid import uuid4
 
 import numpy as np
@@ -8,6 +9,7 @@ from src.knowledge_base.builder import KBChunk
 
 QDRANT_CONFIG = {
     "collection_name": "psych_kb",
+    "alias_name": None,
     "vector_size": 768,
     "distance": "Cosine",
     "on_disk": False,
@@ -29,6 +31,7 @@ class KBIndexer:
     def client(self):
         if self._client is None:
             from qdrant_client import QdrantClient
+
             url = self.config.get("url", "http://localhost:6333")
             logger.info(f"Connecting to Qdrant at {url}")
             self._client = QdrantClient(url=url, check_compatibility=False)
@@ -37,6 +40,7 @@ class KBIndexer:
     def create_collection(self, recreate: bool = False) -> None:
         """Create Qdrant collection."""
         from qdrant_client.models import Distance, HnswConfigDiff, VectorParams
+
         collection_name = self.config["collection_name"]
         distance_map = {
             "Cosine": Distance.COSINE,
@@ -69,6 +73,40 @@ class KBIndexer:
         )
         logger.info(f"Created collection '{collection_name}'")
 
+    def upsert_alias(self) -> None:
+        """Point alias_name to collection_name when configured."""
+        alias_name = self.config.get("alias_name")
+        collection_name = self.config["collection_name"]
+        if not alias_name or alias_name == collection_name:
+            return
+        try:
+            from qdrant_client.models import (
+                CreateAlias,
+                CreateAliasOperation,
+                DeleteAlias,
+                DeleteAliasOperation,
+            )
+
+            aliases = self.client.get_aliases().aliases
+            existing = [a.alias_name for a in aliases if a.alias_name == alias_name]
+            actions = []
+            if existing:
+                actions.append(
+                    DeleteAliasOperation(delete_alias=DeleteAlias(alias_name=alias_name))
+                )
+            actions.append(
+                CreateAliasOperation(
+                    create_alias=CreateAlias(
+                        collection_name=collection_name,
+                        alias_name=alias_name,
+                    )
+                )
+            )
+            self.client.update_collection_aliases(change_aliases_operations=actions)
+            logger.info(f"Updated Qdrant alias '{alias_name}' → '{collection_name}'")
+        except Exception as exc:
+            logger.warning(f"Could not update Qdrant alias '{alias_name}': {exc}")
+
     def index_chunks(
         self,
         chunks: list[KBChunk],
@@ -77,6 +115,7 @@ class KBIndexer:
     ) -> None:
         """Upload chunk embeddings + payloads to Qdrant."""
         from qdrant_client.models import PointStruct
+
         collection_name = self.config["collection_name"]
         total = len(chunks)
         logger.info(f"Indexing {total} chunks into '{collection_name}'")
@@ -120,4 +159,11 @@ class KBIndexer:
             query=query_vector.tolist(),
             limit=top_k,
         )
-        return [{"score": r.score, "text": r.payload.get("text", ""), "chunk_id": r.payload.get("chunk_id", "")} for r in response.points]
+        return [
+            {
+                "score": r.score,
+                "text": r.payload.get("text", ""),
+                "chunk_id": r.payload.get("chunk_id", ""),
+            }
+            for r in response.points
+        ]

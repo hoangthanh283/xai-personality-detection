@@ -31,6 +31,11 @@ sources:
     framework: ocean
     category: trait_definition
 
+  - name: ocean_curated_v1
+    path: data/knowledge_base/sources/ocean_curated_v1.jsonl
+    framework: ocean
+    category: trait_definition
+
   - name: ocean_facet_definitions
     path: data/knowledge_base/sources/ocean_facets.jsonl
     framework: ocean
@@ -64,14 +69,15 @@ chunking:
   min_chunk_size: 50
 
 embedding:
-  model: sentence-transformers/all-MiniLM-L6-v2
+  model: BAAI/bge-base-en-v1.5
   batch_size: 64
   normalize: true
 
 qdrant:
   url: http://localhost:6333
-  collection_name: psych_kb
-  vector_size: 384
+  collection_name: psych_kb_ocean_v1
+  alias_name: psych_kb
+  vector_size: 768
   distance: Cosine
   on_disk: false
   hnsw_config:
@@ -79,3 +85,4 @@ qdrant:
     ef_construct: 100
 
 output_dir: data/knowledge_base/
+kb_version: psych_kb_ocean_v1

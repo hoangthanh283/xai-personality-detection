@@ -1,0 +1,25 @@
+{"query":"worries constantly before events","framework":"ocean","expected_trait":"N","expected_pole":"HIGH","expected_category":"state_definition"}
+{"query":"nervous before speaking and imagines failure","framework":"ocean","expected_trait":"N","expected_pole":"HIGH","expected_category":"behavioral_marker"}
+{"query":"can't stop thinking about what could go wrong","framework":"ocean","expected_trait":"N","expected_pole":"HIGH","expected_category":"state_definition"}
+{"query":"uses anxious words like scared nervous dread","framework":"ocean","expected_trait":"N","expected_pole":"HIGH","expected_category":"linguistic_correlate"}
+{"query":"emotionally reactive and slow to calm down","framework":"ocean","expected_trait":"N","expected_pole":"HIGH","expected_category":"trait_definition"}
+{"query":"keeps deadlines and plans tasks carefully","framework":"ocean","expected_trait":"C","expected_pole":"HIGH","expected_category":"state_definition"}
+{"query":"uses a schedule checklist and finishes obligations","framework":"ocean","expected_trait":"C","expected_pole":"HIGH","expected_category":"behavioral_marker"}
+{"query":"organized goal directed and reliable follow through","framework":"ocean","expected_trait":"C","expected_pole":"HIGH","expected_category":"trait_definition"}
+{"query":"mentions plan deadline prepare track organize","framework":"ocean","expected_trait":"C","expected_pole":"HIGH","expected_category":"linguistic_correlate"}
+{"query":"sets goals monitors progress and persists","framework":"ocean","expected_trait":"C","expected_pole":"HIGH","expected_category":"state_definition"}
+{"query":"prefers solitude after socializing","framework":"ocean","expected_trait":"E","expected_pole":"LOW","expected_category":"state_definition"}
+{"query":"feels drained by parties and needs quiet recharge","framework":"ocean","expected_trait":"E","expected_pole":"LOW","expected_category":"behavioral_marker"}
+{"query":"initiates conversations and enjoys group energy","framework":"ocean","expected_trait":"E","expected_pole":"HIGH","expected_category":"trait_definition"}
+{"query":"social words framed as exhausting and tiring","framework":"ocean","expected_trait":"E","expected_pole":"LOW","expected_category":"linguistic_correlate"}
+{"query":"assertive energetic and seeks stimulation with others","framework":"ocean","expected_trait":"E","expected_pole":"HIGH","expected_category":"trait_definition"}
+{"query":"curious about abstract ideas and what if questions","framework":"ocean","expected_trait":"O","expected_pole":"HIGH","expected_category":"state_definition"}
+{"query":"uses metaphor theory meaning creative novel art","framework":"ocean","expected_trait":"O","expected_pole":"HIGH","expected_category":"behavioral_marker"}
+{"query":"intellectual curiosity imagination aesthetic sensitivity","framework":"ocean","expected_trait":"O","expected_pole":"BOTH","expected_category":"trait_definition"}
+{"query":"abstract nouns and metaphor rich descriptions","framework":"ocean","expected_trait":"O","expected_pole":"HIGH","expected_category":"linguistic_correlate"}
+{"query":"prefers familiar routines and concrete facts","framework":"ocean","expected_trait":"O","expected_pole":"LOW","expected_category":"trait_definition"}
+{"query":"notices another person's feelings and wants to help","framework":"ocean","expected_trait":"A","expected_pole":"HIGH","expected_category":"state_definition"}
+{"query":"forgives mistakes and avoids unnecessary conflict","framework":"ocean","expected_trait":"A","expected_pole":"HIGH","expected_category":"behavioral_marker"}
+{"query":"compassion trust politeness cooperation welfare","framework":"ocean","expected_trait":"A","expected_pole":"BOTH","expected_category":"trait_definition"}
+{"query":"warm social language gratitude apology support","framework":"ocean","expected_trait":"A","expected_pole":"HIGH","expected_category":"linguistic_correlate"}
+{"query":"blunt criticism distrust and antagonism","framework":"ocean","expected_trait":"A","expected_pole":"LOW","expected_category":"trait_definition"}

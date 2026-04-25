@@ -2,6 +2,7 @@
 
 Score = alpha * semantic_score + (1 - alpha) * bm25_score
 """
+
 from loguru import logger
 
 from src.retrieval.kb_retriever import KBChunkResult, KBRetriever
@@ -18,6 +19,7 @@ class BM25Retriever:
 
     def _load_corpus(self, path: str) -> None:
         import json
+
         with open(path, encoding="utf-8") as f:
             self._corpus = [json.loads(line) for line in f if line.strip()]
         logger.info(f"Loaded {len(self._corpus)} chunks for BM25 index")
@@ -26,28 +28,45 @@ class BM25Retriever:
     def _build_index(self) -> None:
         try:
             from rank_bm25 import BM25Okapi
+
             tokenized = [doc["text"].lower().split() for doc in self._corpus]
             self._bm25 = BM25Okapi(tokenized)
             logger.info("BM25 index built")
         except ImportError:
             logger.warning("rank_bm25 not installed, BM25 retrieval disabled")
 
-    def search(self, query: str, top_k: int = 10, framework: str | None = None, category: str | None = None) -> list[KBChunkResult]:
+    def search(
+        self, query: str, top_k: int = 10, framework: str | None = None, category: str | None = None
+    ) -> list[KBChunkResult]:
         if self._bm25 is None or not self._corpus:
             return []
         tokenized_query = query.lower().split()
         scores = self._bm25.get_scores(tokenized_query)
-        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+        candidate_indices = []
+        for idx, doc in enumerate(self._corpus):
+            meta = doc.get("metadata", {})
+            if (
+                framework
+                and framework != "both"
+                and meta.get("framework") not in {framework, "both"}
+            ):
+                continue
+            if category and meta.get("category") != category:
+                continue
+            candidate_indices.append(idx)
+        top_indices = sorted(candidate_indices, key=lambda i: scores[i], reverse=True)[:top_k]
         results = []
         for idx in top_indices:
             if scores[idx] > 0:
                 doc = self._corpus[idx]
-                results.append(KBChunkResult(
-                    chunk_id=doc.get("chunk_id", f"bm25_{idx}"),
-                    text=doc.get("text", ""),
-                    score=float(scores[idx]),
-                    metadata=doc.get("metadata", {}),
-                ))
+                results.append(
+                    KBChunkResult(
+                        chunk_id=doc.get("chunk_id", f"bm25_{idx}"),
+                        text=doc.get("text", ""),
+                        score=float(scores[idx]),
+                        metadata=doc.get("metadata", {}),
+                    )
+                )
         return results
 
 
@@ -88,12 +107,14 @@ class HybridRetriever:
         result = []
         for cid, fused_score in ranked[:top_k]:
             chunk = chunk_map[cid]
-            result.append(KBChunkResult(
-                chunk_id=chunk.chunk_id,
-                text=chunk.text,
-                score=fused_score,
-                metadata=chunk.metadata,
-            ))
+            result.append(
+                KBChunkResult(
+                    chunk_id=chunk.chunk_id,
+                    text=chunk.text,
+                    score=fused_score,
+                    metadata=chunk.metadata,
+                )
+            )
         return result
 
     def search(
@@ -107,7 +128,9 @@ class HybridRetriever:
         dense_results = self.dense_retriever.search(
             query, top_k=top_k * 2, framework=framework, category=category
         )
-        sparse_results = self.sparse_retriever.search(query, top_k=top_k * 2)
+        sparse_results = self.sparse_retriever.search(
+            query, top_k=top_k * 2, framework=framework, category=category
+        )
         return self._reciprocal_rank_fusion(dense_results, sparse_results, top_k)
 
     def search_many(
@@ -129,7 +152,9 @@ class HybridRetriever:
         # 2. Sequential sparse search (BM25 is very fast on CPU locally)
         results = []
         for i, query in enumerate(queries):
-            sparse_results = self.sparse_retriever.search(query, top_k=top_k * 2)
+            sparse_results = self.sparse_retriever.search(
+                query, top_k=top_k * 2, framework=framework, category=category
+            )
             results.append(
                 self._reciprocal_rank_fusion(dense_results_list[i], sparse_results, top_k)
             )

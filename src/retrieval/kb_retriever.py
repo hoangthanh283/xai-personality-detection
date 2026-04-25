@@ -1,4 +1,5 @@
 """Retrieve psychology definitions from the Qdrant knowledge base."""
+
 from dataclasses import dataclass
 
 from src.knowledge_base.embedder import KBEmbedder
@@ -25,22 +26,34 @@ class KBRetriever:
 
     def __init__(self, config: dict | None = None):
         self.config = config or {}
-        self.embedder = KBEmbedder(self.config.get("embedding"))
+        embedding_cfg = self.config.get("embedding", {})
+        if "embedding_model" in self.config and "model" not in embedding_cfg:
+            embedding_cfg = {**embedding_cfg, "model": self.config["embedding_model"]}
+        self.embedder = KBEmbedder(embedding_cfg)
         self._qdrant = None
-        self.collection_name = self.config.get("collection_name", "psych_kb")
-        self.qdrant_url = self.config.get("qdrant_url", "http://localhost:6333")
+        qdrant_cfg = self.config.get("qdrant", {})
+        self.collection_name = (
+            self.config.get("collection_name")
+            or self.config.get("collection")
+            or qdrant_cfg.get("collection_name")
+            or "psych_kb"
+        )
+        self.qdrant_url = (
+            self.config.get("qdrant_url") or qdrant_cfg.get("url") or "http://localhost:6333"
+        )
 
     @property
     def qdrant(self):
         if self._qdrant is None:
             from qdrant_client import QdrantClient
+
             self._qdrant = QdrantClient(url=self.qdrant_url, check_compatibility=False)
         return self._qdrant
 
     def _build_filter(self, framework: str | None = None, category: str | None = None):
         """Build Qdrant payload filter."""
-        from qdrant_client.models import (FieldCondition, Filter, MatchAny,
-                                          MatchValue)
+        from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
+
         conditions = []
         if framework and framework != "both":
             conditions.append(
@@ -50,9 +63,7 @@ class KBRetriever:
                 )
             )
         if category:
-            conditions.append(
-                FieldCondition(key="category", match=MatchValue(value=category))
-            )
+            conditions.append(FieldCondition(key="category", match=MatchValue(value=category)))
         if conditions:
             return Filter(must=conditions)
         return None
@@ -79,10 +90,14 @@ class KBRetriever:
             @dataclass
             class MockResponse:
                 points: list
+
             res = client.search(**search_kwargs)
             return MockResponse(points=res)
         else:
-            raise AttributeError(f"QdrantClient object has no attribute 'query_points' or 'search'. Available: {dir(client)}")
+            raise AttributeError(
+                "QdrantClient object has no attribute 'query_points' or 'search'. "
+                f"Available: {dir(client)}"
+            )
 
     def search(
         self,
@@ -143,15 +158,19 @@ class KBRetriever:
                 query_filter=filter_,
                 limit=top_k,
             )
-            results.append([
-                KBChunkResult(
-                    chunk_id=r.payload.get("chunk_id", ""),
-                    text=r.payload.get("text", ""),
-                    score=r.score,
-                    metadata={k: v for k, v in r.payload.items() if k not in ("chunk_id", "text")},
-                )
-                for r in response.points
-            ])
+            results.append(
+                [
+                    KBChunkResult(
+                        chunk_id=r.payload.get("chunk_id", ""),
+                        text=r.payload.get("text", ""),
+                        score=r.score,
+                        metadata={
+                            k: v for k, v in r.payload.items() if k not in ("chunk_id", "text")
+                        },
+                    )
+                    for r in response.points
+                ]
+            )
         return results
 
 

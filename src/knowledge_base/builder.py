@@ -3,6 +3,7 @@
 Sources: MBTI type descriptions, OCEAN trait definitions, psychology textbook excerpts.
 Each chunk gets metadata: {source, trait, category, page}
 """
+
 import json
 import re
 from dataclasses import dataclass, field
@@ -11,16 +12,19 @@ from typing import Iterator
 
 from loguru import logger
 
+from src.knowledge_base.schema import normalize_metadata
+
 try:
     import tiktoken
+
     HAS_TIKTOKEN = True
 except ImportError:
     HAS_TIKTOKEN = False
     logger.warning("tiktoken not installed, falling back to word-based chunking")
 
 CHUNK_CONFIG = {
-    "chunk_size": 512,           # tokens
-    "chunk_overlap": 64,         # token overlap
+    "chunk_size": 512,  # tokens
+    "chunk_overlap": 64,  # token overlap
     "tokenizer": "cl100k_base",  # tiktoken
     "split_on": ["\n\n", "\n", ". "],
     "min_chunk_size": 50,
@@ -69,7 +73,7 @@ class TextChunker:
                     chunks.append(current_chunk.strip())
                 # Start new chunk with overlap
                 words = current_chunk.split()
-                overlap_words = words[-int(chunk_overlap * len(words) / chunk_size):]
+                overlap_words = words[-int(chunk_overlap * len(words) / chunk_size) :]
                 current_chunk = " ".join(overlap_words) + " " + para
                 current_tokens = self.count_tokens(current_chunk)
             else:
@@ -89,7 +93,11 @@ class KBBuilder:
         self.config = config or {}
         self.chunker = TextChunker(self.config.get("chunking"))
 
-    def parse_jsonl_source(self, file_path: Path) -> Iterator[KBChunk]:
+    def parse_jsonl_source(
+        self,
+        file_path: Path,
+        source_defaults: dict | None = None,
+    ) -> Iterator[KBChunk]:
         """Parse a JSONL knowledge base source file."""
         with open(file_path, encoding="utf-8") as f:
             for i, line in enumerate(f):
@@ -99,10 +107,12 @@ class KBBuilder:
                 try:
                     item = json.loads(line)
                     text = item.get("text", "")
-                    metadata = item.get("metadata", {})
+                    metadata = normalize_metadata(item.get("metadata", {}), source_defaults)
                     chunk_id = item.get("chunk_id", f"{file_path.stem}_{i:05d}")
                     # Chunk if needed
-                    if self.chunker.count_tokens(text) > self.config.get("chunking", {}).get("chunk_size", 512):
+                    if self.chunker.count_tokens(text) > self.config.get("chunking", {}).get(
+                        "chunk_size", 512
+                    ):
                         sub_chunks = self.chunker.chunk_text(text)
                         for j, chunk_text in enumerate(sub_chunks):
                             yield KBChunk(
@@ -115,13 +125,18 @@ class KBBuilder:
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.debug(f"Skipping malformed KB record at {file_path}:{i}: {e}")
 
-    def parse_markdown_source(self, file_path: Path, metadata: dict | None = None) -> Iterator[KBChunk]:
+    def parse_markdown_source(
+        self, file_path: Path, metadata: dict | None = None
+    ) -> Iterator[KBChunk]:
         """Parse a markdown file into chunks."""
         with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         sub_chunks = self.chunker.chunk_text(content)
-        base_meta = metadata or {"source": file_path.stem, "format": "markdown"}
+        base_meta = normalize_metadata(
+            {"source": file_path.stem, "format": "markdown"},
+            metadata,
+        )
         for i, chunk_text in enumerate(sub_chunks):
             yield KBChunk(
                 chunk_id=f"{file_path.stem}_{i:05d}",
@@ -138,12 +153,14 @@ class KBBuilder:
                 logger.warning(f"KB source file not found: {path}")
                 continue
             metadata = {
+                "name": source.get("name", path.stem),
+                "source_id": source.get("source_id", source.get("name", path.stem)),
                 "source": source.get("name", path.stem),
                 "framework": source.get("framework", "both"),
                 "category": source.get("category", "general"),
             }
             if path.suffix in (".jsonl", ".json"):
-                chunks = list(self.parse_jsonl_source(path))
+                chunks = list(self.parse_jsonl_source(path, metadata))
             elif path.suffix in (".md", ".txt"):
                 chunks = list(self.parse_markdown_source(path, metadata))
             else:
@@ -158,6 +175,10 @@ class KBBuilder:
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             for chunk in chunks:
-                record = {"chunk_id": chunk.chunk_id, "text": chunk.text, "metadata": chunk.metadata}
+                record = {
+                    "chunk_id": chunk.chunk_id,
+                    "text": chunk.text,
+                    "metadata": chunk.metadata,
+                }
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
         logger.info(f"Saved {len(chunks)} chunks to {output_path}")

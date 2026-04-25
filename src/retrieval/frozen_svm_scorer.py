@@ -11,6 +11,7 @@ Key advantages over fine-tuned RoBERTa scorer:
 
 Used by RAGXPRPipeline when evidence_retrieval.backbone = "frozen_svm".
 """
+
 from __future__ import annotations
 
 import math
@@ -59,26 +60,25 @@ class FrozenSvmEvidenceScorer:
         """
         self.batch_size = batch_size
         self.baselines: dict[str, FrozenBertSvmBaseline] = {}
+        encoder_cfg = {"device": "cpu", **dict(encoder_cfg or {})}
 
-        # Build shared encoder once upfront (respects encoder_cfg device override).
-        # This avoids each FrozenBertSvmBaseline.load() creating its own GPU encoder.
+        # Build the first baseline from its saved config, then share that encoder.
+        # Defaulting to CPU avoids OOM when a busy GPU is visible but unavailable.
         shared_encoder: FrozenTransformerEncoder | None = None
-        if encoder_cfg is not None and checkpoint_paths:
-            shared_encoder = FrozenTransformerEncoder(encoder_cfg)
 
         for dim, ckpt_path in checkpoint_paths.items():
             if not Path(ckpt_path).exists():
                 logger.warning(f"FrozenSVM checkpoint missing for {dim}: {ckpt_path} (skipping)")
                 continue
             logger.info(f"Loading FrozenBertSvmBaseline[{dim}] from {ckpt_path}")
-            # Patch device into saved config before constructing encoder to avoid CUDA OOM.
+            # Patch encoder overrides into saved config before constructing the encoder.
             import pickle
+
             with open(ckpt_path, "rb") as _f:
                 state = pickle.load(_f)
-            if encoder_cfg is not None and "device" in encoder_cfg:
-                enc_cfg = dict(state["config"].get("encoder") or {})
-                enc_cfg["device"] = encoder_cfg["device"]
-                state["config"] = {**state["config"], "encoder": enc_cfg}
+            enc_cfg = dict(state["config"].get("encoder") or {})
+            enc_cfg.update(encoder_cfg)
+            state["config"] = {**state["config"], "encoder": enc_cfg}
             baseline = FrozenBertSvmBaseline(config=state["config"])
             baseline.bag = state["bag"]
             baseline._label_encoder = state["label_encoder"]
@@ -130,7 +130,9 @@ class FrozenSvmEvidenceScorer:
         valid_sents = [sentences[i] for i in valid_idxs]
 
         if not valid_sents:
-            return [ScoredSentence(text=s, sentence_idx=i, score=0.0) for i, s in enumerate(sentences)]
+            return [
+                ScoredSentence(text=s, sentence_idx=i, score=0.0) for i, s in enumerate(sentences)
+            ]
 
         # Encode once — shared encoder, all valid sentences.
         shared_encoder = next(iter(self.baselines.values())).encoder
@@ -179,7 +181,9 @@ def default_mbti_svm_checkpoints(models_dir: str = "outputs/models") -> dict[str
     }
 
 
-def default_ocean_svm_checkpoints(models_dir: str = "outputs/models", dataset: str = "essays") -> dict[str, str]:
+def default_ocean_svm_checkpoints(
+    models_dir: str = "outputs/models", dataset: str = "essays"
+) -> dict[str, str]:
     dims = ["O", "C", "E", "A", "N"]
     ckpts: dict[str, str] = {}
     for d in dims:
