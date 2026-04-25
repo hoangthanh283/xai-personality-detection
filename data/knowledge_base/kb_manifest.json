@@ -171,5 +171,9 @@
     "num_duplicate_chunk_ids": 0,
     "duplicate_chunk_ids": [],
     "errors": {}
-  }
+  },
+  "embeddings_shape": [
+    718,
+    768
+  ]
 }
