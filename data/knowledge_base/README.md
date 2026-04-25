@@ -17,6 +17,10 @@ Current build:
 | `chunks.jsonl` | Parsed KB chunks consumed by BM25/hybrid retrieval |
 | `embeddings.npy` | Dense embeddings for Qdrant indexing |
 | `kb_manifest.json` | Reproducibility manifest: config hash, chunks hash, counts, validation |
+| `psychology_kb_source_dump_v1.jsonl` | Full normalized source-level snapshot (non-chunked) |
+| `ocean_knowledge_v1.jsonl` | OCEAN-focused normalized source snapshot |
+| `mbti_knowledge_v1.jsonl` | MBTI-focused normalized source snapshot |
+| `cope_examples_v1.jsonl` | Few-shot and CoPE examples snapshot |
 | `eval_queries/ocean_retrieval_gold.jsonl` | Lightweight retrieval QA queries |
 | `reports/` | Audit, retrieval metrics, and visual dashboard |
 
@@ -71,9 +75,13 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
 
 uv run --no-project --python 3.12 --with-requirements requirements.txt \
   python scripts/generate_kb_dashboard.py
+
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/export_kb_views.py
 ```
 
 Outputs are written to `data/knowledge_base/reports/`.
+The export command writes persistent source-level `.jsonl` dumps directly into `data/knowledge_base/`.
 
 ## Visual Review
 
@@ -87,6 +95,14 @@ Or read the Markdown summary:
 
 ```text
 data/knowledge_base/reports/kb_summary.md
+```
+
+For direct JSONL inspection in the editor, use:
+
+```text
+data/knowledge_base/ocean_knowledge_v1.jsonl
+data/knowledge_base/mbti_knowledge_v1.jsonl
+data/knowledge_base/psychology_kb_source_dump_v1.jsonl
 ```
 
 ## Important Notes
