@@ -10,7 +10,7 @@ We train baselines across three model families to establish comparison benchmark
 2. **BiLSTM + Attention** (`src/baselines/lstm_baseline.py`): BiLSTM with attention pooling; supports GloVe 6B init
 3. **Transformer** (`src/baselines/transformer_baseline.py`): DistilBERT, RoBERTa, XLM-R, multilingual-DistilBERT
 
-All baselines are run on **5 datasets**:
+All baselines are run on **4 datasets**:
 - **MBTI** — 16-class + 4-dim binary (IE / SN / TF / JP)
 - **Essays** — OCEAN binary (O / C / E / A / N)
 - **Pandora** — OCEAN binary (5 traits)

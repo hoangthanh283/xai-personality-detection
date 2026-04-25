@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-04-18
 **Branch:** master
-**Status:** Classical ML + DistilBERT + LSTM (v1 random, v2 GloVe) + RoBERTa all complete across 4/5 datasets. RoBERTa personality_evd (XLM-R) pending GPU availability — rerun script staged at `scripts/rerun_roberta_personality_evd.sh`.
+**Status:** Classical ML + DistilBERT + LSTM (v1 random, v2 GloVe) complete across all 4 datasets; RoBERTa is complete on 3/4 datasets. RoBERTa personality_evd (XLM-R) pending GPU availability — rerun script staged at `scripts/rerun_roberta_personality_evd.sh`.
 
 ---
 
@@ -58,12 +58,12 @@ differs by > 3 pp, trust macro F1.
 | **RAG-XPR (keyword-only)**¹ | [5.7%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [51.0%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
 | **RAG-XPR (roberta-both)**¹ | [14.9%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | [58.8%](https://wandb.ai/thanh-workspace/XAI-RAG/runs/btpbzho7) | — | — | — |
 
-**Macro F1 ranking (MBTI 4-dim, 5 datasets average of applicable tasks)**: Frozen-BERT+SVM
+**Macro F1 ranking (MBTI 4-dim plus OCEAN datasets where applicable)**: Frozen-BERT+SVM
 and LR are jointly the strongest balanced classifiers; all transformer-based models and
 SVM+TFIDF cluster ~10 pp below on Pandora/PEvd where class imbalance is highest. Naive
 Bayes, Random Forest, and XGBoost exhibit **majority-class collapse** on MBTI SN/IE
 (minority recall ≈ 0 — see `docs/CLASSIFICATION_REPORTS.md`). Frozen-BERT+SVM wins
-4/5 dataset columns; its single loss (Essays 34.4%) is the paradigm-mismatch case —
+3/4 dataset columns; its single loss (Essays 34.4%) is the paradigm-mismatch case —
 Kazameini's bagged-SVM needs more samples than Essays' 1.7K train split offers.
 
 ---
@@ -120,10 +120,10 @@ accuracy 80% only because the test set has 80% majority class.
 > ¹ RAG-XPR results are on a **random 100-sample subset** of the MBTI test split (vs. full 1,301 for baselines). Pipeline: Gemma-4-E2B local LLM + CoPE 3-step reasoning + KB retrieval over 698 psychology chunks. `roberta-both` additionally uses 4 fine-tuned RoBERTa binaries to (a) score sentence relevance and (b) inject a doc-level supervised prior into the Step-3 trait-inference prompt. Unlike baselines, both RAG-XPR variants also output a grounded `evidence_chain` (96.4% grounding) and natural-language `explanation` per prediction.
 > ² **Frozen-encoder paradigms (NEW)** — published SOTA-style baselines that address the "fine-tuning overfits on small data" failure mode documented in Section 5.5. **RoBERTa+MLP** adapts Gao et al. 2024 (arXiv:2406.16223): frozen `roberta-base` `[CLS]` → 2-layer MLP head (`768→256→C`, GELU+Dropout+LayerNorm) trained with AdamW lr=1e-3 + sqrt_balanced CrossEntropy + early stopping. **Frozen-BERT+SVM** adapts Kazameini et al. 2020 (arXiv:2010.01309): frozen `roberta-base` (mean of last 4 hidden layers) → `BaggingClassifier(LinearSVC, n_estimators=10)`. Both use the same chunking strategy (512-token windows, stride 256, mean-pool across chunks).
 >
-> **Key findings across full 5-dataset matrix (ranked by the primary Macro F1 metric)**:
-> - **Frozen-BERT+SVM has highest Macro F1** on 4/5 datasets — no class collapse on imbalanced OCEAN: Pandora Macro F1 55.0% (vs end-to-end RoBERTa 37.8%, +17 pp), PEvd 56.6% (vs all baselines ≤48%), MBTI 4-dim 66.0% (highest across all models).
+> **Key findings across the 4-dataset matrix (ranked by the primary Macro F1 metric)**:
+> - **Frozen-BERT+SVM has highest Macro F1** on 3/4 datasets — no class collapse on imbalanced OCEAN: Pandora Macro F1 55.0% (vs end-to-end RoBERTa 37.8%, +17 pp), PEvd 56.6% (vs all baselines ≤48%), MBTI 4-dim 66.0% (highest across all models).
 > - **RoBERTa+MLP beats end-to-end RoBERTa on every task**: MBTI 16-class Macro F1 +10.1 pp (20.0% vs 9.9%), 4-dim mean Macro F1 +2.8 pp, Pandora +6.7 pp F1, PEvd 80.9% acc (fills the end-to-end RoBERTa vacancy).
-> - **The accuracy story is misleading**: SVM+TFIDF "wins" the accuracy column on 3/5 datasets but drops to 2nd–5th in Macro F1 because its wins are majority-guessing. See Section 5.5 RCA and `docs/CLASSIFICATION_REPORTS.md`.
+> - **The accuracy story is misleading**: SVM+TFIDF "wins" the accuracy column on several imbalanced tasks but drops in Macro F1 because its wins are majority-guessing. See Section 5.5 RCA and `docs/CLASSIFICATION_REPORTS.md`.
 
 ---
 
@@ -633,7 +633,7 @@ RoBERTa+MLP (76.4%) and Frozen-BERT+SVM (70.8%) come in slightly below SVM+TFIDF
 - **RoBERTa+MLP predicts minority only 1%** on SN (S F1 = 0.022). Slightly better than NB/RF, still effectively collapsed.
 - **Frozen-BERT+SVM predicts minority 56%** on SN (S F1 = 0.365). Genuine balanced learning — at the cost of 14 pp "accuracy" (73.0% vs 86.9%).
 
-**The honest answer**: SVM's apparent accuracy win is majority-class guessing. On **Macro F1 — our primary metric (Section 2.1) — Frozen-BERT+SVM ties or beats SVM on 4/5 datasets**: MBTI 4-dim 66.0% vs 64.5%, Pandora 55.0% vs 49.2%, PEvd 56.6% vs 48.0%. The accuracy column in Section 2.3 is retained for literature comparability, but ranking by it on imbalanced tasks systematically rewards majority-class guessers over genuine learners.
+**The honest answer**: SVM's apparent accuracy win is majority-class guessing. On **Macro F1 — our primary metric (Section 2.1) — Frozen-BERT+SVM ties or beats SVM on 3/4 datasets**: MBTI 4-dim 66.0% vs 64.5%, Pandora 55.0% vs 49.2%, PEvd 56.6% vs 48.0%. The accuracy column in Section 2.3 is retained for literature comparability, but ranking by it on imbalanced tasks systematically rewards majority-class guessers over genuine learners.
 
 This is why we adopt Macro F1 as the primary metric for paper analysis, with Balanced Accuracy (Section 2.2) as an intuitive cross-check.
 
@@ -669,7 +669,7 @@ This is why we adopt Macro F1 as the primary metric for paper analysis, with Bal
 
 - [x] **RoBERTa full matrix** — Complete for MBTI 16-class, MBTI 4-dim, Essays OCEAN, and Pandora OCEAN (W&B links live in sections 3.x above). personality_evd (XLM-R) blocked by GPU contention with 3 concurrent RAG-XPR jobs; XLM-R-base has a 250K vocab that doesn't fit alongside them in the 5.6 GB GPU. Rerun available via `bash scripts/rerun_roberta_personality_evd.sh` (uses batch=1, grad_accum=32, gradient_checkpointing=true — will succeed once RAG-XPR jobs free the GPU).
 - [ ] **personality_evd multilingual rerun** — DistilBERT + XLM-R pending. DistilBERT currently uses `distilbert-base-uncased` (English-only) on Chinese dialogue. Must rerun with `distilbert-base-multilingual-cased` and `xlm-roberta-base` as configured in `baseline_config.yaml:107–110`.
-- [x] **LSTM full matrix** — BiLSTM+attention baseline complete for all 5 datasets (v1 random init + v2 GloVe).
+- [x] **LSTM full matrix** — BiLSTM+attention baseline complete for all 4 datasets (v1 random init + v2 GloVe).
 
 ### Medium Priority
 

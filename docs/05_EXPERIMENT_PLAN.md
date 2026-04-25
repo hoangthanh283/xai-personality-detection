@@ -6,21 +6,40 @@
 
 All experiments use seed=42. 3 random restarts planned for final paper numbers.
 
+## Dataset Roles
+
+The datasets are not interchangeable for RAG-XPR evaluation:
+
+| Dataset | Role in Experiments | Why |
+|---------|---------------------|-----|
+| MBTI | Accuracy benchmark and MBTI generalization | Large user-level benchmark, but no gold evidence |
+| Pandora | Long-context social-media generalization | Rich user histories, but sparse OCEAN labels and no gold evidence |
+| Essays | Controlled long-form Big Five generalization | Cleaner long-form text, but no evidence labels |
+| Personality Evd | Primary explainability benchmark | Only dataset with gold evidence annotations |
+
+For the final paper, Personality Evd should carry the main claim about explainability. MBTI,
+Pandora, and Essays should support the secondary claim that RAG-XPR remains competitive and
+portable across different text sources and personality label spaces.
+
+Because none of these datasets includes a psychology knowledge base, KB construction is a required
+experimental dependency. The KB should be built and frozen before final RAG-XPR runs so ablations
+can attribute differences to retrieval/CoPE choices rather than shifting source material.
+
 ### Experiment 1: Baseline Benchmarking — COMPLETE
 
 **Goal:** Establish accuracy baselines WITHOUT explainability.
 
 **Status (2026-04-18):** 110+ W&B runs complete and logged in W&B.
 
-**Matrix (8 model families × 5 datasets):**
+**Matrix (8 model families × 4 datasets):**
 
 | ID | Model | Datasets | Tasks | Status |
 |----|-------|----------|-------|--------|
 | B1 | TF-IDF + LR / SVM / NB / XGBoost / RF | MBTI, Essays, Pandora, personality_evd | 16-class + 4-dim + OCEAN binary | Done |
 | B2 | Ensemble (soft-vote) | MBTI | 16-class + 4-dim | Done |
-| B3 | BiLSTM + Attention (random init) | All 5 datasets | all tasks | Done |
+| B3 | BiLSTM + Attention (random init) | All 4 datasets | all tasks | Done |
 | B4 | BiLSTM + Attention (GloVe 300d + sqrt_balanced) | MBTI, Essays, Pandora | all tasks | Done |
-| B5 | DistilBERT | All 5 datasets | all tasks | Done |
+| B5 | DistilBERT | All 4 datasets | all tasks | Done |
 | B6 | DistilBERT (SN sqrt_balanced override) | MBTI | SN | Done (separate `_weighted` checkpoint) |
 | B7 | RoBERTa | MBTI, Essays, Pandora | all tasks | Done |
 | B8 | XLM-R | personality_evd | OCEAN binary | Pending (GPU) |
@@ -134,8 +153,8 @@ Follow this order to manage dependencies and costs:
 
 ```
 Past sprints (complete):
-  - Data preprocessing — all 5 datasets (incl. cleaned MBTI with verified 0 leakage)
-  - Exp 1 — Baselines across 8 model families × 5 datasets (110+ W&B runs)
+  - Data preprocessing — all 4 datasets (incl. cleaned MBTI with verified 0 leakage)
+  - Exp 1 — Baselines across 8 model families × 4 datasets (110+ W&B runs)
   - KB construction + retrieval engine + CoPE pipeline
   - Evaluation harness (classification + XAI metrics)
 

@@ -15,6 +15,42 @@ Comprehensive analysis and statistics for all ingested datasets, including raw d
 | Essays | Pennebaker & King (1999) | ~2 MB | 2,467 (1726/370/371) | OCEAN binary | 650 |
 | Personality Evd | Lei Sun et al. (2024) | ~5 MB | 1,846 (1292/277/277) | OCEAN binary, evidence gold | 10 |
 
+## 1.1 Research Role for RAG-XPR
+
+The four retained datasets serve different roles in the current research design:
+
+| Dataset | Primary Role | Explainability Ground Truth | Recommended Use |
+|---------|--------------|-----------------------------|-----------------|
+| MBTI | Large-scale MBTI accuracy benchmark | No | Accuracy/generalization only |
+| Pandora | User-history social-media benchmark | No | Long-context generalization and robustness |
+| Essays | Controlled long-form Big Five benchmark | No | Cross-domain Big Five generalization |
+| Personality Evd | Explainable personality recognition benchmark | Yes, gold evidence annotations | Main XAI evaluation dataset |
+
+The key methodological implication is that **Personality Evd should be the primary dataset for
+evaluating the scientific contribution of RAG-XPR**: it is the only dataset where evidence
+extraction quality can be measured against gold annotations. MBTI, Pandora, and Essays are still
+important, but they mainly test classification accuracy and cross-domain generalization because
+their explanations can only be evaluated with proxy metrics such as grounding, consistency, and
+faithfulness.
+
+## 1.2 Cross-Dataset KB Gap
+
+None of the four datasets ships with an attached psychology knowledge base. All labels and texts
+are provided separately from the psychological theory needed by RAG-XPR to map evidence to states
+and traits. Therefore, KB construction is not a minor implementation detail; it is a core project
+workstream.
+
+Required KB sources should include:
+- Big Five trait/facet definitions from BFI-2 documentation and related manuals.
+- Costa & McCrae NEO-PI-R / NEO-PI-3 trait and facet descriptions.
+- MBTI type/function descriptions for MBTI-specific experiments.
+- Papers on linguistic and behavioral correlates of personality.
+- CoPE-style examples that connect text evidence → personality state → trait.
+
+This work should be scheduled early and treated as roughly 20-30% of the total project effort,
+because retrieval quality directly controls the quality of state identification and final
+explanations.
+
 ---
 
 ## 2. MBTI Dataset (Kaggle)

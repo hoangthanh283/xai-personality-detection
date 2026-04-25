@@ -543,6 +543,24 @@ def build_report(analysis: dict[str, Any]) -> str:
             f"{', '.join(labels) or 'n/a'} | {evidence_records} |"
         )
 
+    lines.extend(
+        [
+            "",
+            "## Research Framing",
+            "",
+            "`personality_evd` is the only dataset with gold evidence annotations, so it should "
+            "be the main benchmark for RAG-XPR's explainability claim. `mbti`, `pandora`, "
+            "and `essays` are best treated as accuracy/generalization benchmarks because "
+            "they do not provide ground-truth evidence labels.",
+            "",
+            "None of the four datasets includes an attached psychology knowledge base. RAG-XPR "
+            "must therefore build an external KB from validated sources such as BFI-2, "
+            "NEO-PI-R/NEO-PI-3, MBTI manuals, and personality facet/behavioral-marker papers. "
+            "This KB work should be planned early because retrieval quality directly affects "
+            "state identification and explanation quality.",
+        ]
+    )
+
     lines.extend(["", "## Leakage Overview", ""])
     lines.extend(
         [

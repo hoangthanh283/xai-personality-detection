@@ -47,9 +47,9 @@ This project implements **RAG-based Explainable Personality Recognition (RAG-XPR
 | Model family | Datasets covered | Best result |
 |--------------|------------------|-------------|
 | Classical ML (LR / SVM / NB / XGBoost / RF) | MBTI (16-class + 4-dim), Essays, Pandora, personality_evd | SVM 77.2% MBTI 4-dim |
-| BiLSTM + Attention (random + GloVe) | All 5 datasets | 73.1% MBTI 4-dim |
-| DistilBERT | All 5 datasets | 74.4% MBTI 4-dim |
-| RoBERTa | 4/5 datasets (personality_evd pending GPU) | 74.9% MBTI 4-dim |
+| BiLSTM + Attention (random + GloVe) | All 4 datasets | 73.1% MBTI 4-dim |
+| DistilBERT | All 4 datasets | 74.4% MBTI 4-dim |
+| RoBERTa | 3/4 datasets (personality_evd pending GPU) | 74.9% MBTI 4-dim |
 
 Baseline runs are tracked in W&B, so reported numbers remain auditable at the run level.
 

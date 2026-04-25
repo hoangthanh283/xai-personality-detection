@@ -40,6 +40,18 @@ def compute_classification_metrics(y_true, y_pred, labels=None):
 
 ## 2. Explainability (XAI) Metrics
 
+Only Personality Evd supports direct gold-standard XAI evaluation because it includes evidence
+annotations. MBTI, Pandora, and Essays can still report generated explanations, but those
+explanations should be evaluated with proxy metrics only:
+
+- Grounding: whether cited evidence appears in the input text.
+- Faithfulness: whether removing cited evidence changes the prediction.
+- Consistency: whether the explanation supports the predicted label.
+- Human review: whether the state/trait mapping is psychologically plausible.
+
+Do not present MBTI, Pandora, or Essays explanation scores as gold evidence quality. They measure
+explanation behavior without ground-truth evidence labels.
+
 ### 2.1 Automated XAI Metrics
 
 **Implementation**: `src/evaluation/xai_metrics.py`

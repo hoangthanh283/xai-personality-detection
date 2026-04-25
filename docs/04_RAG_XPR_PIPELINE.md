@@ -41,18 +41,28 @@ Input Text
 
 ## Phase 1: Knowledge Base Construction
 
+The datasets do not provide theory-grounded KB entries. RAG-XPR therefore needs an external
+psychology KB before final evaluation, and this work should be treated as a first-class research
+task rather than a utility script. A weak KB will directly weaken Step 2 state identification and
+the final explanation quality, especially on Personality Evd where evidence quality is measured
+against gold annotations.
+
 ### 1.1 Source Materials
 
 Collect and digitize the following psychology references:
 
 | Source | Content | Priority |
 |--------|---------|----------|
+| BFI-2 manual / documentation | Big Five domains and facets | P0 |
 | Myers-Briggs Manual (official) | 16 type descriptions, cognitive functions | P0 |
 | "Gifts Differing" (Isabel Briggs Myers) | Detailed type portraits | P0 |
-| NEO-PI-R Manual (Costa & McCrae) | Big Five facet definitions | P0 |
+| NEO-PI-R / NEO-PI-3 Manual (Costa & McCrae) | Big Five facet definitions | P0 |
 | APA Dictionary of Psychology | Trait definitions | P1 |
 | Research papers on behavioral markers | Linguistic correlates of personality | P1 |
 | CoPE paper few-shot examples | Example evidence → state → trait chains | P0 |
+
+Expected effort: roughly 20-30% of the project, including source selection, chunk design,
+metadata normalization, retrieval testing, and KB freezing for reproducible experiments.
 
 ### 1.2 KB Structure
 
