@@ -16,6 +16,7 @@ This project implements **RAG-based Explainable Personality Recognition (RAG-XPR
 | [04_RAG_XPR_PIPELINE.md](./04_RAG_XPR_PIPELINE.md) | KB construction, retrieval engine, CoPE reasoning framework |
 | [05_EXPERIMENT_PLAN.md](./05_EXPERIMENT_PLAN.md) | Full experiment matrix, metrics, ablations |
 | [06_EVALUATION_PROTOCOL.md](./06_EVALUATION_PROTOCOL.md) | Classification + XAI metrics, statistical tests, human eval |
+| [09_KB_CHUNKING_STRATEGY.md](./09_KB_CHUNKING_STRATEGY.md) | Detailed KB chunking method, embed text design, Qdrant indexing workflow |
 | [08_DATA_ANALYSIS.md](./08_DATA_ANALYSIS.md) | Dataset statistics, label distributions, quality checks |
 
 ## Architecture Diagram

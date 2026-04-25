@@ -2,6 +2,10 @@
 
 This directory contains the citable psychology KB used by RAG-XPR retrieval and CoPE reasoning.
 
+Detailed chunking design and implementation notes are documented in:
+
+- [docs/09_KB_CHUNKING_STRATEGY.md](/mnt/DataDrive/Workspace/Master-HUST/NLP/xai-personality-detection/docs/09_KB_CHUNKING_STRATEGY.md)
+
 Current build:
 - KB version: `psych_kb_ocean_v2`
 - Qdrant collection: `psych_kb_ocean_v2`
