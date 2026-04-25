@@ -268,6 +268,18 @@ def step_index(config: dict) -> None:
             )
 
     embeddings = np.load(str(embeddings_path))
+    expected_size = config.get("qdrant", {}).get("vector_size")
+    if len(chunks) != len(embeddings):
+        raise ValueError(
+            f"Chunk/embedding count mismatch: {len(chunks)} chunks vs "
+            f"{len(embeddings)} embeddings. Run --step embed after --step parse."
+        )
+    if expected_size and embeddings.shape[1] != expected_size:
+        raise ValueError(
+            f"Embedding dimension mismatch: embeddings.npy has {embeddings.shape[1]} dims, "
+            f"but qdrant.vector_size={expected_size}. Rebuild embeddings with "
+            f"{config.get('embedding', {}).get('model', '<configured model>')}."
+        )
     qdrant_cfg = config.get("qdrant", {})
     indexer = KBIndexer(qdrant_cfg)
     indexer.create_collection(recreate=False)
