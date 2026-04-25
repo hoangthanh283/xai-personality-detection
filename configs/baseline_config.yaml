@@ -116,10 +116,6 @@ transformer:
       num_epochs: 10
       early_stopping_patience: 4
       batch_size: 32
-    pandora_big5:
-      max_length: 256
-      num_epochs: 10
-      early_stopping_patience: 4
     personality_evd:
       max_length: 256
       num_epochs: 20

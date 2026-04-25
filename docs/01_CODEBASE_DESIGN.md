@@ -18,7 +18,6 @@ xai-personality-detection/
 │   ├── raw/                        # Original downloaded datasets (gitignored)
 │   │   ├── mbti/                   # Kaggle Personality Café CSV
 │   │   ├── pandora/                # Reddit Pandora JSON
-│   │   ├── pandora_big5/           # HuggingFace jingjietan/pandora-big5 mirror
 │   │   ├── essays/                 # Pennebaker & King (1999) CSV
 │   │   └── personality_evd/        # Sun et al. EMNLP 2024 Chinese dialogues
 │   ├── processed/                  # Cleaned, split data ready for training
@@ -36,7 +35,6 @@ xai-personality-detection/
 │   │   ├── preprocessor.py         # Text cleaning pipeline
 │   │   ├── mbti_parser.py
 │   │   ├── pandora_parser.py
-│   │   ├── pandora_big5_parser.py  # HuggingFace mirror parser
 │   │   ├── essays_parser.py
 │   │   └── personality_evd_parser.py
 │   │
@@ -89,10 +87,8 @@ xai-personality-detection/
 │
 ├── scripts/                        # Entry-point scripts
 │   ├── download_data.py            # Download MBTI / Essays / Pandora
-│   ├── download_pandora_big5.py    # Download HuggingFace Big-5 mirror
 │   ├── download_embeddings.py      # Download GloVe 6B (50/100/200/300d)
 │   ├── preprocess_data.py          # Dataset preprocessing orchestrator
-│   ├── preprocess_pandora_big5.py  # HuggingFace mirror preprocessing
 │   ├── convert_personality_evd.py  # Convert EMNLP 2024 dialogues → JSONL
 │   ├── build_kb.py                 # Build & index knowledge base
 │   ├── train_baseline.py           # Train any baseline (ML / LSTM / Transformer)

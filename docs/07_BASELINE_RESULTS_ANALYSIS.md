@@ -619,7 +619,6 @@ Only 1,087 OCEAN-labeled train samples out of 7,180 total. Test set has 232 samp
 **This dataset does not support reliable binary classification baselines in its current split.** Options to improve:
 1. Reframe as ranking/regression (Pearson r, as in the original paper)
 2. Obtain more OCEAN-labeled Pandora records to grow the labeled pool
-3. Use the HuggingFace Pandora Big5 mirror which has more labeled samples
 
 ### 5.4 personality_evd — Dataset design limitations
 
@@ -675,9 +674,8 @@ This is why we adopt Macro F1 as the primary metric for paper analysis, with Bal
 ### Medium Priority
 
 - [ ] **Essays gap reduction** — Try adding LIWC-style features (word count, punctuation ratios, function words) via `sklearn.pipeline.FeatureUnion` with the existing TF-IDF to close the ~5 pp gap to Jiang 2020 / EERPD 2024. Target: mean Essays accuracy ≥ 60%.
-- [ ] **Pandora labeled data expansion** — The current 232 OCEAN test samples are too few for reliable benchmarking. Investigate whether additional Pandora user-level OCEAN labels can be obtained from the original dataset or from the HuggingFace mirror (`pandora_big5` dataset).
+- [ ] **Pandora labeled data expansion** — The current 232 OCEAN test samples are too few for reliable benchmarking. Investigate whether additional Pandora user-level OCEAN labels can be obtained from the original dataset.
 - [ ] **Ensemble baseline** — Soft-vote ensemble over LR + SVM + XGBoost on all tasks. Expected +1–3 pp over individual models. Implement via `scripts/train_baseline.py --model ensemble`.
-- [ ] **pandora_big5 (HuggingFace mirror)** — The 1.65M-record HuggingFace mirror has not been trained yet. Run DistilBERT with 3 epochs, max_length=256 as configured.
 
 ### Low Priority
 

@@ -12,7 +12,6 @@ Comprehensive analysis and statistics for all ingested datasets, including raw d
 |---------|--------|----------|-------------------|-------------|-----------|
 | MBTI | Kaggle (Personality Café) | ~50 MB | 8,673 (6071/1301/1301) | MBTI 16-class, 4-dim binary | 1,223 |
 | Pandora | Reddit (Gjurković et al., 2020) | 5.26 GB | 10,258 (7180/1539/1539) | MBTI 16-class, 4-dim binary, OCEAN binary | 1,933 |
-| Pandora Big5 | HuggingFace mirror (jingjietan/pandora-big5) | ~800 MB | 2,579,563 | OCEAN binary only | 44 |
 | Essays | Pennebaker & King (1999) | ~2 MB | 2,467 (1726/370/371) | OCEAN binary | 650 |
 | Personality Evd | Lei Sun et al. (2024) | ~5 MB | 1,846 (1292/277/277) | OCEAN binary, evidence gold | 10 |
 
@@ -160,24 +159,6 @@ Comprehensive analysis and statistics for all ingested datasets, including raw d
 | Consistent split tags | All records match their file's split |
 | All records have source="pandora" | Verified |
 
-### Relationship to Pandora Big5 Mirror
-
-The project also includes a separate parser for the `jingjietan/pandora-big5` HuggingFace mirror (`src/data/pandora_big5_parser.py`), which contains 2,579,563 records with only OCEAN labels (no MBTI). Key differences:
-
-| Property | Pandora (CSV, ours) | Pandora Big5 (parquet mirror) |
-|----------|---------------------|-------------------------------|
-| Records | 10,258 | 2,579,563 |
-| Text source | Concatenated user comments (avg 1,933 words) | Individual comments (avg 44 words) |
-| MBTI labels | Yes (8,690 records) | No |
-| OCEAN labels | Yes (1,087 records) | Yes (all records) |
-| OCEAN scale | Percentile 0–100 | Percentile 0–100 |
-| Pre-existing splits | No (custom stratified) | Yes (train/val/test) |
-| Granularity | Per-user | Per-comment |
-
-**Recommendation**: Use the CSV-based Pandora dataset for MBTI tasks (16-class and 4-dim binary) and for experiments requiring longer, user-level text. Use the Pandora Big5 mirror for OCEAN binary classification experiments requiring large sample sizes with shorter texts.
-
----
-
 ## 4. Essays Dataset (Pennebaker & King)
 
 ### Raw Format
@@ -249,7 +230,6 @@ The project also includes a separate parser for the `jingjietan/pandora-big5` Hu
 | Dataset | OCEAN Records | Source Scale | Imbalance Severity |
 |---------|---------------|--------------|-------------------|
 | Pandora | 1,087 | Percentile (0–100) | Moderate (0.46–2.00) |
-| Pandora Big5 | 2,579,563 | Percentile (0–100) | Similar per-trait distributions |
 | Essays | 2,467 | Binary (y/n) | Low (1.02–1.14) |
 | Personality Evd | 1,292 | Binary (HIGH/LOW) | Extreme (1.60–42.07) |
 
@@ -259,7 +239,6 @@ The project also includes a separate parser for the `jingjietan/pandora-big5` Hu
 |---------|-----------|-----|-----|------|---------------|
 | MBTI | 1,226 | ~10 | ~2,000 | Forum posts (aggregated) |
 | Pandora | 1,933 | ~5 | 2,000 | Reddit comments (aggregated) |
-| Pandora Big5 | 44 | ~5 | ~2,000 | Individual Reddit comments |
 | Essays | 650 | ~10 | ~2,000 | Formal essays |
 | Personality Evd | 10 | ~1 | ~50 | Dialogue utterances |
 
@@ -303,17 +282,6 @@ datasets:
     split_ratio: [0.70, 0.15, 0.15]
     seed: 42
 
-  pandora_big5:
-    raw_path: data/raw/pandora_big5/
-    output_dir: data/processed/pandora_big5
-    source_repo: jingjietan/pandora-big5
-    source_name: pandora_big5
-    ocean_threshold: 50.0
-    min_words: 5
-    max_words: 2000
-    log_every: 200000
-    seed: 42
-
   essays:
     raw_path: data/raw/essays/essays.csv
     output_dir: data/processed/essays
@@ -346,10 +314,6 @@ transformer:
       num_epochs: 3
       early_stopping_patience: 2
       batch_size: 32
-    pandora_big5:
-      max_length: 128
-      num_epochs: 1
-      early_stopping_patience: 1
     personality_evd:
       max_length: 64
       num_epochs: 10

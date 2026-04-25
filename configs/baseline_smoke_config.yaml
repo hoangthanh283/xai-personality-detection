@@ -34,10 +34,6 @@ transformer:
       max_length: 384
       num_epochs: 2
       early_stopping_patience: 1
-    pandora_big5:
-      max_length: 128
-      num_epochs: 1
-      early_stopping_patience: 1
     personality_evd:
       max_length: 64
       num_epochs: 2

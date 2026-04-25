@@ -133,7 +133,6 @@ This section covers:
 | MBTI | `data/raw/mbti/mbti_1.csv` | Directly downloadable | Kaggle CLI (`datasnaek/mbti-type`) | Supported and working |
 | Essays (Pennebaker) | `data/raw/essays/essays.csv` | Directly downloadable | Public GitHub raw CSV mirror | Supported and working |
 | Pandora | `data/raw/pandora/` | Request-gated | Official request form (manual approval) | Supported once raw files are provided |
-| Pandora Big5 Mirror | `data/raw/pandora_big5/` | Directly downloadable | Hugging Face parquet mirror (`jingjietan/pandora-big5`) | Supported via dedicated adapter |
 | Personality-Evd | `data/raw/personality_evd/` | Repository downloadable | GitHub clone + converter script | Supported and working after conversion |
 
 ### 7.2 Download Raw Datasets
@@ -141,19 +140,13 @@ This section covers:
 Create raw-data folders:
 
 ```bash
-mkdir -p data/raw/mbti data/raw/essays data/raw/pandora data/raw/pandora_big5 data/raw/personality_evd
+mkdir -p data/raw/mbti data/raw/essays data/raw/pandora data/raw/personality_evd
 ```
 
-Automated downloader (MBTI + Essays + Pandora Big5 mirror):
+Automated downloader (MBTI + Essays):
 
 ```bash
 uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/download_data.py --all
-```
-
-Dedicated Pandora Big5 mirror downloader:
-
-```bash
-uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/download_pandora_big5.py
 ```
 
 Manual Kaggle route (alternative) with `uvx` and `.env`:
@@ -211,18 +204,6 @@ If raw Pandora files are present:
 uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/preprocess_data.py --dataset pandora
 ```
 
-Preprocess the public Pandora Big5 mirror:
-
-```bash
-uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/preprocess_pandora_big5.py
-```
-
-Or through the generic preprocessor:
-
-```bash
-uv run --no-project --python 3.12 --with-requirements requirements.txt python scripts/preprocess_data.py --dataset pandora_big5
-```
-
 Preprocess Personality-Evd after conversion:
 
 ```bash
@@ -240,7 +221,6 @@ Expected processed outputs:
 - `data/processed/mbti/{train,val,test}.jsonl`
 - `data/processed/essays/{train,val,test}.jsonl`
 - `data/processed/pandora/{train,val,test}.jsonl` (after manual dataset access)
-- `data/processed/pandora_big5/{train,val,test}.jsonl`
 - `data/processed/personality_evd/{train,val,test}.jsonl` (after conversion step)
 
 ## 8) Build the Knowledge Base

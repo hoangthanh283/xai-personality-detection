@@ -14,7 +14,6 @@ All baselines are run on **5 datasets**:
 - **MBTI** — 16-class + 4-dim binary (IE / SN / TF / JP)
 - **Essays** — OCEAN binary (O / C / E / A / N)
 - **Pandora** — OCEAN binary (5 traits)
-- **Pandora Big5** (HuggingFace mirror) — OCEAN binary (1.65M records; partially trained)
 - **personality_evd** — OCEAN binary (Chinese dialogues; multilingual models required)
 
 > **Status:** All baselines complete with 110+ W&B runs.

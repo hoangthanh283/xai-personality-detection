@@ -41,7 +41,7 @@ def load_predictions(path: Path) -> tuple[list[str], list[str]]:
 def extract_dataset_task(stem: str) -> tuple[str, str, str]:
     """Parse <model>_<dataset>_<task> from file stem. Handles hyphenated model names."""
     # Known datasets
-    datasets = ["mbti", "essays", "pandora", "personality_evd", "pandora_big5"]
+    datasets = ["mbti", "essays", "pandora", "personality_evd"]
     for ds in datasets:
         marker = f"_{ds}_"
         if marker in stem:

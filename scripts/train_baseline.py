@@ -60,7 +60,7 @@ def expand_tasks(dataset: str, task: str) -> list[str]:
     if dataset == "mbti":
         return ["16class", "4dim"]
 
-    if dataset in {"essays", "pandora", "pandora_big5", "personality_evd"}:
+    if dataset in {"essays", "pandora", "personality_evd"}:
         return ["ocean_binary"]
 
     raise ValueError(f"Unsupported dataset for task expansion: {dataset}")
@@ -626,7 +626,9 @@ def train_transformer(model_name: str, dataset: str, task: str, config: dict, ar
 def main():
     parser = argparse.ArgumentParser(description="Train baseline models")
     parser.add_argument("--model", required=True, help="Model name or 'all_ml'")
-    parser.add_argument("--dataset", required=True, choices=["mbti", "essays", "pandora", "pandora_big5", "personality_evd"])
+    parser.add_argument(
+        "--dataset", required=True, choices=["mbti", "essays", "pandora", "personality_evd"]
+    )
     parser.add_argument("--task", required=True, help="16class, 4dim, ocean_binary, IE, SN, TF, JP")
     parser.add_argument("--config", default="configs/baseline_config.yaml")
     parser.add_argument("--output_dir", help="Override output directory")

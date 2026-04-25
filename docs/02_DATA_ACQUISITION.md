@@ -8,7 +8,6 @@
 |---------|--------|------|------|--------|
 | **MBTI** | Kaggle — Personality Café | ~8,600 users, 422K+ posts | 16-class MBTI + 4-dim binary | CSV |
 | **Pandora** | Reddit (Gjurković & Šnajder 2021) | ~10K users, 1,568 OCEAN-labeled | 16-class MBTI + OCEAN binary | JSON |
-| **Pandora Big5** | HuggingFace mirror `jingjietan/pandora-big5` | ~1.65M records | OCEAN binary | HF parquet |
 | **Essays** | Pennebaker & King (1999) | 2,468 essays | Big Five (OCEAN) binary | CSV |
 | **Personality Evd** | Sun et al. EMNLP 2024 | 1,846 dialogues, Chinese | OCEAN binary + evidence gold | JSON |
 
