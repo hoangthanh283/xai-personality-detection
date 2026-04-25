@@ -56,6 +56,26 @@ sources:
     framework: both
     category: state_definition
 
+  - name: personality_evd_evidence_mappings
+    path: data/knowledge_base/sources/personality_evd_evidence_mappings.jsonl
+    framework: ocean
+    category: evidence_mapping_example
+
+  - name: abstention_and_insufficient_evidence
+    path: data/knowledge_base/sources/abstention_and_insufficient_evidence.jsonl
+    framework: ocean
+    category: evidence_mapping_example
+
+  - name: state_trait_aggregation_rules
+    path: data/knowledge_base/sources/state_trait_aggregation_rules.jsonl
+    framework: ocean
+    category: evidence_mapping_example
+
+  - name: bfi2_item_anchors
+    path: data/knowledge_base/sources/bfi2_item_anchors.jsonl
+    framework: ocean
+    category: behavioral_marker
+
   - name: cope_few_shot_examples
     path: data/knowledge_base/sources/cope_few_shot.jsonl
     framework: both
@@ -81,6 +101,9 @@ chunking:
       mode: atomic
     cognitive_function:
       mode: atomic
+    evidence_mapping_example:
+      mode: atomic
+      max_tokens: 320
     few_shot_example:
       mode: structured_blocks
       block_split: ["## STEP 1", "## STEP 2", "## STEP 3"]
@@ -95,7 +118,7 @@ embedding:
 
 qdrant:
   url: http://localhost:6333
-  collection_name: psych_kb_ocean_v2
+  collection_name: psych_kb_ocean_v3
   alias_name: null
   recreate_collection: false
   vector_size: 768
@@ -106,4 +129,4 @@ qdrant:
     ef_construct: 100
 
 output_dir: data/knowledge_base/
-kb_version: psych_kb_ocean_v2
+kb_version: psych_kb_ocean_v3

@@ -7,11 +7,13 @@ Detailed chunking design and implementation notes are documented in:
 - [docs/09_KB_CHUNKING_STRATEGY.md](/mnt/DataDrive/Workspace/Master-HUST/NLP/xai-personality-detection/docs/09_KB_CHUNKING_STRATEGY.md)
 
 Current build:
-- KB version: `psych_kb_ocean_v2`
-- Qdrant collection: `psych_kb_ocean_v2`
+- KB version: `psych_kb_ocean_v3`
+- Qdrant collection: `psych_kb_ocean_v3`
 - Embedding model: `BAAI/bge-base-en-v1.5`
 - Chunking: atomic by category, structured 3-block chunking for `few_shot_example`
 - Primary role: OCEAN-first KB for PersonalityEvd explainability evaluation
+- Enrichment: PersonalityEvd English train/valid evidence mappings plus abstention and aggregation
+  rules
 
 ## Directory Map
 
@@ -34,6 +36,9 @@ Use the repo-standard `uv` command pattern:
 
 ```bash
 uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/build_kb_enrichment_sources.py
+
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
   python scripts/build_kb.py --step parse --config configs/kb_config.yaml
 
 CUDA_VISIBLE_DEVICES="" OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
@@ -44,6 +49,10 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
 
 The safe embedding command is CPU-only and low-priority, so it is less likely to disturb active GPU
 or LLM jobs.
+
+`build_kb_enrichment_sources.py` reads English PersonalityEvd train/valid annotations for KB
+content. Its default held-out leakage filter reads `data/processed/personality_evd/test.jsonl`
+only to exclude exact-string overlap from generated source records.
 
 `chunks.jsonl` now stores both:
 - `text`: full human-readable chunk content
@@ -62,7 +71,8 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
   python scripts/build_kb.py --step index --config configs/kb_config.yaml
 ```
 
-This creates `psych_kb_ocean_v2` without touching the legacy `psych_kb` / `psych_kb_ocean_v1`
+This creates `psych_kb_ocean_v3` without touching the legacy `psych_kb`, `psych_kb_ocean_v1`,
+or `psych_kb_ocean_v2`
 collections. Alias swapping is disabled by default to avoid interrupting active jobs.
 
 Verify:
@@ -117,6 +127,8 @@ data/knowledge_base/psychology_kb_source_dump_v1.jsonl
 
 - The KB uses English text and is intended to pair with English-normalized PersonalityEvd inputs.
 - Do not copy long copyrighted manual passages into source files; use short paraphrases plus citation metadata.
+- PersonalityEvd enrichment must read only `data/raw/personality_evd_en` train/valid
+  annotations; `test_annotation.json` is not a KB source.
 - Do not add test-split evidence text to `sources/`; audit includes an exact held-out leakage check.
-- `configs/rag_xpr_config.yaml` and `configs/retrieval_config.yaml` point to `psych_kb_ocean_v2`.
+- `configs/rag_xpr_config.yaml` and `configs/retrieval_config.yaml` point to `psych_kb_ocean_v3`.
 - Rebuilds are safe because Qdrant points use deterministic IDs derived from `chunk_id`.

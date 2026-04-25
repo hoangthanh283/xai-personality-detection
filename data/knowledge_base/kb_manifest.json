@@ -1,6 +1,6 @@
 {
-  "kb_version": "psych_kb_ocean_v2",
-  "collection_name": "psych_kb_ocean_v2",
+  "kb_version": "psych_kb_ocean_v3",
+  "collection_name": "psych_kb_ocean_v3",
   "alias_name": null,
   "embedding": {
     "model": "BAAI/bge-base-en-v1.5",
@@ -34,6 +34,10 @@
       },
       "cognitive_function": {
         "mode": "atomic"
+      },
+      "evidence_mapping_example": {
+        "mode": "atomic",
+        "max_tokens": 320
       },
       "few_shot_example": {
         "mode": "structured_blocks",
@@ -120,19 +124,43 @@
       "category": "state_definition"
     },
     {
+      "name": "personality_evd_evidence_mappings",
+      "path": "data/knowledge_base/sources/personality_evd_evidence_mappings.jsonl",
+      "framework": "ocean",
+      "category": "evidence_mapping_example"
+    },
+    {
+      "name": "abstention_and_insufficient_evidence",
+      "path": "data/knowledge_base/sources/abstention_and_insufficient_evidence.jsonl",
+      "framework": "ocean",
+      "category": "evidence_mapping_example"
+    },
+    {
+      "name": "state_trait_aggregation_rules",
+      "path": "data/knowledge_base/sources/state_trait_aggregation_rules.jsonl",
+      "framework": "ocean",
+      "category": "evidence_mapping_example"
+    },
+    {
+      "name": "bfi2_item_anchors",
+      "path": "data/knowledge_base/sources/bfi2_item_anchors.jsonl",
+      "framework": "ocean",
+      "category": "behavioral_marker"
+    },
+    {
       "name": "cope_few_shot_examples",
       "path": "data/knowledge_base/sources/cope_few_shot.jsonl",
       "framework": "both",
       "category": "few_shot_example"
     }
   ],
-  "config_hash": "2f3f60acb4b481eed9153854efb38be2259922d5f42c525dbb5172f0e379b3ec",
-  "chunks_hash": "9edda53928fe7e2a7b6f67e4f079f8bae60dc273a8eac5a7d833b8792e472517",
+  "config_hash": "0f0917c3bcc6a72f11751516c4dab8f362fdf18ff3a456419bbe58098632bab5",
+  "chunks_hash": "1704e4fb83b2c3bb94f345a78a56c7aee3312e934e53d58ee4a06292d4578d09",
   "summary": {
-    "num_chunks": 743,
+    "num_chunks": 1007,
     "framework": {
       "mbti": 184,
-      "ocean": 264,
+      "ocean": 528,
       "both": 295
     },
     "category": {
@@ -141,34 +169,36 @@
       "few_shot_example": 76,
       "cognitive_function": 32,
       "state_definition": 103,
-      "behavioral_marker": 220,
+      "behavioral_marker": 250,
       "linguistic_correlate": 123,
-      "facet_definition": 60
+      "facet_definition": 60,
+      "evidence_mapping_example": 234
     },
     "quality_tier": {
       "C": 140,
       "B": 130,
-      "A": 473
+      "A": 737
     },
     "trait": {
       "I": 1,
-      "E": 89,
+      "E": 138,
       "S": 1,
-      "N": 121,
+      "N": 172,
       "T": 1,
       "F": 1,
       "J": 1,
       "P": 1,
-      "O": 116,
-      "C": 115,
-      "A": 90,
-      "<missing>": 206
+      "O": 168,
+      "C": 168,
+      "A": 141,
+      "<missing>": 211,
+      "null": 3
     },
     "pole": {
       "<missing>": 648,
-      "BOTH": 11,
-      "HIGH": 47,
-      "LOW": 37
+      "BOTH": 71,
+      "HIGH": 148,
+      "LOW": 140
     },
     "source_id": {
       "mbti_type_descriptions_legacy": 8,
@@ -197,6 +227,9 @@
       "watson_clark_1984_negative_affectivity": 9,
       "mcadams_life_story_2006": 20,
       "gross_emotion_regulation_2002": 7,
+      "personality_evd_trainval_evidence": 224,
+      "whole_trait_theory_fleeson_2015": 10,
+      "bfi2_paraphrased_item_anchors": 30,
       "synthetic_textbook_example": 75
     }
   },
@@ -207,7 +240,7 @@
     "errors": {}
   },
   "embeddings_shape": [
-    743,
+    1007,
     768
   ]
 }

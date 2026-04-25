@@ -36,7 +36,8 @@ def audit_records(records: list[dict]) -> dict:
     for record in records:
         meta = record.get("metadata", {})
         if meta.get("framework") == "ocean":
-            trait_category[meta.get("trait", "<missing>")][meta.get("category", "<missing>")] += 1
+            trait = meta.get("trait") or "UNSPECIFIED"
+            trait_category[trait][meta.get("category", "<missing>")] += 1
 
     return {
         "summary": summarize_records(records),
@@ -149,7 +150,7 @@ def main() -> None:
     parser.add_argument("--chunks", default="data/knowledge_base/chunks.jsonl")
     parser.add_argument("--json-output", default="data/knowledge_base/reports/kb_audit.json")
     parser.add_argument("--md-output", default="data/knowledge_base/reports/kb_audit.md")
-    parser.add_argument("--leakage-test-jsonl", default="data/raw/personality_evd/test.jsonl")
+    parser.add_argument("--leakage-test-jsonl", default="data/processed/personality_evd/test.jsonl")
     args = parser.parse_args()
 
     records = load_jsonl(Path(args.chunks))

@@ -1,8 +1,8 @@
 {
   "num_queries": 25,
-  "recall_at_3": 0.6,
+  "recall_at_3": 0.56,
   "recall_at_5": 0.84,
-  "mrr": 0.5226666666666666,
+  "mrr": 0.5106666666666667,
   "by_trait": {
     "A": {
       "total": 5,
@@ -33,35 +33,35 @@
       "top_results": [
         {
           "chunk_id": "ocean_facets_00020",
-          "score": 9.076272498118064,
+          "score": 9.9651756146845,
           "trait": "C",
           "category": "facet_definition",
           "state_label": null
         },
         {
           "chunk_id": "psychological_states_00080",
-          "score": 8.76981251705665,
+          "score": 9.628408352466998,
           "trait": "N",
           "category": "state_definition",
           "state_label": "HopefulAnticipation"
         },
         {
           "chunk_id": "ocean_c_marker_deadlines_001",
-          "score": 8.570658198992659,
+          "score": 8.93547229996944,
           "trait": "C",
           "category": "behavioral_marker",
           "state_label": null
         },
         {
           "chunk_id": "linguistic_correlates_00081",
-          "score": 8.434433842730597,
+          "score": 8.798107324953369,
           "trait": "E",
           "category": "linguistic_correlate",
           "state_label": null
         },
         {
           "chunk_id": "linguistic_correlates_00023",
-          "score": 8.138708052553227,
+          "score": 8.508243818559503,
           "trait": "O",
           "category": "linguistic_correlate",
           "state_label": null
@@ -74,36 +74,36 @@
       "expected_category": "trait_definition",
       "top_results": [
         {
-          "chunk_id": "behavioral_markers_00021",
-          "score": 11.880984042984494,
-          "trait": "E",
-          "category": "behavioral_marker",
-          "state_label": null
-        },
-        {
           "chunk_id": "behavioral_markers_00024",
-          "score": 11.559859405080006,
+          "score": 12.59872248618814,
           "trait": null,
           "category": "behavioral_marker",
           "state_label": null
         },
         {
+          "chunk_id": "behavioral_markers_00021",
+          "score": 12.300037860909647,
+          "trait": "E",
+          "category": "behavioral_marker",
+          "state_label": null
+        },
+        {
           "chunk_id": "psychological_states_00014",
-          "score": 11.038892268053624,
+          "score": 11.587559104537048,
           "trait": "E",
           "category": "state_definition",
           "state_label": "SocialEngagement"
         },
         {
           "chunk_id": "behavioral_markers_00007",
-          "score": 10.396896993016357,
+          "score": 11.297468431348413,
           "trait": "A",
           "category": "behavioral_marker",
           "state_label": null
         },
         {
           "chunk_id": "behavioral_markers_00003",
-          "score": 10.11932901997806,
+          "score": 11.08775481272158,
           "trait": "E",
           "category": "behavioral_marker",
           "state_label": null
@@ -117,37 +117,37 @@
       "top_results": [
         {
           "chunk_id": "cope_few_shot_00021_c0",
-          "score": 13.396655917740768,
+          "score": 14.131929596922191,
           "trait": null,
           "category": "few_shot_example",
           "state_label": null
         },
         {
           "chunk_id": "linguistic_correlates_00029",
-          "score": 11.74662953839967,
+          "score": 12.69728297539092,
           "trait": "O",
           "category": "linguistic_correlate",
           "state_label": null
         },
         {
           "chunk_id": "ocean_traits_00001",
-          "score": 11.108545652064889,
+          "score": 11.747488137935228,
           "trait": "O",
           "category": "trait_definition",
           "state_label": null
         },
         {
           "chunk_id": "linguistic_correlates_00055",
-          "score": 9.836297874258925,
+          "score": 10.86024034418928,
           "trait": "O",
           "category": "linguistic_correlate",
           "state_label": null
         },
         {
-          "chunk_id": "linguistic_correlates_00089",
-          "score": 9.668666765001296,
-          "trait": "C",
-          "category": "linguistic_correlate",
+          "chunk_id": "ocean_o_domain_bfi2_001",
+          "score": 10.372750409486361,
+          "trait": "O",
+          "category": "trait_definition",
           "state_label": null
         }
       ]
@@ -158,39 +158,39 @@
       "expected_category": "trait_definition",
       "top_results": [
         {
+          "chunk_id": "abstention_rule_003_social_politeness_agreeableness",
+          "score": 13.67345276516692,
+          "trait": "A",
+          "category": "evidence_mapping_example",
+          "state_label": null
+        },
+        {
+          "chunk_id": "ocean_facets_00042",
+          "score": 6.985889501994164,
+          "trait": "A",
+          "category": "facet_definition",
+          "state_label": null
+        },
+        {
+          "chunk_id": "ocean_facets_00036",
+          "score": 6.9188813751161025,
+          "trait": "A",
+          "category": "facet_definition",
+          "state_label": null
+        },
+        {
           "chunk_id": "linguistic_correlates_00050",
-          "score": 6.903188260089627,
+          "score": 6.790624149661886,
           "trait": "A",
           "category": "linguistic_correlate",
           "state_label": null
         },
         {
-          "chunk_id": "ocean_facets_00036",
-          "score": 6.724853132338112,
-          "trait": "A",
-          "category": "facet_definition",
-          "state_label": null
-        },
-        {
-          "chunk_id": "ocean_facets_00042",
-          "score": 6.533437655322201,
-          "trait": "A",
-          "category": "facet_definition",
-          "state_label": null
-        },
-        {
           "chunk_id": "psychological_states_00086",
-          "score": 4.88627711125704,
+          "score": 5.291174351662473,
           "trait": "A",
           "category": "state_definition",
           "state_label": "AltruisticActivation"
-        },
-        {
-          "chunk_id": "ocean_facets_00037",
-          "score": 4.686699937960587,
-          "trait": "A",
-          "category": "facet_definition",
-          "state_label": null
         }
       ]
     }

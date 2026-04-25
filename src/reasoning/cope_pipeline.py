@@ -14,8 +14,13 @@ STATE_RETRIEVAL_CATEGORIES = [
     "state_definition",
     "behavioral_marker",
     "linguistic_correlate",
+    "evidence_mapping_example",
 ]
-TRAIT_RETRIEVAL_CATEGORIES = ["trait_definition", "facet_definition"]
+TRAIT_RETRIEVAL_CATEGORIES = [
+    "trait_definition",
+    "facet_definition",
+    "evidence_mapping_example",
+]
 
 
 class CoPEPipeline:

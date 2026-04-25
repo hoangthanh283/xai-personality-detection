@@ -92,6 +92,38 @@ def test_few_shot_structured_chunking_splits_into_step_blocks(tmp_path):
     assert chunks[2].metadata["block_label"] == "STEP 3"
 
 
+def test_evidence_mapping_embed_text_has_trait_and_level_anchors(tmp_path):
+    source_path = tmp_path / "evidence_mappings.jsonl"
+    record = {
+        "text": (
+            'Evidence mapping from PersonalityEvd train/valid. Evidence quote: "I planned '
+            'the schedule carefully." Gold label: Conscientiousness HIGH.'
+        ),
+        "metadata": {
+            "framework": "ocean",
+            "category": "evidence_mapping_example",
+            "source_id": "personality_evd_trainval_evidence",
+            "mapping_type": "gold_evidence_mapping",
+            "trait": "C",
+            "pole": "HIGH",
+        },
+    }
+    source_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+    builder = KBBuilder({"chunking": {"default": {"mode": "atomic", "max_tokens": 160}}})
+    chunks = list(
+        builder.parse_jsonl_source(
+            source_path,
+            {"framework": "ocean", "category": "evidence_mapping_example"},
+        )
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].embed_text.startswith("Evidence mapping.")
+    assert "Trait: C HIGH" in chunks[0].embed_text
+    assert "Source: personality_evd_trainval_evidence" in chunks[0].embed_text
+
+
 def test_embedder_prefers_embed_text(monkeypatch):
     captured = {}
 

@@ -221,16 +221,19 @@ Step 2, state identification:
 - `state_definition`
 - `behavioral_marker`
 - `linguistic_correlate`
+- `evidence_mapping_example`
 
 Step 3, trait inference:
 
 - `trait_definition`
 - `facet_definition`
+- `evidence_mapping_example`
 
 This reduces category pollution. For example:
 
 - a state query should not primarily compete with trait overviews
 - a trait aggregation query should not be dominated by long few-shot examples
+- a PersonalityEvd abstention query can still retrieve insufficient-evidence rules when needed
 
 ## 7. Qdrant Storage Policy
 
@@ -238,13 +241,14 @@ This reduces category pollution. For example:
 
 The current chunking implementation is indexed to:
 
-- collection: `psych_kb_ocean_v2`
+- collection: `psych_kb_ocean_v3`
 - alias: disabled by default (`null`)
 
 This avoids disrupting older jobs that may still read:
 
 - `psych_kb`
 - `psych_kb_ocean_v1`
+- `psych_kb_ocean_v2`
 
 ### 7.2 Deterministic point IDs
 
@@ -260,18 +264,19 @@ Deterministic IDs make rebuild behavior auditable and reproducible.
 
 ## 8. Current Artifact State
 
-After implementing the strategy, the KB was rebuilt.
+After implementing the strategy, the KB was rebuilt. The latest v3 build also includes
+PersonalityEvd English train/valid evidence enrichment.
 
 Current state:
 
-- KB version: `psych_kb_ocean_v2`
-- chunk count: `743`
-- embedding shape: `(743, 768)`
-- Qdrant collection: `psych_kb_ocean_v2`
+- KB version: `psych_kb_ocean_v3`
+- chunk count: `1007`
+- embedding shape: `(1007, 768)`
+- Qdrant collection: `psych_kb_ocean_v3`
 
 Category breakdown in the rebuilt `chunks.jsonl`:
 
-- `behavioral_marker`: `220`
+- `behavioral_marker`: `250`
 - `linguistic_correlate`: `123`
 - `type_description`: `104`
 - `state_definition`: `103`
@@ -279,6 +284,7 @@ Category breakdown in the rebuilt `chunks.jsonl`:
 - `facet_definition`: `60`
 - `cognitive_function`: `32`
 - `trait_definition`: `25`
+- `evidence_mapping_example`: `234`
 
 Few-shot block distribution:
 
@@ -290,6 +296,31 @@ The extra `INPUT+STEP1` block comes from the legacy few-shot file still included
 compatibility.
 
 ## 9. Build Workflow
+
+### 9.0 Generate enrichment sources
+
+The v3 enrichment step reads only the canonical English PersonalityEvd raw files:
+
+- `data/raw/personality_evd_en/Dataset/dialogue.json`
+- `data/raw/personality_evd_en/Dataset/EPR-State Task/train_annotation.json`
+- `data/raw/personality_evd_en/Dataset/EPR-State Task/valid_annotation.json`
+
+It does not read `test_annotation.json` when building KB content.
+By default, the script uses `data/processed/personality_evd/test.jsonl` only as an
+exact-string leakage filter and excludes any train/valid mapping whose generated text would copy
+held-out text.
+
+```bash
+uv run --no-project --python 3.12 --with-requirements requirements.txt \
+  python scripts/build_kb_enrichment_sources.py
+```
+
+Generated source files:
+
+- `data/knowledge_base/sources/personality_evd_evidence_mappings.jsonl`
+- `data/knowledge_base/sources/abstention_and_insufficient_evidence.jsonl`
+- `data/knowledge_base/sources/state_trait_aggregation_rules.jsonl`
+- `data/knowledge_base/sources/bfi2_item_anchors.jsonl`
 
 ### 9.1 Parse
 
@@ -332,7 +363,7 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
   python scripts/build_kb.py --step index --config configs/kb_config.yaml
 ```
 
-This indexes into `psych_kb_ocean_v2`.
+This indexes into `psych_kb_ocean_v3`.
 
 ### 9.4 Verify
 
@@ -381,7 +412,7 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
 Current benchmark after the chunking change:
 
 - `Recall@5 = 0.840`
-- `MRR = 0.523`
+- `MRR = 0.511`
 - `min_trait_Recall@5 = 0.800`
 
 Interpretation:
@@ -421,8 +452,8 @@ now because category filtering is already enforced in the CoPE pipeline.
 
 If future experiments show example pollution remains high, the next clean step is to split into:
 
-- `psych_kb_ocean_v2_main`
-- `psych_kb_ocean_v2_examples`
+- `psych_kb_ocean_v3_main`
+- `psych_kb_ocean_v3_examples`
 
 ### 12.2 Atomic mode assumes current source distributions
 

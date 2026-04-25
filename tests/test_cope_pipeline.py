@@ -267,6 +267,11 @@ class TestCoPEPipeline:
             "state_definition",
             "behavioral_marker",
             "linguistic_correlate",
+            "evidence_mapping_example",
         ]
         assert mock_kb.calls[1][0] == "search"
-        assert mock_kb.calls[1][1] == ["trait_definition", "facet_definition"]
+        assert mock_kb.calls[1][1] == [
+            "trait_definition",
+            "facet_definition",
+            "evidence_mapping_example",
+        ]

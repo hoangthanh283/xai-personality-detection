@@ -284,6 +284,24 @@ class KBBuilder:
                 f"Cognitive function. Type: {type_label or 'unspecified'}. "
                 f"Function: {function or 'unspecified'}."
             )
+        elif category == "evidence_mapping_example":
+            mapping_type = metadata.get("mapping_type", "evidence_mapping")
+            if mapping_type == "abstention_rule":
+                condition = metadata.get("condition", "insufficient evidence")
+                prefix = (
+                    f"Abstention rule. Framework: {framework}. "
+                    f"Trait: {trait or 'any'}. Condition: {condition}."
+                )
+            elif mapping_type == "aggregation_rule":
+                condition = metadata.get("condition", "state trait aggregation")
+                prefix = f"Aggregation rule. Framework: {framework}. Condition: {condition}."
+            else:
+                source_id = metadata.get("source_id", "unknown_source")
+                level = pole or metadata.get("level") or "BOTH"
+                prefix = (
+                    f"Evidence mapping. Framework: {framework}. "
+                    f"Trait: {trait or 'unspecified'} {level}. Source: {source_id}."
+                )
         elif category == "few_shot_example":
             example_id = metadata.get("example_id", "unspecified")
             block_label = metadata.get("block_label")

@@ -129,6 +129,24 @@ SOURCE_REGISTRY: dict[str, dict[str, str]] = {
         "quality_tier": "A",
         "license_status": "citable_paraphrase",
     },
+    "personality_evd_trainval_evidence": {
+        "citation": "Sun et al., 2024; PersonalityEvd train/valid evidence annotations",
+        "source_type": "dataset_annotation",
+        "quality_tier": "A",
+        "license_status": "project_seed",
+    },
+    "whole_trait_theory_fleeson_2015": {
+        "citation": "Fleeson & Jayawickreme, 2015; Whole Trait Theory",
+        "source_type": "paper",
+        "quality_tier": "A",
+        "license_status": "citable_paraphrase",
+    },
+    "bfi2_paraphrased_item_anchors": {
+        "citation": "Soto & John, 2017; BFI-2 documentation, project paraphrase",
+        "source_type": "paper",
+        "quality_tier": "A",
+        "license_status": "citable_paraphrase",
+    },
     "gifts_differing_myers": {
         "citation": "Myers & Myers, 1980",
         "source_type": "book",

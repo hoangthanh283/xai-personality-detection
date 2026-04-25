@@ -1,9 +1,9 @@
 {
   "summary": {
-    "num_chunks": 743,
+    "num_chunks": 1007,
     "framework": {
       "mbti": 184,
-      "ocean": 264,
+      "ocean": 528,
       "both": 295
     },
     "category": {
@@ -12,34 +12,36 @@
       "few_shot_example": 76,
       "cognitive_function": 32,
       "state_definition": 103,
-      "behavioral_marker": 220,
+      "behavioral_marker": 250,
       "linguistic_correlate": 123,
-      "facet_definition": 60
+      "facet_definition": 60,
+      "evidence_mapping_example": 234
     },
     "quality_tier": {
       "C": 140,
       "B": 130,
-      "A": 473
+      "A": 737
     },
     "trait": {
       "I": 1,
-      "E": 89,
+      "E": 138,
       "S": 1,
-      "N": 121,
+      "N": 172,
       "T": 1,
       "F": 1,
       "J": 1,
       "P": 1,
-      "O": 116,
-      "C": 115,
-      "A": 90,
-      "<missing>": 206
+      "O": 168,
+      "C": 168,
+      "A": 141,
+      "<missing>": 211,
+      "null": 3
     },
     "pole": {
       "<missing>": 648,
-      "BOTH": 11,
-      "HIGH": 47,
-      "LOW": 37
+      "BOTH": 71,
+      "HIGH": 148,
+      "LOW": 140
     },
     "source_id": {
       "mbti_type_descriptions_legacy": 8,
@@ -68,6 +70,9 @@
       "watson_clark_1984_negative_affectivity": 9,
       "mcadams_life_story_2006": 20,
       "gross_emotion_regulation_2002": 7,
+      "personality_evd_trainval_evidence": 224,
+      "whole_trait_theory_fleeson_2015": 10,
+      "bfi2_paraphrased_item_anchors": 30,
       "synthetic_textbook_example": 75
     }
   },
@@ -78,52 +83,58 @@
     "short_chunks": [],
     "long_chunks": [],
     "min_words": 15,
-    "max_words": 190
+    "max_words": 261
   },
   "ocean_trait_category_coverage": {
-    "<missing>": {
-      "few_shot_example": 27
-    },
     "A": {
       "trait_definition": 5,
       "state_definition": 1,
-      "behavioral_marker": 2,
+      "behavioral_marker": 8,
       "linguistic_correlate": 24,
-      "facet_definition": 12
+      "facet_definition": 12,
+      "evidence_mapping_example": 45
     },
     "C": {
       "trait_definition": 5,
       "state_definition": 1,
-      "behavioral_marker": 8,
+      "behavioral_marker": 14,
       "linguistic_correlate": 25,
-      "facet_definition": 12
+      "facet_definition": 12,
+      "evidence_mapping_example": 47
     },
     "E": {
       "trait_definition": 5,
       "state_definition": 1,
-      "behavioral_marker": 2,
+      "behavioral_marker": 8,
       "linguistic_correlate": 24,
-      "facet_definition": 12
+      "facet_definition": 12,
+      "evidence_mapping_example": 43
     },
     "N": {
       "trait_definition": 5,
       "state_definition": 1,
-      "behavioral_marker": 7,
+      "behavioral_marker": 13,
       "linguistic_correlate": 24,
-      "facet_definition": 12
+      "facet_definition": 12,
+      "evidence_mapping_example": 45
     },
     "O": {
       "trait_definition": 5,
       "state_definition": 1,
-      "behavioral_marker": 5,
+      "behavioral_marker": 11,
       "linguistic_correlate": 26,
-      "facet_definition": 12
+      "facet_definition": 12,
+      "evidence_mapping_example": 46
+    },
+    "UNSPECIFIED": {
+      "evidence_mapping_example": 8,
+      "few_shot_example": 27
     }
   },
   "leakage": {
     "checked": true,
-    "dataset_path": "data/raw/personality_evd/test.jsonl",
-    "num_heldout_strings": 2299,
+    "dataset_path": "data/processed/personality_evd/test.jsonl",
+    "num_heldout_strings": 2277,
     "matches": []
   }
 }
