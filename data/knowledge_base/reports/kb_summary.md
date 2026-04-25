@@ -1,25 +1,25 @@
 # Psychology KB Summary
 
-- KB version: `psych_kb_ocean_v1`
-- Qdrant collection: `psych_kb_ocean_v1`
+- KB version: `psych_kb_ocean_v2`
+- Qdrant collection: `psych_kb_ocean_v2`
 - Embedding model: `BAAI/bge-base-en-v1.5`
-- Embeddings shape: `[718, 768]`
-- Chunks: `718`
+- Embeddings shape: `[743, 768]`
+- Chunks: `743`
 - Invalid chunks: `0`
 - Duplicate chunk IDs: `0`
 - Retrieval Recall@5: `0.840`
-- Retrieval MRR: `0.519`
+- Retrieval MRR: `0.523`
 
 ## Quality Tier
 - `A`: 473
 - `B`: 130
-- `C`: 115
+- `C`: 140
 
 ## Category Coverage
 - `behavioral_marker`: 220
 - `cognitive_function`: 32
 - `facet_definition`: 60
-- `few_shot_example`: 51
+- `few_shot_example`: 76
 - `linguistic_correlate`: 123
 - `state_definition`: 103
 - `trait_definition`: 25

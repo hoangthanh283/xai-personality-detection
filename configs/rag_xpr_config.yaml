@@ -24,7 +24,7 @@ llm:
 retrieval:
   embedding_model: BAAI/bge-base-en-v1.5
   qdrant_url: http://localhost:6333
-  collection: psych_kb_ocean_v1
+  collection: psych_kb_ocean_v2
 
 cope:
   num_evidence: 6          # max evidence to extract in Step 1 (reduced for local LLM speed)

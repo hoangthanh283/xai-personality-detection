@@ -1,15 +1,15 @@
 {
   "summary": {
-    "num_chunks": 718,
+    "num_chunks": 743,
     "framework": {
-      "mbti": 168,
-      "ocean": 255,
+      "mbti": 184,
+      "ocean": 264,
       "both": 295
     },
     "category": {
       "type_description": 104,
       "trait_definition": 25,
-      "few_shot_example": 51,
+      "few_shot_example": 76,
       "cognitive_function": 32,
       "state_definition": 103,
       "behavioral_marker": 220,
@@ -17,7 +17,7 @@
       "facet_definition": 60
     },
     "quality_tier": {
-      "C": 115,
+      "C": 140,
       "B": 130,
       "A": 473
     },
@@ -33,10 +33,10 @@
       "O": 116,
       "C": 115,
       "A": 90,
-      "<missing>": 181
+      "<missing>": 206
     },
     "pole": {
-      "<missing>": 623,
+      "<missing>": 648,
       "BOTH": 11,
       "HIGH": 47,
       "LOW": 37
@@ -68,7 +68,7 @@
       "watson_clark_1984_negative_affectivity": 9,
       "mcadams_life_story_2006": 20,
       "gross_emotion_regulation_2002": 7,
-      "synthetic_textbook_example": 50
+      "synthetic_textbook_example": 75
     }
   },
   "validation": {
@@ -78,11 +78,11 @@
     "short_chunks": [],
     "long_chunks": [],
     "min_words": 15,
-    "max_words": 272
+    "max_words": 190
   },
   "ocean_trait_category_coverage": {
     "<missing>": {
-      "few_shot_example": 18
+      "few_shot_example": 27
     },
     "A": {
       "trait_definition": 5,

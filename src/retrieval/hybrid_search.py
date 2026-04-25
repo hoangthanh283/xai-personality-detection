@@ -3,6 +3,8 @@
 Score = alpha * semantic_score + (1 - alpha) * bm25_score
 """
 
+from collections.abc import Iterable
+
 from loguru import logger
 
 from src.retrieval.kb_retriever import KBChunkResult, KBRetriever
@@ -36,12 +38,17 @@ class BM25Retriever:
             logger.warning("rank_bm25 not installed, BM25 retrieval disabled")
 
     def search(
-        self, query: str, top_k: int = 10, framework: str | None = None, category: str | None = None
+        self,
+        query: str,
+        top_k: int = 10,
+        framework: str | None = None,
+        category: str | Iterable[str] | None = None,
     ) -> list[KBChunkResult]:
         if self._bm25 is None or not self._corpus:
             return []
         tokenized_query = query.lower().split()
         scores = self._bm25.get_scores(tokenized_query)
+        categories = [category] if isinstance(category, str) else list(category or [])
         candidate_indices = []
         for idx, doc in enumerate(self._corpus):
             meta = doc.get("metadata", {})
@@ -51,22 +58,21 @@ class BM25Retriever:
                 and meta.get("framework") not in {framework, "both"}
             ):
                 continue
-            if category and meta.get("category") != category:
+            if categories and meta.get("category") not in set(categories):
                 continue
             candidate_indices.append(idx)
         top_indices = sorted(candidate_indices, key=lambda i: scores[i], reverse=True)[:top_k]
         results = []
         for idx in top_indices:
-            if scores[idx] > 0:
-                doc = self._corpus[idx]
-                results.append(
-                    KBChunkResult(
-                        chunk_id=doc.get("chunk_id", f"bm25_{idx}"),
-                        text=doc.get("text", ""),
-                        score=float(scores[idx]),
-                        metadata=doc.get("metadata", {}),
-                    )
+            doc = self._corpus[idx]
+            results.append(
+                KBChunkResult(
+                    chunk_id=doc.get("chunk_id", f"bm25_{idx}"),
+                    text=doc.get("text", ""),
+                    score=float(scores[idx]),
+                    metadata=doc.get("metadata", {}),
                 )
+            )
         return results
 
 
@@ -122,7 +128,7 @@ class HybridRetriever:
         query: str,
         top_k: int = 5,
         framework: str | None = None,
-        category: str | None = None,
+        category: str | Iterable[str] | None = None,
     ) -> list[KBChunkResult]:
         """Hybrid search combining semantic and BM25 results."""
         dense_results = self.dense_retriever.search(
@@ -138,7 +144,7 @@ class HybridRetriever:
         queries: list[str],
         top_k: int = 5,
         framework: str | None = None,
-        category: str | None = None,
+        category: str | Iterable[str] | None = None,
     ) -> list[list[KBChunkResult]]:
         """Batch hybrid search."""
         if not queries:

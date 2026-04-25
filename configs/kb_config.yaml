@@ -62,8 +62,28 @@ sources:
     category: few_shot_example
 
 chunking:
-  chunk_size: 512          # tokens
-  chunk_overlap: 64        # token overlap
+  default:
+    mode: atomic
+    max_tokens: 160
+    chunk_overlap: 0
+  by_category:
+    trait_definition:
+      mode: atomic
+    facet_definition:
+      mode: atomic
+    state_definition:
+      mode: atomic
+    behavioral_marker:
+      mode: atomic
+    linguistic_correlate:
+      mode: atomic
+    type_description:
+      mode: atomic
+    cognitive_function:
+      mode: atomic
+    few_shot_example:
+      mode: structured_blocks
+      block_split: ["## STEP 1", "## STEP 2", "## STEP 3"]
   tokenizer: cl100k_base   # tiktoken
   split_on: ["\n\n", "\n", ". "]
   min_chunk_size: 50
@@ -75,8 +95,9 @@ embedding:
 
 qdrant:
   url: http://localhost:6333
-  collection_name: psych_kb_ocean_v1
-  alias_name: psych_kb
+  collection_name: psych_kb_ocean_v2
+  alias_name: null
+  recreate_collection: false
   vector_size: 768
   distance: Cosine
   on_disk: false
@@ -85,4 +106,4 @@ qdrant:
     ef_construct: 100
 
 output_dir: data/knowledge_base/
-kb_version: psych_kb_ocean_v1
+kb_version: psych_kb_ocean_v2

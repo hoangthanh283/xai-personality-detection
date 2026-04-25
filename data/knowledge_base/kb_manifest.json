@@ -1,15 +1,49 @@
 {
-  "kb_version": "psych_kb_ocean_v1",
-  "collection_name": "psych_kb_ocean_v1",
-  "alias_name": "psych_kb",
+  "kb_version": "psych_kb_ocean_v2",
+  "collection_name": "psych_kb_ocean_v2",
+  "alias_name": null,
   "embedding": {
     "model": "BAAI/bge-base-en-v1.5",
     "batch_size": 64,
     "normalize": true
   },
   "chunking": {
-    "chunk_size": 512,
-    "chunk_overlap": 64,
+    "default": {
+      "mode": "atomic",
+      "max_tokens": 160,
+      "chunk_overlap": 0
+    },
+    "by_category": {
+      "trait_definition": {
+        "mode": "atomic"
+      },
+      "facet_definition": {
+        "mode": "atomic"
+      },
+      "state_definition": {
+        "mode": "atomic"
+      },
+      "behavioral_marker": {
+        "mode": "atomic"
+      },
+      "linguistic_correlate": {
+        "mode": "atomic"
+      },
+      "type_description": {
+        "mode": "atomic"
+      },
+      "cognitive_function": {
+        "mode": "atomic"
+      },
+      "few_shot_example": {
+        "mode": "structured_blocks",
+        "block_split": [
+          "## STEP 1",
+          "## STEP 2",
+          "## STEP 3"
+        ]
+      }
+    },
     "tokenizer": "cl100k_base",
     "split_on": [
       "\n\n",
@@ -92,19 +126,19 @@
       "category": "few_shot_example"
     }
   ],
-  "config_hash": "31555f822062a8615902e0e4c81afb7d434760b0ecef46abc11e6c6bf23e6d44",
-  "chunks_hash": "cad114ca6dc75d67f7184fabe8e0a67a78344c49591e47f5a5eff298911ac91a",
+  "config_hash": "2f3f60acb4b481eed9153854efb38be2259922d5f42c525dbb5172f0e379b3ec",
+  "chunks_hash": "9edda53928fe7e2a7b6f67e4f079f8bae60dc273a8eac5a7d833b8792e472517",
   "summary": {
-    "num_chunks": 718,
+    "num_chunks": 743,
     "framework": {
-      "mbti": 168,
-      "ocean": 255,
+      "mbti": 184,
+      "ocean": 264,
       "both": 295
     },
     "category": {
       "type_description": 104,
       "trait_definition": 25,
-      "few_shot_example": 51,
+      "few_shot_example": 76,
       "cognitive_function": 32,
       "state_definition": 103,
       "behavioral_marker": 220,
@@ -112,7 +146,7 @@
       "facet_definition": 60
     },
     "quality_tier": {
-      "C": 115,
+      "C": 140,
       "B": 130,
       "A": 473
     },
@@ -128,10 +162,10 @@
       "O": 116,
       "C": 115,
       "A": 90,
-      "<missing>": 181
+      "<missing>": 206
     },
     "pole": {
-      "<missing>": 623,
+      "<missing>": 648,
       "BOTH": 11,
       "HIGH": 47,
       "LOW": 37
@@ -163,7 +197,7 @@
       "watson_clark_1984_negative_affectivity": 9,
       "mcadams_life_story_2006": 20,
       "gross_emotion_regulation_2002": 7,
-      "synthetic_textbook_example": 50
+      "synthetic_textbook_example": 75
     }
   },
   "validation": {
@@ -173,7 +207,7 @@
     "errors": {}
   },
   "embeddings_shape": [
-    718,
+    743,
     768
   ]
 }

@@ -201,7 +201,12 @@ def _create_demo_chunks():
         },
     ]
     return [
-        KBChunk(chunk_id=e["chunk_id"], text=e["text"], metadata=e["metadata"])
+        KBChunk(
+            chunk_id=e["chunk_id"],
+            text=e["text"],
+            embed_text=e["text"],
+            metadata=e["metadata"],
+        )
         for e in demo_entries
     ]
 
@@ -226,6 +231,7 @@ def step_embed(config: dict) -> None:
                 KBChunk(
                     chunk_id=data["chunk_id"],
                     text=data["text"],
+                    embed_text=data.get("embed_text"),
                     metadata=data.get("metadata", {}),
                 )
             )
@@ -263,6 +269,7 @@ def step_index(config: dict) -> None:
                 KBChunk(
                     chunk_id=data["chunk_id"],
                     text=data["text"],
+                    embed_text=data.get("embed_text"),
                     metadata=data.get("metadata", {}),
                 )
             )
@@ -282,7 +289,7 @@ def step_index(config: dict) -> None:
         )
     qdrant_cfg = config.get("qdrant", {})
     indexer = KBIndexer(qdrant_cfg)
-    indexer.create_collection(recreate=False)
+    indexer.create_collection(recreate=qdrant_cfg.get("recreate_collection", False))
     indexer.index_chunks(chunks, embeddings)
     indexer.upsert_alias()
     info = indexer.get_collection_info()

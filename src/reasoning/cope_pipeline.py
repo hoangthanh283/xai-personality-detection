@@ -1,14 +1,21 @@
 """Full 3-step CoPE pipeline orchestrator."""
+
 from typing import Any
 
 from loguru import logger
 
-from src.reasoning.evidence_extractor import (EvidenceExtractor,
-                                              ExtractedEvidence)
+from src.reasoning.evidence_extractor import EvidenceExtractor, ExtractedEvidence
 from src.reasoning.state_identifier import IdentifiedState, StateIdentifier
 from src.reasoning.trait_inferencer import PredictionResult, TraitInferencer
 from src.retrieval.evidence_retriever import EvidenceSentence
 from src.retrieval.kb_retriever import KBChunkResult, deduplicate_chunks
+
+STATE_RETRIEVAL_CATEGORIES = [
+    "state_definition",
+    "behavioral_marker",
+    "linguistic_correlate",
+]
+TRAIT_RETRIEVAL_CATEGORIES = ["trait_definition", "facet_definition"]
 
 
 class CoPEPipeline:
@@ -48,8 +55,12 @@ class CoPEPipeline:
         Otherwise returns a dict directly.
         """
         if yield_steps:
-            return self._run_stream(text, candidate_evidence, framework, save_intermediate, roberta_prior)
-        return self._run_collect(text, candidate_evidence, framework, save_intermediate, roberta_prior)
+            return self._run_stream(
+                text, candidate_evidence, framework, save_intermediate, roberta_prior
+            )
+        return self._run_collect(
+            text, candidate_evidence, framework, save_intermediate, roberta_prior
+        )
 
     def _run_collect(
         self,
@@ -61,7 +72,9 @@ class CoPEPipeline:
     ) -> dict:
         """Non-streaming: run all steps and return final dict."""
         last: dict = {}
-        for _, payload in self._run_stream(text, candidate_evidence, framework, save_intermediate, roberta_prior):
+        for _, payload in self._run_stream(
+            text, candidate_evidence, framework, save_intermediate, roberta_prior
+        ):
             if isinstance(payload, dict) and "predicted_label" in payload:
                 last = payload
         return last
@@ -90,15 +103,26 @@ class CoPEPipeline:
         if 2 in self.skip_steps and 3 in self.skip_steps:
             logger.info("Skipping Steps 2 and 3 (Direct RAG ablation)")
             import json
+
             kb_texts = []
             if self.kb is not None:
-                trait_kb = self.kb.search(f"{framework} personality trait definitions", top_k=5, framework=framework, category="trait_definition")
+                trait_kb = self.kb.search(
+                    f"{framework} personality trait definitions",
+                    top_k=5,
+                    framework=framework,
+                    category="trait_definition",
+                )
                 kb_texts = [c.text for c in trait_kb]
             evidence_text = "\n".join([e.quote for e in evidence])
-            prompt = f"Predict the {framework} personality type based on the text.\n\nText:\n{evidence_text}\n"
+            prompt = (
+                f"Predict the {framework} personality type based on the text.\n\n"
+                f"Text:\n{evidence_text}\n"
+            )
             if kb_texts:
                 prompt += "\nKnowledge Base Context:\n" + "\n".join(kb_texts) + "\n"
-            prompt += '\nProvide output as JSON: {"prediction": {"type": "XXXX"}, "explanation": "..."}'
+            prompt += (
+                '\nProvide output as JSON: {"prediction": {"type": "XXXX"}, "explanation": "..."}'
+            )
 
             response = self.llm.generate([{"role": "user", "content": prompt}])
             try:
@@ -120,7 +144,15 @@ class CoPEPipeline:
 
         if 2 in self.skip_steps:
             logger.info("Skipping Step 2: Extracting state directly from evidence")
-            states = [IdentifiedState(state_label=e.behavior_type, confidence=1.0, quote=e.quote, reasoning="Skipped Step 2") for e in evidence]
+            states = [
+                IdentifiedState(
+                    state_label=e.behavior_type,
+                    confidence=1.0,
+                    quote=e.quote,
+                    reasoning="Skipped Step 2",
+                )
+                for e in evidence
+            ]
             kb_chunks = []
         else:
             logger.info("Step 2: Identifying psychological states")
@@ -131,12 +163,15 @@ class CoPEPipeline:
                     queries,
                     top_k=self.num_kb_chunks,
                     framework=framework,
-                    category="behavioral_marker",
+                    category=STATE_RETRIEVAL_CATEGORIES,
                 )
                 for chunks in results:
                     kb_chunks.extend(chunks)
                 kb_chunks = deduplicate_chunks(kb_chunks)
-                logger.info(f"Retrieved {len(kb_chunks)} KB chunks for state identification via batch search")
+                logger.info(
+                    "Retrieved "
+                    f"{len(kb_chunks)} KB chunks for state identification via batch search"
+                )
 
             states: list[IdentifiedState] = self.state_identifier.identify(
                 evidence, kb_chunks, max_retries=self.max_retries
@@ -152,11 +187,14 @@ class CoPEPipeline:
                 f"{framework} personality trait definitions",
                 top_k=5,
                 framework=framework,
-                category="trait_definition",
+                category=TRAIT_RETRIEVAL_CATEGORIES,
             )
 
         result: PredictionResult = self.trait_inferencer.infer(
-            states, trait_kb, framework=framework, max_retries=self.max_retries,
+            states,
+            trait_kb,
+            framework=framework,
+            max_retries=self.max_retries,
             roberta_prior=roberta_prior,
         )
         logger.info(f"Predicted: {result.predicted_label}")
@@ -172,7 +210,11 @@ class CoPEPipeline:
         if save_intermediate:
             output["intermediate"] = {
                 "step1_evidence": [
-                    {"quote": e.quote, "behavior_type": e.behavior_type, "description": e.description}
+                    {
+                        "quote": e.quote,
+                        "behavior_type": e.behavior_type,
+                        "description": e.description,
+                    }
                     for e in evidence
                 ],
                 "step2_states": [

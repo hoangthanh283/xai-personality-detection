@@ -1,6 +1,6 @@
 """Index KB chunks into Qdrant."""
 
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid5
 
 import numpy as np
 from loguru import logger
@@ -10,6 +10,7 @@ from src.knowledge_base.builder import KBChunk
 QDRANT_CONFIG = {
     "collection_name": "psych_kb",
     "alias_name": None,
+    "recreate_collection": False,
     "vector_size": 768,
     "distance": "Cosine",
     "on_disk": False,
@@ -127,11 +128,12 @@ class KBIndexer:
 
             points = [
                 PointStruct(
-                    id=str(uuid4()),
+                    id=str(uuid5(NAMESPACE_URL, chunk.chunk_id)),
                     vector=emb.tolist(),
                     payload={
                         "chunk_id": chunk.chunk_id,
                         "text": chunk.text,
+                        "embed_text": chunk.embed_text or chunk.text,
                         **chunk.metadata,
                     },
                 )

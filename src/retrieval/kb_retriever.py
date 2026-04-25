@@ -1,6 +1,7 @@
 """Retrieve psychology definitions from the Qdrant knowledge base."""
 
 from dataclasses import dataclass
+from typing import Iterable
 
 from src.knowledge_base.embedder import KBEmbedder
 
@@ -50,7 +51,19 @@ class KBRetriever:
             self._qdrant = QdrantClient(url=self.qdrant_url, check_compatibility=False)
         return self._qdrant
 
-    def _build_filter(self, framework: str | None = None, category: str | None = None):
+    def _normalize_categories(self, category: str | Iterable[str] | None) -> list[str] | None:
+        if category is None:
+            return None
+        if isinstance(category, str):
+            return [category]
+        values = [str(value) for value in category if str(value).strip()]
+        return values or None
+
+    def _build_filter(
+        self,
+        framework: str | None = None,
+        category: str | Iterable[str] | None = None,
+    ):
         """Build Qdrant payload filter."""
         from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
 
@@ -62,8 +75,14 @@ class KBRetriever:
                     match=MatchAny(any=[framework, "both"]),
                 )
             )
-        if category:
-            conditions.append(FieldCondition(key="category", match=MatchValue(value=category)))
+        categories = self._normalize_categories(category)
+        if categories:
+            matcher = (
+                MatchValue(value=categories[0])
+                if len(categories) == 1
+                else MatchAny(any=categories)
+            )
+            conditions.append(FieldCondition(key="category", match=matcher))
         if conditions:
             return Filter(must=conditions)
         return None
@@ -104,7 +123,7 @@ class KBRetriever:
         query: str,
         top_k: int = 5,
         framework: str | None = None,
-        category: str | None = None,
+        category: str | Iterable[str] | None = None,
     ) -> list[KBChunkResult]:
         """Search the KB for chunks relevant to a query."""
         # Embed query
@@ -134,7 +153,7 @@ class KBRetriever:
         queries: list[str],
         top_k: int = 5,
         framework: str | None = None,
-        category: str | None = None,
+        category: str | Iterable[str] | None = None,
     ) -> list[list[KBChunkResult]]:
         """Batch search for multiple queries (optimized)."""
         if not queries:

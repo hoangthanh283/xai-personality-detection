@@ -1,4 +1,5 @@
 """Embed KB chunks with Sentence-BERT."""
+
 from pathlib import Path
 
 import numpy as np
@@ -25,10 +26,15 @@ class KBEmbedder:
         if self._model is None:
             import torch
             from sentence_transformers import SentenceTransformer
+
             model_name = self.config["model"]
             device = "cuda" if torch.cuda.is_available() else "cpu"
             # Support Apple Silicon (MPS)
-            if device == "cpu" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            if (
+                device == "cpu"
+                and hasattr(torch.backends, "mps")
+                and torch.backends.mps.is_available()
+            ):
                 device = "mps"
 
             logger.info(f"Loading embedding model: {model_name} on {device}")
@@ -50,7 +56,7 @@ class KBEmbedder:
 
     def embed_chunks(self, chunks: list[KBChunk]) -> tuple[list[KBChunk], np.ndarray]:
         """Embed all chunks and return (chunks, embedding_matrix)."""
-        texts = [chunk.text for chunk in chunks]
+        texts = [chunk.embed_text or chunk.text for chunk in chunks]
         embeddings = self.embed_texts(texts)
         return chunks, embeddings
 

@@ -3,10 +3,10 @@
 This directory contains the citable psychology KB used by RAG-XPR retrieval and CoPE reasoning.
 
 Current build:
-- KB version: `psych_kb_ocean_v1`
-- Qdrant collection: `psych_kb_ocean_v1`
+- KB version: `psych_kb_ocean_v2`
+- Qdrant collection: `psych_kb_ocean_v2`
 - Embedding model: `BAAI/bge-base-en-v1.5`
-- Embedding shape: `[718, 768]`
+- Chunking: atomic by category, structured 3-block chunking for `few_shot_example`
 - Primary role: OCEAN-first KB for PersonalityEvd explainability evaluation
 
 ## Directory Map
@@ -41,6 +41,10 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
 The safe embedding command is CPU-only and low-priority, so it is less likely to disturb active GPU
 or LLM jobs.
 
+`chunks.jsonl` now stores both:
+- `text`: full human-readable chunk content
+- `embed_text`: anchor-enriched text used for dense embedding
+
 ## Load Into Qdrant
 
 Start Qdrant first, then index:
@@ -54,8 +58,8 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt \
   python scripts/build_kb.py --step index --config configs/kb_config.yaml
 ```
 
-This creates or updates `psych_kb_ocean_v1`. The legacy `psych_kb` collection may still exist for
-running jobs; do not delete/swap it while experiments are active.
+This creates `psych_kb_ocean_v2` without touching the legacy `psych_kb` / `psych_kb_ocean_v1`
+collections. Alias swapping is disabled by default to avoid interrupting active jobs.
 
 Verify:
 
@@ -110,4 +114,5 @@ data/knowledge_base/psychology_kb_source_dump_v1.jsonl
 - The KB uses English text and is intended to pair with English-normalized PersonalityEvd inputs.
 - Do not copy long copyrighted manual passages into source files; use short paraphrases plus citation metadata.
 - Do not add test-split evidence text to `sources/`; audit includes an exact held-out leakage check.
-- `configs/rag_xpr_config.yaml` and `configs/retrieval_config.yaml` now point to `psych_kb_ocean_v1` for future runs.
+- `configs/rag_xpr_config.yaml` and `configs/retrieval_config.yaml` point to `psych_kb_ocean_v2`.
+- Rebuilds are safe because Qdrant points use deterministic IDs derived from `chunk_id`.
