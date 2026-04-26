@@ -17,6 +17,8 @@ openai>=1.30.0
 
 # Experiment tracking
 wandb>=0.17.0
+tensorboard>=2.14.0
+rapidfuzz>=3.5.0
 
 # Prompt engineering
 jinja2>=3.1.0

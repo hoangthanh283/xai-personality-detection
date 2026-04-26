@@ -1,20 +1,19 @@
 _base: retrieval_config.yaml
 
 llm:
-  provider: ollama                                                                   # openrouter | openai | vllm | ollama
-  model: hf.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive:Q6_K_P             # local Gemma-4-E2B (fast, ~5 GB)
+  provider: ollama                                                # openrouter | openai | vllm | ollama
+  model: qwen2.5:3b-instruct-q4_K_M                               # ~2 GB, BASELINES_REQUIREMENTS Tier 3-5 spec
   base_url: http://localhost:11434/api/chat
   temperature: 0.1
   max_tokens: 2048
   timeout: 300
   retry_attempts: 3
+  seed: 42                                                        # deterministic decoding (CAPE motivation M2)
 
+  # Previous default: hf.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive:Q6_K_P  (~5 GB local)
   # Alternative: larger local Qwen for accuracy
-  # provider: ollama
   # model: qwen2.5:7b
-  # base_url: http://localhost:11434/api/chat
-  # timeout: 120
-
+  #
   # Fallback: OpenRouter API (if API quota available)
   # provider: openrouter
   # model: qwen/qwen-2.5-7b-instruct

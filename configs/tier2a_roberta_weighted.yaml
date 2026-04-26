@@ -1,0 +1,71 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Tier 2a (weighted variant) — RoBERTa-base với loss_weighting=sqrt_balanced
+# Mục đích: re-train chỉ những trait có imbalance cực mạnh sau khi 2a default
+# show minority class collapse trong W&B. Suffix `_weighted` trên output_dir.
+#
+# Pre-scheduled:
+#   - MBTI SN  (86%/14% N/S)
+#   - PerEvd E (97.7% HIGH)
+#
+# Optional (gate-driven, sau khi xem W&B):
+#   - PerEvd O (89% HIGH), C (87%)
+#
+# Inherits everything from tier2a_roberta_trunc.yaml then overrides loss_weighting.
+# ────────────────────────────────────────────────────────────────────────────
+tier: tier2a_weighted
+description: RoBERTa-base fine-tuning, sqrt_balanced loss for severe imbalance.
+
+model:
+  type: roberta
+  model_name: roberta-base
+  use_pretrained: true
+  max_length: 512
+  strategy: truncation
+  dropout: 0.1
+
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  num_epochs: 100
+  warmup_ratio: 0.05
+  lr_scheduler: cosine
+  fp16: true
+  max_grad_norm: 1.0
+  loss_weighting: sqrt_balanced       # ← KEY OVERRIDE
+  metric_for_best_model: eval_f1_macro
+  greater_is_better: true
+  early_stopping_patience: 10
+  dataloader_num_workers: 2
+
+logging:
+  logging_strategy: steps
+  logging_steps: 50
+  eval_strategy: steps
+  eval_steps: 200
+  save_strategy: steps
+  save_steps: 200
+  save_total_limit: 2
+
+dataset_overrides:
+  mbti:
+    training:
+      learning_rate: 1.0e-5
+  personality_evd:
+    model:
+      max_length: 256
+    training:
+      batch_size: 16
+      gradient_accumulation_steps: 1
+
+wandb:
+  group: tier2a
+  tags: [tier2a, roberta, transformer, truncation, weighted]
+  log_histograms: false
+
+tensorboard:
+  enabled: true
+
+output_dir: outputs/models/
+seed: 42

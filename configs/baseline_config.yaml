@@ -120,10 +120,9 @@ transformer:
       max_length: 256
       num_epochs: 20
       early_stopping_patience: 5
-      distilbert:
-        model_name: distilbert-base-multilingual-cased
-      roberta:
-        model_name: xlm-roberta-base
+      # Personality-Evd has been fully translated to English (Apr 25); use
+      # monolingual EN encoders to align with the EN knowledge base (BFI-2)
+      # and to match the Tier-2 backbone used on Essays/MBTI/Pandora.
 
 lstm:
   vocab_size: 30000
@@ -164,10 +163,8 @@ frozen_bert_svm:
       C: 1.0
       class_weight: balanced
       max_iter: 10000
-  dataset_overrides:
-    personality_evd:
-      encoder:
-        model_name: xlm-roberta-base
+  # No dataset_overrides: Personality-Evd is now English (Apr 25 translation),
+  # so the default monolingual roberta-base encoder is used everywhere.
 
 # Baseline B — Gao et al. 2024 (arXiv:2406.16223) paradigm:
 #   Frozen RoBERTa + 2-layer MLP head trained with AdamW + early stopping.
@@ -189,10 +186,8 @@ roberta_mlp:
     early_stopping_patience: 5
     loss_weighting: sqrt_balanced   # match existing baselines
     metric_for_best_model: eval_accuracy
-  dataset_overrides:
-    personality_evd:
-      encoder:
-        model_name: xlm-roberta-base
+  # No dataset_overrides: Personality-Evd is now English (Apr 25 translation),
+  # so the default monolingual roberta-base encoder is used everywhere.
 
 output_dir: outputs/models/
 seed: 42

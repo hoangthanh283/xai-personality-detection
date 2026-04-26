@@ -264,21 +264,31 @@ class OllamaClient(LLMClient):
         base_url: str = "http://localhost:11434/api/chat",
         temperature: float = 0.1,
         timeout: int = 300,
+        seed: int | None = None,
     ):
         import requests
         self.model = model
         self.base_url = base_url
         self.temperature = temperature
         self.timeout = timeout
+        # Deterministic decoding: forward seed into Ollama `options.seed`.
+        # Falls back to OLLAMA_SEED env var when caller does not set one.
+        if seed is None:
+            env_seed = os.getenv("OLLAMA_SEED")
+            seed = int(env_seed) if env_seed else None
+        self.seed = seed
         self._requests = requests
 
     def generate(self, messages: list[dict], **kwargs) -> str:
         start = time.perf_counter()
+        options: dict = {"temperature": self.temperature}
+        if self.seed is not None:
+            options["seed"] = self.seed
         payload = {
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": self.temperature},
+            "options": options,
         }
         response = self._requests.post(self.base_url, json=payload, timeout=kwargs.get("timeout", self.timeout))
         response.raise_for_status()
@@ -341,6 +351,7 @@ def build_llm_client(config: dict) -> LLMClient:
             base_url=config.get("base_url", "http://localhost:11434/api/chat"),
             temperature=temperature,
             timeout=config.get("timeout", 300),
+            seed=config.get("seed"),
         )
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")

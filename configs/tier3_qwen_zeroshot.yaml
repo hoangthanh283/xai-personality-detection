@@ -1,0 +1,56 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Tier 3 — Qwen 2.5 3B Q4_K_M zero-shot
+# Motivation: M2 (LLM hallucination baseline). Hallucination rate baseline = 100%.
+# Run scope: 4 W&B runs (MBTI 4dim + Essays/Pandora/PerEvd OCEAN).
+# ────────────────────────────────────────────────────────────────────────────
+tier: tier3
+description: Qwen 2.5 3B zero-shot prediction. No CoPE, no RAG, no evidence.
+
+_base: retrieval_config.yaml          # reuse retrieval block (used only for embedding deps)
+
+llm:
+  provider: ollama
+  model: qwen2.5:3b-instruct-q4_K_M
+  base_url: http://localhost:11434/api/chat
+  temperature: 0.1
+  max_tokens: 512                     # zero-shot output ngắn (just JSON)
+  timeout: 180
+  retry_attempts: 3
+  seed: 42
+
+# Tier 3 uses LLM-direct mode (set via --mode llm_direct on CLI).
+# These params still load to keep the script paths consistent.
+retrieval:
+  embedding_model: BAAI/bge-base-en-v1.5
+  qdrant_url: http://localhost:6333
+  collection: psych_kb_ocean_v3
+
+cope:
+  num_evidence: 0                     # not used in zero-shot
+  num_kb_chunks: 0                    # not used
+  framework: ocean                    # CLI override per dataset
+  max_retries_per_step: 2
+  aggregation: majority
+
+evidence_retrieval:
+  method: hybrid                      # not used in Tier 3
+  alpha: 0.7
+  pre_filter: false
+  top_k: 0
+  scorer: keyword
+  use_roberta_prior: false
+
+inference:
+  log_every_n: 20                     # InferenceLogger flush cadence
+  batch_size: 1                       # Ollama is sequential
+
+wandb:
+  group: tier3
+  tags: [tier3, qwen2.5_3b, llm_direct, zero_shot]
+
+tensorboard:
+  enabled: true
+
+output:
+  save_intermediate: false            # zero-shot has no intermediate
+  output_dir: outputs/predictions/

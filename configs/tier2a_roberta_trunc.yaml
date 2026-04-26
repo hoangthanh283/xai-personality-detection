@@ -1,0 +1,75 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Tier 2a — RoBERTa-base end-to-end fine-tuning (truncation 512)
+# Motivation: M1 (SOTA black-box). Cố ý truncate để show M5.4 (long-text loss).
+# Run scope: 4 W&B runs (MBTI 4dim + Essays/Pandora/PerEvd OCEAN).
+# Special: 2 weighted variants (MBTI SN, PerEvd E) via tier2a_roberta_weighted.yaml.
+# ────────────────────────────────────────────────────────────────────────────
+tier: tier2a
+description: RoBERTa-base fine-tuning with truncation, max budget 100 epochs + early stopping.
+
+model:
+  type: roberta
+  model_name: roberta-base
+  use_pretrained: true
+  max_length: 512
+  strategy: truncation
+  dropout: 0.1
+
+training:
+  batch_size: 4                       # was 2; fp16 + RTX 2060 6GB fit được
+  gradient_accumulation_steps: 4      # effective batch = 16
+  learning_rate: 2.0e-5               # was 1e-5; large datasets cần cao hơn
+  weight_decay: 0.01
+  num_epochs: 100                     # max budget — early stopping sẽ catch
+  warmup_ratio: 0.05                  # was 0.1; với 100 epochs warmup quá dài
+  lr_scheduler: cosine
+  fp16: true
+  max_grad_norm: 1.0                  # gradient clipping chống explosion
+  loss_weighting: none                # default; weighted variants override
+  metric_for_best_model: eval_f1_macro   # was eval_accuracy (CRITICAL fix; HF Trainer naming)
+  greater_is_better: true
+  early_stopping_patience: 10         # eval steps ≈ 5-10 epoch plateau
+  dataloader_num_workers: 2
+
+logging:
+  logging_strategy: steps
+  logging_steps: 50
+  eval_strategy: steps
+  eval_steps: 200
+  save_strategy: steps
+  save_steps: 200
+  save_total_limit: 2
+
+dataset_overrides:
+  mbti:
+    training:
+      learning_rate: 1.0e-5           # MBTI nhỏ — cao hơn sẽ overshoot
+  essays:
+    model:
+      max_length: 384
+    training:
+      batch_size: 8
+      gradient_accumulation_steps: 2
+  pandora:
+    model:
+      max_length: 256
+    training:
+      batch_size: 16
+      gradient_accumulation_steps: 1
+  personality_evd:
+    model:
+      max_length: 256
+    training:
+      batch_size: 16
+      gradient_accumulation_steps: 1
+
+wandb:
+  group: tier2a
+  tags: [tier2a, roberta, transformer, truncation]
+  log_histograms: false               # toggle on if đủ disk
+
+tensorboard:
+  enabled: true                       # HF Trainer auto write; we just point to dir
+
+output_dir: outputs/models/
+seed: 42

@@ -1,0 +1,43 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Tier 2b — Frozen RoBERTa + 2-layer MLP head (chunked encoding)
+# Motivation: M5.4 — long-text truncation problem. Chunking giữ toàn bộ nội dung.
+# Run scope: 2 W&B runs (MBTI 4dim + Pandora OCEAN — datasets có long text issue).
+# ────────────────────────────────────────────────────────────────────────────
+tier: tier2b
+description: Frozen RoBERTa + MLP head over chunked encodings (proxy cho RoBERTa-FT chunking).
+
+model:
+  type: roberta_mlp
+  encoder:
+    model_name: roberta-base
+    pooling: cls                      # [CLS] token; max-pool across chunks at downstream
+    chunk_size: 512
+    stride: 256
+    batch_size: 16                    # encoder batch
+  head:
+    hidden_dim: 512                   # was 256; tăng capacity
+    dropout: 0.3
+
+training:
+  batch_size: 128                     # MLP only, frozen encoder
+  num_epochs: 100                     # max budget; frozen = mỗi epoch nhanh
+  learning_rate: 5.0e-4               # was 1e-3; giảm để tránh overshoot
+  weight_decay: 0.01
+  loss_weighting: sqrt_balanced       # frozen MLP — class imbalance dễ cause collapse
+  metric_for_best_model: eval_f1_macro
+  greater_is_better: true
+  early_stopping_patience: 15         # epoch-level, frozen MLP nhiều epoch ngắn
+
+logging:
+  log_every_batches: 50               # batch-level train logging
+  eval_every_batches: 200             # batch-level val eval
+
+wandb:
+  group: tier2b
+  tags: [tier2b, roberta_mlp, frozen, chunking]
+
+tensorboard:
+  enabled: true
+
+output_dir: outputs/models/
+seed: 42

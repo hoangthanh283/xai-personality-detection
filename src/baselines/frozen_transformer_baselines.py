@@ -300,6 +300,7 @@ class RobertaMlpBaseline:
         val_labels: list[str] | None = None,
         cache_key_train: str | None = None,
         cache_key_val: str | None = None,
+        mb_logger=None,
     ) -> "RobertaMlpBaseline":
         self._label_encoder = LabelEncoder().fit(train_labels)
         y_train = self._label_encoder.transform(train_labels)
@@ -351,12 +352,22 @@ class RobertaMlpBaseline:
                 optimizer.step()
                 total_loss += loss.item() * xb.size(0)
                 global_step += 1
-                try:
-                    import wandb as _wandb
-                    if _wandb.run:
-                        _wandb.log({"train/loss_step": loss.item(), "train/global_step": global_step}, step=global_step)
-                except Exception:
-                    pass
+                # Route per-batch loss through MultiBackendLogger if provided
+                # (writes to W&B + TensorBoard with shared step axis); fallback
+                # to global wandb.log so legacy paths still log somewhere.
+                if mb_logger is not None:
+                    mb_logger.log_dict(
+                        {"train/loss_step": float(loss.item()),
+                         "train/global_step": float(global_step)},
+                        step=global_step,
+                    )
+                else:
+                    try:
+                        import wandb as _wandb
+                        if _wandb.run:
+                            _wandb.log({"train/loss_step": loss.item(), "train/global_step": global_step}, step=global_step)
+                    except Exception:
+                        pass
             train_loss = total_loss / len(ds)
 
             # Compute train metrics (from cached X_train to avoid re-encoding)
@@ -375,27 +386,32 @@ class RobertaMlpBaseline:
                 msg += f" | val_acc={val_acc:.4f} | val_f1={val_metrics.get('f1_macro', 0):.4f}"
             logger.info(msg)
 
-            try:
-                import wandb as _wandb
-                if _wandb.run:
-                    log_dict = {
-                        "epoch": epoch,
-                        "train/loss": train_loss,
-                        "train/accuracy": train_acc,
-                        "train/f1_macro": train_f1,
-                        "train/learning_rate": current_lr,
-                    }
-                    if val_metrics:
-                        log_dict.update({
-                            "eval/accuracy": val_metrics.get("accuracy", 0),
-                            "eval/f1_macro": val_metrics.get("f1_macro", 0),
-                            "eval/f1_weighted": val_metrics.get("f1_weighted", 0),
-                            "eval/precision_macro": val_metrics.get("precision_macro", 0),
-                            "eval/recall_macro": val_metrics.get("recall_macro", 0),
-                        })
-                    _wandb.log(log_dict, step=global_step)
-            except Exception:
-                pass
+            epoch_log: dict[str, float] = {
+                "epoch": float(epoch),
+                "train/loss": float(train_loss),
+                "train/accuracy": float(train_acc),
+                "train/f1_macro": float(train_f1),
+                "train/learning_rate": float(current_lr),
+            }
+            if val_metrics:
+                epoch_log.update({
+                    "eval/accuracy": float(val_metrics.get("accuracy", 0)),
+                    "eval/f1_macro": float(val_metrics.get("f1_macro", 0)),
+                    "eval/f1_weighted": float(val_metrics.get("f1_weighted", 0)),
+                    "eval/precision_macro": float(val_metrics.get("precision_macro", 0)),
+                    "eval/recall_macro": float(val_metrics.get("recall_macro", 0)),
+                    "eval/recall_weighted": float(val_metrics.get("recall_weighted", 0)),
+                    "eval/precision_weighted": float(val_metrics.get("precision_weighted", 0)),
+                })
+            if mb_logger is not None:
+                mb_logger.log_dict(epoch_log, step=global_step)
+            else:
+                try:
+                    import wandb as _wandb
+                    if _wandb.run:
+                        _wandb.log(epoch_log, step=global_step)
+                except Exception:
+                    pass
 
             # Early stop on val acc if provided, else train loss (negated)
             metric = val_acc if val_acc is not None else -train_loss

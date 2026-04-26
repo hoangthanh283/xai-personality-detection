@@ -1,0 +1,49 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Tier 1 — TF-IDF + Logistic Regression
+# Motivation: M1 (interpretable baseline) + M5 (per-class metrics, imbalance)
+# Run scope: 4 W&B runs covering MBTI 4dim + Essays/Pandora/PerEvd OCEAN
+# ────────────────────────────────────────────────────────────────────────────
+tier: tier1
+description: "TF-IDF + LogisticRegression baseline (XAI angle: interpretable coefficients)."
+
+model:
+  type: logistic_regression
+  tfidf:
+    max_features: 20000          # was 15000; tăng để cover vocab Essays/Pandora
+    ngram_range: [1, 2]
+    sublinear_tf: true
+    min_df: 3                     # was 5; PerEvd text ngắn (8 từ median) cần min_df thấp
+    max_df: 0.90
+    use_char_ngrams: false
+  classifier:
+    max_iter: 5000
+    class_weight: balanced
+    C: 0.5
+    solver: lbfgs
+  # Quick C sweep to pick best by val macro-F1 (no CV, just val-based selection).
+  # Set to null/empty to skip and use the single C above.
+  c_sweep: [0.5, 1.0, 4.0]
+
+# Learning curve checkpoints — fit incremental & log val metrics at each.
+# Logged to W&B as `iter_{N}/val_*`, gives a true learning curve plot.
+learning_curve:
+  enabled: true
+  iter_checkpoints: [50, 200, 500, 1000, 2500, 5000]
+
+dataset_overrides:
+  personality_evd:
+    model:
+      tfidf:
+        min_df: 1                # text ngắn 8 từ → min_df=3 sẽ drop quá nhiều
+        max_features: 10000
+
+wandb:
+  group: tier1
+  tags: [tier1, logistic_regression, classical_ml]
+  log_top_features: 20            # interpretability for XAI
+
+tensorboard:
+  enabled: true                   # outputs/tensorboard/tier1/{run_name}/
+
+output_dir: outputs/models/
+seed: 42

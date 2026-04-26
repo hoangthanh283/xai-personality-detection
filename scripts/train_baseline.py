@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.logging_config import setup_logging  # noqa: E402
 from src.utils.seed import set_seed  # noqa: E402
+from src.utils.observability import MultiBackendLogger, build_run_paths  # noqa: E402
 
 ML_MODELS = ["logistic_regression", "svm", "naive_bayes", "xgboost", "random_forest"]
 TRANSFORMER_MODELS = ["distilbert", "roberta"]  # legacy end-to-end fine-tuning — kept for reproducibility
@@ -45,6 +46,14 @@ FROZEN_MODELS = ["frozen_bert_svm", "roberta_mlp"]  # new published paradigms
 LSTM_MODELS = ["lstm"]
 MBTI_DIMENSIONS = ["IE", "SN", "TF", "JP"]
 OCEAN_TRAITS = ["O", "C", "E", "A", "N"]
+TIER_MODEL_TYPE_MAP = {
+    "logistic_regression": "ml",
+    "roberta": "transformer",
+    "distilbert": "transformer",
+    "roberta_mlp": "frozen",
+    "frozen_bert_svm": "frozen",
+    "lstm": "lstm",
+}
 
 
 def load_config(config_path: str) -> dict:
@@ -623,9 +632,492 @@ def train_transformer(model_name: str, dataset: str, task: str, config: dict, ar
         return metrics
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Tier-config-driven orchestration (single W&B run per (model, dataset, task))
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _expand_traits_for_tier(dataset: str, task: str) -> list[str]:
+    """Return the list of binary heads to train inside a single W&B run."""
+    if task == "16class":
+        return ["16class"]
+    if task == "4dim":
+        return MBTI_DIMENSIONS[:]
+    if task == "ocean_binary":
+        return OCEAN_TRAITS[:]
+    if task in MBTI_DIMENSIONS or task in OCEAN_TRAITS:
+        return [task]
+    raise ValueError(f"Cannot expand task {task!r} for tier orchestration")
+
+
+def _setup_tier_logger(
+    *,
+    tier_id: str,
+    tier_cfg: dict,
+    model_name: str,
+    dataset: str,
+    task: str,
+    seed: int,
+    wandb_project: str | None,
+    extra_tag: str | None = None,
+) -> tuple[MultiBackendLogger, str, str]:
+    """Create the parent MultiBackendLogger for one (model, dataset, task) run."""
+    setting = "default"
+    name_parts = [tier_id, model_name, dataset]
+    if task in {"4dim", "ocean_binary", "16class"}:
+        # Multi-trait — keep run name compact at task level
+        pass
+    else:
+        name_parts.append(task)
+    if extra_tag:
+        name_parts.append(extra_tag)
+        setting = extra_tag
+    run_name = "_".join(name_parts)
+    tb_enabled = (tier_cfg.get("tensorboard", {}) or {}).get("enabled", True)
+    tb_dir = f"outputs/tensorboard/{tier_id}/{run_name}" if tb_enabled else None
+
+    wandb_block = tier_cfg.get("wandb", {}) or {}
+    tags = list(wandb_block.get("tags", []))
+    for t in [tier_id, model_name, dataset, setting]:
+        if t and t not in tags:
+            tags.append(t)
+    group = wandb_block.get("group", tier_id)
+
+    config_dump = {
+        "tier": tier_id,
+        "model": model_name,
+        "dataset": dataset,
+        "task": task,
+        "seed": seed,
+        "setting": setting,
+        **{k: v for k, v in tier_cfg.items() if k not in {"_base"}},
+    }
+    parent = MultiBackendLogger.init_run(
+        project=wandb_project,
+        name=run_name,
+        tags=tags,
+        group=group,
+        config=config_dump,
+        tensorboard_dir=tb_dir,
+    )
+    return parent, run_name, tb_dir or ""
+
+
+def _safe_evaluate(trainer, texts, labels, **kwargs) -> dict:
+    """Wrap evaluate to a flat scalar dict (drops non-numeric report fields)."""
+    raw = trainer.evaluate(texts, labels, **kwargs)
+    return {k: v for k, v in raw.items() if isinstance(v, (int, float))}
+
+
+def _run_tier_ml(
+    *,
+    tier_id: str,
+    tier_cfg: dict,
+    dataset: str,
+    task: str,
+    args,
+) -> dict:
+    """Tier 1 LR (and other ML) flow: TF-IDF + LogReg with learning curves.
+
+    Single W&B run; per-trait metrics namespaced via `trait_{T}/...`; aggregate
+    `mean/test_macro_f1` etc. computed across traits.
+    """
+    from src.baselines.ml_baselines import MLBaselineTrainer
+
+    model_name = tier_cfg.get("model", {}).get("type", "logistic_regression")
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    parent, run_name, _ = _setup_tier_logger(
+        tier_id=tier_id, tier_cfg=tier_cfg, model_name=model_name,
+        dataset=dataset, task=task, seed=args.seed, wandb_project=wandb_project,
+    )
+
+    # Translate tier YAML → legacy ml_baselines config keys.
+    tfidf_block = tier_cfg.get("model", {}).get("tfidf", {})
+    clf_block = tier_cfg.get("model", {}).get("classifier", {})
+    legacy_cfg = {
+        "tfidf": dict(tfidf_block),
+        "tfidf_char": {"analyzer": "char_wb", "ngram_range": [3, 5], "max_features": 20000,
+                       "sublinear_tf": True, "min_df": 3, "max_df": 0.95},
+        "dimensionality_reduction": {"enabled": False, "n_components": 300},
+        "ml_models": {model_name: dict(clf_block)},
+    }
+    # Apply per-dataset override
+    overrides = (tier_cfg.get("dataset_overrides", {}) or {}).get(dataset, {})
+    if overrides:
+        if "model" in overrides and "tfidf" in overrides["model"]:
+            legacy_cfg["tfidf"].update(overrides["model"]["tfidf"])
+    # Apply CLI overrides (supports legacy --set tfidf.max_features=X)
+    legacy_cfg = _apply_overrides(legacy_cfg, args.overrides)
+
+    traits = _expand_traits_for_tier(dataset, task)
+    learning_curve_iters: list[int] = (tier_cfg.get("learning_curve", {}) or {}).get(
+        "iter_checkpoints", []
+    ) if (tier_cfg.get("learning_curve", {}) or {}).get("enabled", False) else []
+
+    per_trait_metrics: dict[str, dict[str, float]] = {}
+    try:
+        for trait in traits:
+            logger.info(f"\n=== {tier_id} | {model_name} | {dataset} | trait={trait} ===")
+            child = parent.with_prefix(f"trait_{trait}")
+            train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(
+                dataset, trait, legacy_cfg
+            )
+
+            # Optional learning-curve sweep (incrementally increasing max_iter)
+            if learning_curve_iters:
+                _log_lr_learning_curve(
+                    child=child,
+                    model_name=model_name,
+                    legacy_cfg=legacy_cfg,
+                    train_texts=train_texts,
+                    train_labels=train_labels,
+                    val_texts=val_texts,
+                    val_labels=val_labels,
+                    iters=learning_curve_iters,
+                )
+
+            trainer = MLBaselineTrainer(model_name, legacy_cfg)
+            trainer.fit(train_texts, train_labels, use_grid_search=False)
+
+            split_metrics = {
+                "train": _safe_evaluate(trainer, train_texts, train_labels),
+                "eval": _safe_evaluate(trainer, val_texts, val_labels),
+                "test": _safe_evaluate(trainer, test_texts, test_labels),
+            }
+            flat = {f"{split}/{k}": v for split, m in split_metrics.items() for k, v in m.items()}
+            child.update_summary(flat)
+            child.log_dict(flat)
+
+            # XAI: top features per class for LR
+            if model_name == "logistic_regression":
+                top_n = (tier_cfg.get("wandb", {}) or {}).get("log_top_features", 0)
+                if top_n:
+                    _log_top_features(child, trainer, top_n)
+
+            preds = trainer.predict(test_texts)
+            save_predictions(test_texts, test_labels, preds.tolist(), model_name, dataset, trait)
+            output_path = f"outputs/models/tfidf_{model_name}_{dataset}_{trait}.pkl"
+            trainer.save(output_path)
+
+            per_trait_metrics[trait] = {k.replace("/", "_"): v for k, v in flat.items()}
+
+        # Aggregate across traits
+        aggregates = MultiBackendLogger.aggregate_per_trait(per_trait_metrics)
+        parent.update_summary(aggregates)
+        parent.log_dict(aggregates)
+        logger.info(f"Aggregates: {aggregates}")
+    finally:
+        parent.finish()
+
+    return {"per_trait": per_trait_metrics, "aggregates": aggregates if 'aggregates' in locals() else {}}
+
+
+def _log_lr_learning_curve(
+    *,
+    child: MultiBackendLogger,
+    model_name: str,
+    legacy_cfg: dict,
+    train_texts, train_labels, val_texts, val_labels,
+    iters: list[int],
+) -> None:
+    """Fit LR at increasing max_iter checkpoints and log val metrics with iter as the value.
+
+    Logs three series so users can chart `learning_curve/val_macro_f1` against
+    `learning_curve/iter` in W&B without colliding with the global step counter.
+    Avoids passing `step=` to prevent monotonic-step warnings across traits.
+    """
+    from sklearn.metrics import accuracy_score, f1_score, log_loss
+    from src.baselines.ml_baselines import MLBaselineTrainer
+
+    for n_iter in iters:
+        cfg_copy = json.loads(json.dumps(legacy_cfg))
+        cfg_copy["ml_models"][model_name]["max_iter"] = int(n_iter)
+        trainer = MLBaselineTrainer(model_name, cfg_copy)
+        trainer.fit(train_texts, train_labels, use_grid_search=False)
+        try:
+            val_preds = trainer.predict(val_texts)
+            val_proba = trainer.predict_proba(val_texts) if hasattr(trainer, "predict_proba") else None
+        except Exception:
+            val_preds, val_proba = None, None
+        if val_preds is not None:
+            macro_f1 = f1_score(val_labels, val_preds, average="macro", zero_division=0)
+            acc = accuracy_score(val_labels, val_preds)
+            metrics = {
+                "learning_curve/iter": float(n_iter),
+                "learning_curve/val_macro_f1": float(macro_f1),
+                "learning_curve/val_accuracy": float(acc),
+            }
+            if val_proba is not None:
+                try:
+                    classes = sorted(set(train_labels))
+                    metrics["learning_curve/val_log_loss"] = float(
+                        log_loss(val_labels, val_proba, labels=classes)
+                    )
+                except Exception:
+                    pass
+            # Don't pass step= — wandb auto-increments. Per-trait curves stay
+            # separated by the trait_{T}/ prefix already on `child`.
+            child.log_dict(metrics)
+
+
+def _log_top_features(child: MultiBackendLogger, trainer, top_n: int) -> None:
+    """Log top-N TF-IDF features per class for LR XAI angle."""
+    try:
+        clf = trainer.classifier
+        feature_names = trainer.vectorizer.get_feature_names_out() if hasattr(trainer, "vectorizer") else None
+        if feature_names is None or not hasattr(clf, "coef_"):
+            return
+        import numpy as np
+        coefs = clf.coef_
+        classes = list(getattr(clf, "classes_", []))
+        rows: list[list] = []
+        for i, cls_label in enumerate(classes):
+            if coefs.shape[0] == 1:
+                # Binary LR: positive coefs → class 1, negative → class 0
+                if i == 1:
+                    sign = +1
+                    indices = np.argsort(-coefs[0])[:top_n]
+                else:
+                    sign = -1
+                    indices = np.argsort(coefs[0])[:top_n]
+                weights = sign * coefs[0][indices]
+            else:
+                indices = np.argsort(-coefs[i])[:top_n]
+                weights = coefs[i][indices]
+            for rank, (idx, weight) in enumerate(zip(indices, weights), start=1):
+                rows.append([str(cls_label), rank, str(feature_names[idx]), float(weight)])
+        child.log_table("top_features", ["class", "rank", "feature", "weight"], rows)
+    except Exception as exc:
+        logger.warning(f"top-features logging skipped: {exc}")
+
+
+def _run_tier_transformer(
+    *,
+    tier_id: str,
+    tier_cfg: dict,
+    dataset: str,
+    task: str,
+    args,
+) -> dict:
+    """Tier 2a — fine-tune RoBERTa-base end-to-end with truncation."""
+    import dataclasses
+    from src.baselines.transformer_baseline import TransformerBaseline, TransformerConfig
+    from src.utils.wandb_callbacks import MultiBackendCallback
+
+    model_block = tier_cfg.get("model", {})
+    training_block = tier_cfg.get("training", {})
+    logging_block = tier_cfg.get("logging", {})
+    model_name_full = model_block.get("model_name", "roberta-base")
+    # Use short model id for run names: "roberta", "distilbert"
+    model_short = model_name_full.split("-")[0]
+    extra_tag = "weighted" if training_block.get("loss_weighting") == "sqrt_balanced" else None
+
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    parent, run_name, tb_dir = _setup_tier_logger(
+        tier_id=tier_id, tier_cfg=tier_cfg, model_name=model_short,
+        dataset=dataset, task=task, seed=args.seed, wandb_project=wandb_project,
+        extra_tag=extra_tag,
+    )
+
+    traits = _expand_traits_for_tier(dataset, task)
+    per_trait_metrics: dict[str, dict[str, float]] = {}
+
+    try:
+        for trait in traits:
+            logger.info(f"\n=== {tier_id} | {model_short} | {dataset} | trait={trait} ===")
+            train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(
+                dataset, trait, {}
+            )
+            # Build TransformerConfig honoring tier YAML + dataset overrides
+            ds_override = (tier_cfg.get("dataset_overrides", {}) or {}).get(dataset, {})
+            merged_model = {**model_block, **(ds_override.get("model", {}) or {})}
+            merged_training = {**training_block, **(ds_override.get("training", {}) or {})}
+            merged_logging = {**logging_block, **(ds_override.get("logging", {}) or {})}
+
+            output_dir = (
+                args.output_dir
+                or f"outputs/models/{tier_id}_{model_short}_{dataset}_{trait}"
+                + ("_weighted" if extra_tag else "")
+            )
+            valid_fields = {f.name for f in dataclasses.fields(TransformerConfig)}
+            init_kwargs = {
+                "model_name": merged_model.get("model_name", "roberta-base"),
+                "max_length": merged_model.get("max_length", 512),
+                "dropout": merged_model.get("dropout"),
+                "use_pretrained": merged_model.get("use_pretrained", True),
+                **{k: v for k, v in merged_training.items() if k in valid_fields},
+                **{k: v for k, v in merged_logging.items() if k in valid_fields},
+                "tensorboard_dir": tb_dir or None,
+                "output_dir": output_dir,
+                "seed": args.seed,
+            }
+            init_kwargs = {k: v for k, v in init_kwargs.items() if k in valid_fields}
+            transformer_config = TransformerConfig(**init_kwargs)
+
+            trainer = TransformerBaseline(transformer_config)
+            trait_logger = parent.with_prefix(f"trait_{trait}")
+            cb = MultiBackendCallback(logger=trait_logger)
+            trainer.train(
+                train_texts, train_labels, val_texts, val_labels,
+                output_dir=output_dir,
+                wandb_project=wandb_project,  # so HF Trainer routes to existing W&B run
+                external_callbacks=[cb],
+            )
+
+            split_metrics = {
+                "train": {k: v for k, v in trainer.evaluate(train_texts, train_labels).items() if isinstance(v, (int, float))},
+                "eval": {k: v for k, v in trainer.evaluate(val_texts, val_labels).items() if isinstance(v, (int, float))},
+                "test": {k: v for k, v in trainer.evaluate(test_texts, test_labels).items() if isinstance(v, (int, float))},
+            }
+            flat = {f"{split}/{k}": v for split, m in split_metrics.items() for k, v in m.items()}
+            trait_logger.update_summary(flat)
+            trait_logger.log_dict(flat)
+
+            preds = trainer.predict(test_texts)
+            save_predictions(test_texts, test_labels, preds, f"{tier_id}_{model_short}", dataset,
+                             trait + ("_weighted" if extra_tag else ""))
+            per_trait_metrics[trait] = {k.replace("/", "_"): v for k, v in flat.items()}
+
+        aggregates = MultiBackendLogger.aggregate_per_trait(per_trait_metrics)
+        parent.update_summary(aggregates)
+        parent.log_dict(aggregates)
+        logger.info(f"Aggregates: {aggregates}")
+    finally:
+        parent.finish()
+
+    return {"per_trait": per_trait_metrics, "aggregates": aggregates if 'aggregates' in locals() else {}}
+
+
+def _run_tier_frozen(
+    *,
+    tier_id: str,
+    tier_cfg: dict,
+    dataset: str,
+    task: str,
+    args,
+) -> dict:
+    """Tier 2b — frozen RoBERTa + MLP head (chunked encoding)."""
+    from src.baselines.frozen_transformer_baselines import RobertaMlpBaseline
+
+    model_type = tier_cfg.get("model", {}).get("type", "roberta_mlp")
+    encoder_block = tier_cfg.get("model", {}).get("encoder", {})
+    head_block = tier_cfg.get("model", {}).get("head", {})
+    training_block = tier_cfg.get("training", {})
+
+    legacy_cfg = {
+        "encoder": dict(encoder_block),
+        "head": dict(head_block),
+        "training": dict(training_block),
+        "seed": args.seed,
+    }
+    wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT")
+    parent, run_name, _ = _setup_tier_logger(
+        tier_id=tier_id, tier_cfg=tier_cfg, model_name=model_type,
+        dataset=dataset, task=task, seed=args.seed, wandb_project=wandb_project,
+    )
+
+    traits = _expand_traits_for_tier(dataset, task)
+    per_trait_metrics: dict[str, dict[str, float]] = {}
+    try:
+        for trait in traits:
+            logger.info(f"\n=== {tier_id} | {model_type} | {dataset} | trait={trait} ===")
+            train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = get_task_data(
+                dataset, trait, {}
+            )
+            enc_name = encoder_block.get("model_name", "roberta-base")
+            ck_train = f"{dataset}_train"
+            ck_val = f"{dataset}_val"
+            ck_test = f"{dataset}_test"
+
+            trainer = RobertaMlpBaseline(config=legacy_cfg, model_name=model_type)
+            child = parent.with_prefix(f"trait_{trait}")
+            trainer.fit(
+                train_texts, train_labels,
+                val_texts=val_texts, val_labels=val_labels,
+                cache_key_train=ck_train, cache_key_val=ck_val,
+                mb_logger=child,
+            )
+            split_metrics = {
+                "train": _safe_evaluate(trainer, train_texts, train_labels, cache_key=ck_train),
+                "eval": _safe_evaluate(trainer, val_texts, val_labels, cache_key=ck_val),
+                "test": _safe_evaluate(trainer, test_texts, test_labels, cache_key=ck_test),
+            }
+            flat = {f"{split}/{k}": v for split, m in split_metrics.items() for k, v in m.items()}
+            child.update_summary(flat)
+            child.log_dict(flat)
+
+            preds = trainer.predict(test_texts, cache_key=ck_test).tolist()
+            save_predictions(test_texts, test_labels, preds, f"{tier_id}_{model_type}", dataset, trait)
+            output_dir = f"outputs/models/{tier_id}_{model_type}_{dataset}_{trait}"
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            trainer.save(f"{output_dir}/model.pt")
+            per_trait_metrics[trait] = {k.replace("/", "_"): v for k, v in flat.items()}
+
+        aggregates = MultiBackendLogger.aggregate_per_trait(per_trait_metrics)
+        parent.update_summary(aggregates)
+        parent.log_dict(aggregates)
+    finally:
+        parent.finish()
+
+    return {"per_trait": per_trait_metrics, "aggregates": aggregates if 'aggregates' in locals() else {}}
+
+
+def _apply_overrides(cfg: dict, overrides: list[str]) -> dict:
+    """Apply --set KEY=VALUE overrides via dot-path notation."""
+    import ast
+    for override in overrides:
+        if "=" not in override:
+            raise ValueError(f"--set requires KEY=VALUE format, got: {override!r}")
+        key_path, _, raw_value = override.partition("=")
+        keys = key_path.split(".")
+        node = cfg
+        for k in keys[:-1]:
+            node = node.setdefault(k, {})
+        try:
+            node[keys[-1]] = ast.literal_eval(raw_value)
+        except (ValueError, SyntaxError):
+            node[keys[-1]] = raw_value
+    return cfg
+
+
+def run_tier(args) -> int:
+    """Tier-config-driven orchestration. Returns exit code (0 = success)."""
+    cfg = load_config(args.config)
+    cfg = _apply_overrides(cfg, args.overrides)
+    tier_id = cfg.get("tier")
+    if not tier_id:
+        raise ValueError(f"Config {args.config} must define `tier:` for tier orchestration")
+    if not tier_id.startswith("tier"):
+        raise ValueError(f"Unexpected tier id: {tier_id}")
+
+    setup_logging()
+    set_seed(args.seed)
+
+    # Decide tier flow by model type
+    model_block = cfg.get("model", {})
+    model_type = model_block.get("type") or model_block.get("model_name", "")
+    if model_type in {"logistic_regression", "svm", "naive_bayes", "xgboost", "random_forest"}:
+        flow = "ml"
+    elif tier_id.startswith("tier2a") or model_type in {"roberta", "distilbert"}:
+        flow = "transformer"
+    elif tier_id.startswith("tier2b") or model_type in {"roberta_mlp", "frozen_bert_svm"}:
+        flow = "frozen"
+    else:
+        raise ValueError(f"Cannot infer training flow from tier={tier_id}, model_type={model_type}")
+
+    if flow == "ml":
+        _run_tier_ml(tier_id=tier_id, tier_cfg=cfg, dataset=args.dataset, task=args.task, args=args)
+    elif flow == "transformer":
+        _run_tier_transformer(tier_id=tier_id, tier_cfg=cfg, dataset=args.dataset, task=args.task, args=args)
+    elif flow == "frozen":
+        _run_tier_frozen(tier_id=tier_id, tier_cfg=cfg, dataset=args.dataset, task=args.task, args=args)
+
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train baseline models")
-    parser.add_argument("--model", required=True, help="Model name or 'all_ml'")
+    parser.add_argument("--model", required=False, help="Model name or 'all_ml' (legacy mode); inferred from tier config in tier mode")
     parser.add_argument(
         "--dataset", required=True, choices=["mbti", "essays", "pandora", "personality_evd"]
     )
@@ -641,11 +1133,19 @@ def main():
         "--set", metavar="KEY=VALUE", action="append", dest="overrides", default=[],
         help="Override a config value using dot-path notation, e.g. --set transformer.distilbert.loss_weighting=sqrt_balanced",
     )
+    parser.add_argument("--smoke", action="store_true", help="Smoke mode: small subset, 1-2 epochs (Phase 1.5.5 verification)")
     args = parser.parse_args()
 
     setup_logging()
     set_seed(args.seed)
     config = load_config(args.config)
+
+    # Tier-orchestration mode: config defines `tier:` ⇒ single-W&B-run flow
+    if isinstance(config, dict) and config.get("tier"):
+        if args.smoke:
+            # Smoke: shrink budget per-tier flow handles in run_tier (TBD)
+            os.environ["RAGXPR_SMOKE_MODE"] = "1"
+        return run_tier(args)
 
     for override in args.overrides:
         if "=" not in override:

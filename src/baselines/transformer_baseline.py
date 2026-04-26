@@ -48,6 +48,18 @@ class TransformerConfig:
     output_dir: str = "outputs/models/transformer"
     loss_weighting: str = "sqrt_balanced"  # none | balanced | sqrt_balanced
     metric_for_best_model: str = "eval_accuracy"
+    # Tier-2 step-level training observability
+    logging_strategy: str = "epoch"          # "epoch" | "steps"
+    logging_steps: int = 50
+    eval_strategy: str = "epoch"             # "epoch" | "steps"
+    eval_steps: int = 200
+    save_strategy: str = "epoch"             # "epoch" | "steps"
+    save_steps: int = 200
+    save_total_limit: int = 3
+    max_grad_norm: float = 1.0
+    dataloader_num_workers: int = 0
+    tensorboard_dir: str | None = None       # if set, HF Trainer writes TB events here
+    report_to_extra: list[str] | None = None # ["tensorboard"] etc., merged with wandb routing
 
 
 if HAS_TRANSFORMERS:
@@ -202,10 +214,17 @@ class TransformerBaseline:
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
         }
+        # Per-class metrics — surfaces minority-class collapse on imbalanced
+        # tasks (e.g. PersonalityEvd E=HIGH 97.7%, MBTI SN N=86%).
+        per_class_f1 = f1_score(labels, preds, average=None, zero_division=0)
+        per_class_recall = recall_score(labels, preds, average=None, zero_division=0)
+        for i, (f1_i, rec_i) in enumerate(zip(per_class_f1, per_class_recall)):
+            metrics[f"f1_class_{i}"] = float(f1_i)
+            metrics[f"recall_class_{i}"] = float(rec_i)
         logger.info(
             f"eval | acc={metrics['accuracy']:.4f} | f1_macro={metrics['f1_macro']:.4f} | "
             f"f1_weighted={metrics['f1_weighted']:.4f} | prec_macro={metrics['precision_macro']:.4f} | "
-            f"rec_macro={metrics['recall_macro']:.4f}"
+            f"rec_macro={metrics['recall_macro']:.4f} | per_class_f1={per_class_f1.tolist()}"
         )
         return metrics
 
@@ -217,6 +236,7 @@ class TransformerBaseline:
         val_labels: list[str],
         output_dir: str | None = None,
         wandb_project: str | None = None,
+        external_callbacks: list | None = None,
     ) -> None:
         """Fine-tune the transformer on personality classification."""
         self._setup_labels(train_labels + val_labels)
@@ -268,8 +288,30 @@ class TransformerBaseline:
             pad_to_multiple_of=8 if self.config.fp16 and torch.cuda.is_available() else None,
         )
 
-        # Training arguments
-        report_to = "wandb" if wandb_project else "none"
+        # Training arguments — config-driven step strategies for full observability
+        report_to_list: list[str] = []
+        if wandb_project:
+            report_to_list.append("wandb")
+        extra_routes = getattr(self.config, "report_to_extra", None) or []
+        for r in extra_routes:
+            if r and r not in report_to_list:
+                report_to_list.append(r)
+        # if a logging_dir was set we always want tensorboard events
+        if getattr(self.config, "tensorboard_dir", None) and "tensorboard" not in report_to_list:
+            report_to_list.append("tensorboard")
+        report_to = report_to_list if report_to_list else "none"
+
+        # Validate save_strategy compatibility with eval_strategy when load_best_model_at_end=True
+        eval_strategy = getattr(self.config, "eval_strategy", "epoch")
+        save_strategy = getattr(self.config, "save_strategy", "epoch")
+        if eval_strategy != save_strategy:
+            logger.warning(
+                f"eval_strategy={eval_strategy} != save_strategy={save_strategy}; "
+                "HF Trainer requires they match when load_best_model_at_end=True. "
+                f"Forcing save_strategy={eval_strategy}."
+            )
+            save_strategy = eval_strategy
+
         training_args_kwargs = {
             "output_dir": output_dir,
             "num_train_epochs": self.config.num_epochs,
@@ -281,8 +323,10 @@ class TransformerBaseline:
             "lr_scheduler_type": self.config.lr_scheduler,
             "fp16": self.config.fp16 and torch.cuda.is_available(),
             "gradient_accumulation_steps": self.config.gradient_accumulation_steps,
-            "save_strategy": "epoch",
-            "save_total_limit": 3,
+            "max_grad_norm": getattr(self.config, "max_grad_norm", 1.0),
+            "save_strategy": save_strategy,
+            "save_steps": getattr(self.config, "save_steps", 200),
+            "save_total_limit": getattr(self.config, "save_total_limit", 3),
             "load_best_model_at_end": True,
             "metric_for_best_model": getattr(
                 self.config, "metric_for_best_model", "eval_accuracy"
@@ -291,16 +335,24 @@ class TransformerBaseline:
             "report_to": report_to,
             "run_name": f"{Path(output_dir).name}",
             "seed": self.config.seed,
-            "logging_steps": 50,
+            "logging_strategy": getattr(self.config, "logging_strategy", "epoch"),
+            "logging_steps": getattr(self.config, "logging_steps", 50),
             "logging_first_step": True,
+            "dataloader_num_workers": getattr(self.config, "dataloader_num_workers", 0),
         }
+        # Route TensorBoard events into the per-tier dir if provided
+        tb_dir = getattr(self.config, "tensorboard_dir", None)
+        if tb_dir:
+            training_args_kwargs["logging_dir"] = tb_dir
         if getattr(self.config, "gradient_checkpointing", False):
             training_args_kwargs["gradient_checkpointing"] = True
         training_args_params = inspect.signature(TrainingArguments.__init__).parameters
         if "evaluation_strategy" in training_args_params:
-            training_args_kwargs["evaluation_strategy"] = "epoch"
+            training_args_kwargs["evaluation_strategy"] = eval_strategy
         else:
-            training_args_kwargs["eval_strategy"] = "epoch"
+            training_args_kwargs["eval_strategy"] = eval_strategy
+        if eval_strategy == "steps":
+            training_args_kwargs["eval_steps"] = getattr(self.config, "eval_steps", 200)
 
         training_args = TrainingArguments(**training_args_kwargs)
 
@@ -308,6 +360,8 @@ class TransformerBaseline:
             EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience),
             _LRLoggerCallback(),
         ]
+        if external_callbacks:
+            callbacks.extend(external_callbacks)
         trainer = WeightedClassificationTrainer(
             model=self.model,
             args=training_args,
