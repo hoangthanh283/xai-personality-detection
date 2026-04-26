@@ -750,9 +750,10 @@ def _run_tier_ml(
     legacy_cfg = _apply_overrides(legacy_cfg, args.overrides)
 
     traits = _expand_traits_for_tier(dataset, task)
-    learning_curve_iters: list[int] = (tier_cfg.get("learning_curve", {}) or {}).get(
-        "iter_checkpoints", []
-    ) if (tier_cfg.get("learning_curve", {}) or {}).get("enabled", False) else []
+    lc_block = tier_cfg.get("learning_curve", {}) or {}
+    lc_enabled = lc_block.get("enabled", False)
+    lc_method = lc_block.get("method", "sweep")  # "sweep" | "sgd"
+    lc_iters: list[int] = lc_block.get("iter_checkpoints", []) if lc_enabled else []
 
     per_trait_metrics: dict[str, dict[str, float]] = {}
     try:
@@ -763,8 +764,9 @@ def _run_tier_ml(
                 dataset, trait, legacy_cfg
             )
 
-            # Optional learning-curve sweep (incrementally increasing max_iter)
-            if learning_curve_iters:
+            # Real learning curve: per-epoch SGD partial_fit gives dense per-step
+            # progression of train_loss/eval_loss/accuracy/F1/precision/recall.
+            if lc_enabled:
                 _log_lr_learning_curve(
                     child=child,
                     model_name=model_name,
@@ -773,7 +775,8 @@ def _run_tier_ml(
                     train_labels=train_labels,
                     val_texts=val_texts,
                     val_labels=val_labels,
-                    iters=learning_curve_iters,
+                    iters=lc_iters,
+                    method=lc_method,
                 )
 
             trainer = MLBaselineTrainer(model_name, legacy_cfg)
@@ -819,16 +822,31 @@ def _log_lr_learning_curve(
     legacy_cfg: dict,
     train_texts, train_labels, val_texts, val_labels,
     iters: list[int],
+    method: str = "sweep",
 ) -> None:
-    """Fit LR at increasing max_iter checkpoints and log val metrics with iter as the value.
+    """Log a learning curve for the LR baseline.
 
-    Logs three series so users can chart `learning_curve/val_macro_f1` against
-    `learning_curve/iter` in W&B without colliding with the global step counter.
-    Avoids passing `step=` to prevent monotonic-step warnings across traits.
+    Two methods:
+    - method="sweep": refit with increasing max_iter values and log val
+      metrics at each. Cheap, ~6 points; works with the lbfgs LR pipeline.
+    - method="sgd": train an SGDClassifier(log_loss) over `iters` epochs with
+      partial_fit and log per-epoch train_loss + val metrics. Produces dense
+      curves matching the user's ask of "see how metrics evolve over epochs".
     """
-    from sklearn.metrics import accuracy_score, f1_score, log_loss
-    from src.baselines.ml_baselines import MLBaselineTrainer
+    from sklearn.metrics import (
+        accuracy_score, f1_score, log_loss, precision_score, recall_score,
+    )
 
+    if method == "sgd":
+        _log_lr_sgd_curve(
+            child=child, legacy_cfg=legacy_cfg,
+            train_texts=train_texts, train_labels=train_labels,
+            val_texts=val_texts, val_labels=val_labels,
+            num_epochs=int(iters[-1]) if iters else 30,
+        )
+        return
+
+    from src.baselines.ml_baselines import MLBaselineTrainer
     for n_iter in iters:
         cfg_copy = json.loads(json.dumps(legacy_cfg))
         cfg_copy["ml_models"][model_name]["max_iter"] = int(n_iter)
@@ -855,9 +873,100 @@ def _log_lr_learning_curve(
                     )
                 except Exception:
                     pass
-            # Don't pass step= — wandb auto-increments. Per-trait curves stay
-            # separated by the trait_{T}/ prefix already on `child`.
             child.log_dict(metrics)
+
+
+def _log_lr_sgd_curve(
+    *,
+    child: MultiBackendLogger,
+    legacy_cfg: dict,
+    train_texts, train_labels, val_texts, val_labels,
+    num_epochs: int = 30,
+) -> None:
+    """Train an SGDClassifier with partial_fit to produce real per-epoch curves.
+
+    Logs train_loss, train_macro_f1, val_loss, val_macro_f1, val_accuracy,
+    val_precision_macro, val_recall_macro for each epoch. Output keys match
+    the transformer convention `train/*` and `eval/*` so charts can stack.
+    """
+    import numpy as np
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.metrics import (
+        accuracy_score, f1_score, log_loss, precision_score, recall_score,
+    )
+
+    tfidf_cfg = legacy_cfg.get("tfidf", {})
+    vec = TfidfVectorizer(
+        max_features=tfidf_cfg.get("max_features", 20000),
+        ngram_range=tuple(tfidf_cfg.get("ngram_range", [1, 2])),
+        sublinear_tf=tfidf_cfg.get("sublinear_tf", True),
+        min_df=tfidf_cfg.get("min_df", 3),
+        max_df=tfidf_cfg.get("max_df", 0.9),
+    )
+    X_train = vec.fit_transform(train_texts)
+    X_val = vec.transform(val_texts)
+    classes = np.array(sorted(set(train_labels)))
+
+    y_train = np.array(train_labels)
+    y_val = np.array(val_labels)
+    # `class_weight='balanced'` is unsupported by partial_fit; precompute and
+    # pass explicit per-class weights instead.
+    from sklearn.utils.class_weight import compute_class_weight
+    cw = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
+    class_weight_dict = {c: float(w) for c, w in zip(classes, cw)}
+    clf = SGDClassifier(
+        loss="log_loss",
+        alpha=1e-4,
+        learning_rate="adaptive",
+        eta0=0.05,
+        random_state=42,
+        class_weight=class_weight_dict,
+    )
+
+    for epoch in range(1, num_epochs + 1):
+        # Shuffle each epoch
+        rng = np.random.default_rng(42 + epoch)
+        order = rng.permutation(len(y_train))
+        clf.partial_fit(X_train[order], y_train[order], classes=classes)
+
+        # Train metrics
+        train_proba = clf.predict_proba(X_train)
+        train_preds = clf.predict(X_train)
+        try:
+            tr_loss = float(log_loss(y_train, train_proba, labels=classes))
+        except ValueError:
+            tr_loss = float("nan")
+        tr_acc = float(accuracy_score(y_train, train_preds))
+        tr_f1 = float(f1_score(y_train, train_preds, average="macro", zero_division=0))
+        tr_prec = float(precision_score(y_train, train_preds, average="macro", zero_division=0))
+        tr_rec = float(recall_score(y_train, train_preds, average="macro", zero_division=0))
+
+        # Val metrics
+        val_proba = clf.predict_proba(X_val)
+        val_preds = clf.predict(X_val)
+        try:
+            v_loss = float(log_loss(y_val, val_proba, labels=classes))
+        except ValueError:
+            v_loss = float("nan")
+        v_acc = float(accuracy_score(y_val, val_preds))
+        v_f1 = float(f1_score(y_val, val_preds, average="macro", zero_division=0))
+        v_prec = float(precision_score(y_val, val_preds, average="macro", zero_division=0))
+        v_rec = float(recall_score(y_val, val_preds, average="macro", zero_division=0))
+
+        child.log_dict({
+            "epoch": float(epoch),
+            "train/loss": tr_loss,
+            "train/accuracy": tr_acc,
+            "train/f1_macro": tr_f1,
+            "train/precision_macro": tr_prec,
+            "train/recall_macro": tr_rec,
+            "eval/loss": v_loss,
+            "eval/accuracy": v_acc,
+            "eval/f1_macro": v_f1,
+            "eval/precision_macro": v_prec,
+            "eval/recall_macro": v_rec,
+        })
 
 
 def _log_top_features(child: MultiBackendLogger, trainer, top_n: int) -> None:

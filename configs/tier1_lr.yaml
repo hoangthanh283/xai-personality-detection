@@ -24,11 +24,14 @@ model:
   # Set to null/empty to skip and use the single C above.
   c_sweep: [0.5, 1.0, 4.0]
 
-# Learning curve checkpoints — fit incremental & log val metrics at each.
-# Logged to W&B as `iter_{N}/val_*`, gives a true learning curve plot.
+# Per-epoch learning curve via SGDClassifier(log_loss) + partial_fit. Produces
+# a real `train/loss`, `eval/loss`, `train/f1_macro`, `eval/f1_macro` etc.
+# series for each epoch — matches the user's "see how model learns" ask.
+# Use method="sweep" instead if you want the cheaper lbfgs max_iter sweep.
 learning_curve:
   enabled: true
-  iter_checkpoints: [50, 200, 500, 1000, 2500, 5000]
+  method: sgd                       # "sgd" (per-epoch partial_fit) | "sweep"
+  iter_checkpoints: [30]            # interpreted as num_epochs when method=sgd
 
 dataset_overrides:
   personality_evd:

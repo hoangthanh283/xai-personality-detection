@@ -40,12 +40,14 @@ class MultiBackendCallback(TrainerCallback):
     def on_log(self, args, state, control, logs: dict[str, Any] | None = None, **kwargs):
         if not logs:
             return
-        step = state.global_step if state is not None else None
-        # Strip non-scalar bookkeeping HF inserts (e.g. "epoch" stays scalar though).
+        # NOTE: HF Trainer's `state.global_step` resets to 0 each new Trainer
+        # instance, so passing it through breaks tensorboard's monotonic axis
+        # when multiple traits share one parent run. Surface it as a metric
+        # (`train/global_step`) but rely on MultiBackendLogger's shared
+        # auto-step counter for the actual chart x-axis.
         scalar_logs: dict[str, float] = {}
         for k, v in logs.items():
             if isinstance(v, (int, float)) and v == v:  # filter NaN
-                # Bucket by phase so charts read clean: train/* vs eval/*
                 if k.startswith("eval_"):
                     bucket_key = f"eval/{k[len('eval_'):]}"
                 elif k.startswith("test_"):
@@ -53,25 +55,25 @@ class MultiBackendCallback(TrainerCallback):
                 elif k in {"loss", "learning_rate", "grad_norm", "epoch"}:
                     bucket_key = f"train/{k}"
                 else:
-                    # Pass through (e.g. custom keys)
                     bucket_key = k
                 scalar_logs[bucket_key] = float(v)
+        if state is not None:
+            scalar_logs["train/global_step"] = float(state.global_step)
         if scalar_logs:
-            self._mb_logger.log_dict(scalar_logs, step=step)
+            self._mb_logger.log_dict(scalar_logs)
 
     def on_evaluate(self, args, state, control, metrics: dict[str, Any] | None = None, **kwargs):
         # `on_log` already covers eval metrics in most flows; keep this as a safety
         # net for callers that emit metrics outside on_log.
         if not metrics:
             return
-        step = state.global_step if state is not None else None
         scalar_metrics = {
             (f"eval/{k[len('eval_'):]}" if k.startswith("eval_") else k): float(v)
             for k, v in metrics.items()
             if isinstance(v, (int, float)) and v == v
         }
         if scalar_metrics:
-            self._mb_logger.log_dict(scalar_metrics, step=step)
+            self._mb_logger.log_dict(scalar_metrics)
 
     def on_train_end(self, args, state, control, **kwargs):
         loguru_logger.info(f"Training done at step={state.global_step if state else '?'}")

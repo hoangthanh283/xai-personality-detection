@@ -123,19 +123,21 @@ class MultiBackendLogger:
 
     # ---- logging primitives -------------------------------------------------
     def log_scalar(self, key: str, value: float, step: int | None = None) -> None:
+        """Log one scalar to W&B + TensorBoard.
+
+        Step handling:
+        - W&B: always uses its own monotonic internal counter (we never pass
+          step=). This avoids "step 50 < current step 4660" warnings when HF
+          Trainer's per-trait global_step resets between traits.
+        - TensorBoard: uses caller-supplied step if provided, else our shared
+          monotonic counter so the chart x-axis is always strictly increasing.
+        """
         if value is None:
             return
         full_key = self._full_key(key)
-        # If caller didn't supply a step, advance the shared counter so both
-        # backends still receive a usable step axis (TensorBoard requires int).
         effective_step = step if step is not None else self._next_step()
         if self.wandb_run is not None:
-            payload = {full_key: value}
-            if step is not None:
-                self.wandb_run.log(payload, step=step)
-            else:
-                # Let wandb manage its own internal step axis here.
-                self.wandb_run.log(payload)
+            self.wandb_run.log({full_key: value})
         if self.tb_writer is not None:
             try:
                 self.tb_writer.add_scalar(full_key, value, effective_step)
@@ -153,10 +155,9 @@ class MultiBackendLogger:
             return
         effective_step = step if step is not None else self._next_step()
         if self.wandb_run is not None:
-            if step is not None:
-                self.wandb_run.log(scalar_metrics, step=step)
-            else:
-                self.wandb_run.log(scalar_metrics)
+            # Always let W&B own its step axis to avoid monotonic violations
+            # across nested per-trait Trainer runs.
+            self.wandb_run.log(scalar_metrics)
         if self.tb_writer is not None:
             for k, v in scalar_metrics.items():
                 try:
@@ -166,27 +167,29 @@ class MultiBackendLogger:
 
     def log_histogram(self, key: str, values: Any, step: int | None = None) -> None:
         full_key = self._full_key(key)
+        effective_step = step if step is not None else self._next_step()
         if self.wandb_run is not None and wandb is not None:
             try:
-                self.wandb_run.log({full_key: wandb.Histogram(values)}, step=step)
+                self.wandb_run.log({full_key: wandb.Histogram(values)})
             except Exception as exc:  # pragma: no cover
                 logger.debug(f"wandb histogram({full_key}) failed: {exc}")
-        if self.tb_writer is not None and step is not None:
+        if self.tb_writer is not None:
             try:
-                self.tb_writer.add_histogram(full_key, values, step)
+                self.tb_writer.add_histogram(full_key, values, effective_step)
             except Exception as exc:  # pragma: no cover
                 logger.debug(f"tb histogram({full_key}) failed: {exc}")
 
     def log_image(self, key: str, image: Any, step: int | None = None) -> None:
         full_key = self._full_key(key)
+        effective_step = step if step is not None else self._next_step()
         if self.wandb_run is not None and wandb is not None:
             try:
-                self.wandb_run.log({full_key: wandb.Image(image)}, step=step)
+                self.wandb_run.log({full_key: wandb.Image(image)})
             except Exception as exc:  # pragma: no cover
                 logger.debug(f"wandb image({full_key}) failed: {exc}")
-        if self.tb_writer is not None and step is not None:
+        if self.tb_writer is not None:
             try:
-                self.tb_writer.add_image(full_key, image, step, dataformats="HWC")
+                self.tb_writer.add_image(full_key, image, effective_step, dataformats="HWC")
             except Exception as exc:  # pragma: no cover
                 logger.debug(f"tb image({full_key}) failed: {exc}")
 
