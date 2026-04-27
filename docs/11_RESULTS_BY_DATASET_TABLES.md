@@ -68,12 +68,6 @@ This doc compares **only the models we trained across our Tier matrix** against 
 
 **Publications**: Most don't report F1-macro on cleaned MBTI 4-dim. HIPPD reports accuracy only.
 
-**Take-away**:
-- **Qwen + RAG-XPR full (T5A) is competitive on accuracy** (76.7% acc) — close to best supervised baseline T2b 76.7% (tied) and slightly above LR 74.5%. **F1-macro 69.5% beats LR's 67.9%** by +1.6 pp without majority-class collapse — KB-grounded reasoning generalizes better on imbalanced traits.
-- **Without leakage, RAG > fine-tune on F1**: RoBERTa trunc/MLP/focal cluster at 63-64% F1 because they can't exploit type keywords; the LLM with KB-grounded reasoning routes around this and learns from psychology states instead of surface tokens.
-- **CoPE alone (T4) at 73.3% acc / 66.8% F1** — solid but below RAG-XPR. Adding KB (T5A) = +3.4 pp acc / +2.7 pp F1, confirming KB contribution.
-- **Position vs publications**: T5A 76.7% acc vs HIPPD 86.1% — but HIPPD uses raw Kaggle (with type keywords); see §2 for like-for-like comparison.
-
 ---
 
 ## 2. MBTI uncleaned (type keywords retained — publication comparison) Phase 5A
