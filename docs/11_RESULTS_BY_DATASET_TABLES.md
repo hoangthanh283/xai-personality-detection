@@ -112,10 +112,6 @@ This is the **publication-comparable regime**. Per MbtiBench (2024), 31.21% of K
 | **RoBERTa trunc (T2a)** | 63.5% | 80.1% | **+16.6 pp** |
 | RoBERTa frozen + MLP (T2b) | 63.4% | 70.3% | +6.9 pp |
 
-**Take-away**:
-- **RoBERTa fine-tune benefits 2× more from leakage than LR** (+16.6 pp vs +9.1 pp) — confirms the publication-inflation hypothesis. Surface fine-tune learns "INTP" / "extrovert" tokens directly.
-- Our uncleaned T2a F1-macro 80.1% is within ~6 pp of HIPPD's 86.1% accuracy — gap to "literature" largely vanishes once leakage is matched. HIPPD's specialized hierarchical pretraining buys ~2-6 pp on top of plain RoBERTa-base, not 8+.
-
 ---
 
 ## 3. Essays (Pennebaker — Big Five binary)
@@ -152,11 +148,6 @@ This is the **publication-comparable regime**. Per MbtiBench (2024), 31.21% of K
 | Qwen + CoPE (T4) | 60.0% | 56.9% | 54.3% | 58.4% | 55.7% | 57.1% |
 | **Qwen + RAG-XPR full (T5A)** | **63.7%** | 59.5% | 56.2% | 61.0% | 57.8% | **59.6%** |
 
-**Take-away**:
-- **Qwen + RAG-XPR full (T5A) wins**: 60.3% acc / 59.6% F1-macro — beats best supervised baseline (T2a-aug 59.6% acc, LR 56.9% F1) by +0.7 pp acc and +2.7 pp F1, and matches Kazameini 2020 BERT+SVM (59.0% acc). KB grounding + CoPE compensate for Essays' small N=1.7k where fine-tune over-fits.
-- **CoPE alone (T4) at 57.6% acc / 57.1% F1** is competitive with supervised baselines but trails T2a-aug; adding KB (T5A) buys +2.7 pp acc / +2.5 pp F1, recovering the lead.
-- **Position vs SOTA**: ~2 pp below EERPD 2024 (62.4% acc with explicit emotion features) and far below HPMN 2023 (80.9% with hierarchical BERT pretraining). RAG-XPR closes most of the gap to mid-tier publications without specialized architecture changes.
-
 ---
 
 ## 4. Pandora (Reddit Big Five)
@@ -192,12 +183,6 @@ This is the **publication-comparable regime**. Per MbtiBench (2024), 31.21% of K
 | Qwen 2.5 ZS (T3) | 48.6% | 46.5% | 48.1% | 47.4% | 45.9% | 47.3% |
 | Qwen + CoPE (T4) | 60.2% | 54.7% | 59.5% | 57.4% | 56.0% | 57.6% |
 | **Qwen + RAG-XPR full (T5A)** | **63.5%** | 57.4% | **62.3%** | 60.1% | 58.6% | **60.4%** |
-
-**Take-away**:
-- **Qwen + RAG-XPR full (T5A) wins**: 63.9% acc / 60.4% F1-macro — beats best supervised baseline (T2a-aug 63.2% acc, RoBERTa trunc 54.9% F1) by +0.7 pp acc and +5.5 pp F1, escaping the majority-class collapse that traps supervised models near the 60.9% dummy ceiling.
-- **CoPE 3-step reasoning is competitive**: T4 alone (no KB) at 61.3% acc / 57.6% F1 — close to baselines but doesn't yet exceed them. Adding KB (T5A) buys +2.6 pp acc / +2.8 pp F1, pushing T5A above the dummy ceiling.
-- **F1-macro gap is meaningful** (T5A 60.4% vs LR 54.6%, +5.8 pp): Pandora's 60-68% per-trait majority dominates supervised loss; RAG-XPR's structured reasoning over evidence chains improves minority detection.
-- **Position vs publications**: Gao et al. (2024) reports 74.8% mean acc but on a different OCEAN split with more training data and full RoBERTa fine-tune. T5A's 63.9% partially closes the gap **without** retraining the encoder — the win is from inference-time reasoning, not parameter scale.
 
 ---
 
@@ -238,10 +223,3 @@ This is the **publication-comparable regime**. Per MbtiBench (2024), 31.21% of K
 | Qwen + RAG no_kb (T5-ab) | 61.8% | 60.3% | 49.4% | 64.6% | 59.7% | 59.2% |
 | Qwen + RAG no_evd_filter (T5-ab) | 63.5% | 62.0% | 49.4% | 65.8% | 61.2% | 60.4% |
 | Qwen + RAG no_cope (T5-ab) | 57.4% | 55.8% | 49.4% | 60.5% | 56.9% | 56.0% |
-
-**Take-away**:
-- **Trait E imbalance terminal** (97% positive) — all models hit ~96-97% acc with F1-macro ~49% (chance for binary). Weighted CE / focal don't move the needle here; this trait is a dataset artifact, not a learnable signal.
-- **Qwen + RAG-XPR full (T5A) 79.2% acc / 62.0% F1-macro** — beats Sun et al. EMNLP 2024 GLM-32k (77.8%) by +1.4 pp accuracy and Qwen-32k (76.6%) by +2.6 pp, despite using a **10× smaller model** (3B vs 32B). The KB grounding + CoPE 3-step reasoning compensate for parameter count by injecting psychology-domain priors and forcing structured evidence chains.
-- **F1-macro improvement is meaningful**: T5A 62.0% vs T2a 57.8% (+4.2 pp). RAG-XPR's evidence-grounded reasoning improves minority detection on traits where supervised baselines collapse to majority.
-- **Ablations confirm component value**: removing CoPE costs the most (-4.6 pp acc, -6.0 pp F1), KB second (-1.9 pp acc, -2.8 pp F1), evidence filter least (-0.8 pp acc, -1.6 pp F1). CoPE 3-step is the dominant contributor — confirms the explainability-via-reasoning thesis.
-- **Personality-Evd is the dataset where RAG-XPR shines** — long-form dialogue + narrative evidence is the natural fit for retrieval + reasoning. Smaller datasets (Pandora N=232, Essays N=371) don't give CoPE enough text to chain over.
