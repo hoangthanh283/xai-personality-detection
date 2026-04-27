@@ -1,0 +1,1362 @@
+{
+  "datasets": {
+    "mbti": {
+      "dataset": "mbti",
+      "total_records": 8673,
+      "split_counts": {
+        "train": 6071,
+        "val": 1301,
+        "test": 1301
+      },
+      "text": {
+        "words": {
+          "min": 13,
+          "p25": 1031,
+          "median": 1279,
+          "mean": 1224.76,
+          "p75": 1472,
+          "p90": 1607,
+          "p95": 1670,
+          "p99": 1772,
+          "max": 1917
+        },
+        "chars": {
+          "min": 60,
+          "p25": 5507,
+          "median": 6882,
+          "mean": 6566.58,
+          "p75": 7897,
+          "p90": 8616,
+          "p95": 8942,
+          "p99": 9387,
+          "max": 9780
+        },
+        "empty_text": 0,
+        "over_512_words": 8351,
+        "over_512_words_pct": 96.29,
+        "over_2000_words": 0,
+        "over_2000_words_pct": 0.0
+      },
+      "labels_mbti": {
+        "full_type": {
+          "total": 8673,
+          "classes": {
+            "INFP": 1831,
+            "INFJ": 1470,
+            "INTP": 1304,
+            "INTJ": 1091,
+            "ENTP": 685,
+            "ENFP": 675,
+            "ISTP": 336,
+            "ISFP": 271,
+            "ENTJ": 231,
+            "ISTJ": 205,
+            "ENFJ": 190,
+            "ISFJ": 166,
+            "ESTP": 89,
+            "ESFP": 48,
+            "ESFJ": 42,
+            "ESTJ": 39
+          },
+          "majority": {
+            "label": "INFP",
+            "count": 1831,
+            "pct": 21.11
+          },
+          "minority": {
+            "label": "ESTJ",
+            "count": 39,
+            "pct": 0.45
+          },
+          "imbalance_ratio": 46.95
+        },
+        "dimensions": {
+          "IE": {
+            "total": 8673,
+            "classes": {
+              "I": 6674,
+              "E": 1999
+            },
+            "majority": {
+              "label": "I",
+              "count": 6674,
+              "pct": 76.95
+            },
+            "minority": {
+              "label": "E",
+              "count": 1999,
+              "pct": 23.05
+            },
+            "imbalance_ratio": 3.34
+          },
+          "SN": {
+            "total": 8673,
+            "classes": {
+              "N": 7477,
+              "S": 1196
+            },
+            "majority": {
+              "label": "N",
+              "count": 7477,
+              "pct": 86.21
+            },
+            "minority": {
+              "label": "S",
+              "count": 1196,
+              "pct": 13.79
+            },
+            "imbalance_ratio": 6.25
+          },
+          "TF": {
+            "total": 8673,
+            "classes": {
+              "F": 4693,
+              "T": 3980
+            },
+            "majority": {
+              "label": "F",
+              "count": 4693,
+              "pct": 54.11
+            },
+            "minority": {
+              "label": "T",
+              "count": 3980,
+              "pct": 45.89
+            },
+            "imbalance_ratio": 1.18
+          },
+          "JP": {
+            "total": 8673,
+            "classes": {
+              "P": 5239,
+              "J": 3434
+            },
+            "majority": {
+              "label": "P",
+              "count": 5239,
+              "pct": 60.41
+            },
+            "minority": {
+              "label": "J",
+              "count": 3434,
+              "pct": 39.59
+            },
+            "imbalance_ratio": 1.53
+          }
+        }
+      },
+      "labels_ocean": {
+        "complete_ocean_labels": 0,
+        "partial_ocean_labels": 0,
+        "missing_ocean_labels": 8673,
+        "traits": {
+          "O": {
+            "total": 8673,
+            "classes": {
+              "MISSING": 8673
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "minority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "imbalance_ratio": 1.0
+          },
+          "C": {
+            "total": 8673,
+            "classes": {
+              "MISSING": 8673
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "minority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "imbalance_ratio": 1.0
+          },
+          "E": {
+            "total": 8673,
+            "classes": {
+              "MISSING": 8673
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "minority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "imbalance_ratio": 1.0
+          },
+          "A": {
+            "total": 8673,
+            "classes": {
+              "MISSING": 8673
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "minority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "imbalance_ratio": 1.0
+          },
+          "N": {
+            "total": 8673,
+            "classes": {
+              "MISSING": 8673
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "minority": {
+              "label": "MISSING",
+              "count": 8673,
+              "pct": 100.0
+            },
+            "imbalance_ratio": 1.0
+          }
+        }
+      },
+      "leakage": {
+        "any_mbti_type_mention": 0,
+        "any_mbti_type_mention_pct": 0.0,
+        "own_mbti_type_mention": 0,
+        "own_mbti_type_mention_pct": 0.0,
+        "mbti_taxonomy_terms": 4824,
+        "mbti_taxonomy_terms_pct": 55.62,
+        "ocean_taxonomy_terms": 759,
+        "ocean_taxonomy_terms_pct": 8.75,
+        "url_leftovers": 1,
+        "url_leftovers_pct": 0.01,
+        "mention_leftovers": 0,
+        "mention_leftovers_pct": 0.0,
+        "examples": {
+          "own_mbti": [],
+          "any_mbti": [],
+          "ocean_taxonomy": [
+            {
+              "id": "mbti_fcb782d8",
+              "hit": "ocean"
+            },
+            {
+              "id": "mbti_645e3f2f",
+              "hit": "extroversion"
+            },
+            {
+              "id": "mbti_4a9f2452",
+              "hit": "extraversion"
+            },
+            {
+              "id": "mbti_ce723c77",
+              "hit": "openness"
+            },
+            {
+              "id": "mbti_7c44fe5d",
+              "hit": "extroversion"
+            }
+          ]
+        }
+      },
+      "duplicates": {
+        "unique_ids": 8673,
+        "duplicate_id_values": 0,
+        "duplicate_id_records": 0,
+        "unique_texts": 8673,
+        "duplicate_text_values": 0,
+        "duplicate_text_records": 0
+      },
+      "evidence": {
+        "records_with_evidence": 0,
+        "records_with_evidence_pct": 0.0,
+        "total_evidence_items": 0,
+        "evidence_items_per_record": 0,
+        "trait_distribution": {},
+        "level_distribution": {},
+        "nonempty_quote_items": 0,
+        "nonempty_quote_items_pct": 0.0,
+        "quote_found_in_processed_text": 0,
+        "quote_found_in_processed_text_pct": 0.0,
+        "items_with_utterance_ids": 0,
+        "items_with_utterance_ids_pct": 0.0,
+        "evidence_record_label_disagreements": {}
+      },
+      "mbti_specific": {
+        "num_clean_posts_per_user": {
+          "min": 1,
+          "p25": 36,
+          "median": 42,
+          "mean": 39.89,
+          "p75": 46,
+          "p90": 48,
+          "p95": 49,
+          "p99": 50,
+          "max": 50
+        },
+        "avg_clean_post_length_words": {
+          "min": 13,
+          "p25": 28,
+          "median": 31,
+          "mean": 30.28,
+          "p75": 33,
+          "p90": 34,
+          "p95": 35,
+          "p99": 36,
+          "max": 39
+        }
+      }
+    },
+    "essays": {
+      "dataset": "essays",
+      "total_records": 2467,
+      "split_counts": {
+        "train": 1726,
+        "val": 370,
+        "test": 371
+      },
+      "text": {
+        "words": {
+          "min": 33,
+          "p25": 472,
+          "median": 626,
+          "mean": 651.84,
+          "p75": 806,
+          "p90": 978,
+          "p95": 1090,
+          "p99": 1341,
+          "max": 2000
+        },
+        "chars": {
+          "min": 158,
+          "p25": 2403,
+          "median": 3161,
+          "mean": 3283.8,
+          "p75": 4064,
+          "p90": 4941,
+          "p95": 5491,
+          "p99": 6747,
+          "max": 10218
+        },
+        "empty_text": 0,
+        "over_512_words": 1683,
+        "over_512_words_pct": 68.22,
+        "over_2000_words": 0,
+        "over_2000_words_pct": 0.0
+      },
+      "labels_mbti": {
+        "full_type": {
+          "total": 0,
+          "classes": {},
+          "majority": null,
+          "minority": null
+        },
+        "dimensions": {
+          "IE": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          },
+          "SN": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          },
+          "TF": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          },
+          "JP": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          }
+        }
+      },
+      "labels_ocean": {
+        "complete_ocean_labels": 2467,
+        "partial_ocean_labels": 0,
+        "missing_ocean_labels": 0,
+        "traits": {
+          "O": {
+            "total": 2467,
+            "classes": {
+              "HIGH": 1271,
+              "LOW": 1196
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1271,
+              "pct": 51.52
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 1196,
+              "pct": 48.48
+            },
+            "imbalance_ratio": 1.06
+          },
+          "C": {
+            "total": 2467,
+            "classes": {
+              "HIGH": 1253,
+              "LOW": 1214
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1253,
+              "pct": 50.79
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 1214,
+              "pct": 49.21
+            },
+            "imbalance_ratio": 1.03
+          },
+          "E": {
+            "total": 2467,
+            "classes": {
+              "HIGH": 1276,
+              "LOW": 1191
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1276,
+              "pct": 51.72
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 1191,
+              "pct": 48.28
+            },
+            "imbalance_ratio": 1.07
+          },
+          "A": {
+            "total": 2467,
+            "classes": {
+              "HIGH": 1310,
+              "LOW": 1157
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1310,
+              "pct": 53.1
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 1157,
+              "pct": 46.9
+            },
+            "imbalance_ratio": 1.13
+          },
+          "N": {
+            "total": 2467,
+            "classes": {
+              "LOW": 1234,
+              "HIGH": 1233
+            },
+            "majority": {
+              "label": "LOW",
+              "count": 1234,
+              "pct": 50.02
+            },
+            "minority": {
+              "label": "HIGH",
+              "count": 1233,
+              "pct": 49.98
+            },
+            "imbalance_ratio": 1.0
+          }
+        }
+      },
+      "leakage": {
+        "any_mbti_type_mention": 1,
+        "any_mbti_type_mention_pct": 0.04,
+        "own_mbti_type_mention": 0,
+        "own_mbti_type_mention_pct": 0.0,
+        "mbti_taxonomy_terms": 2,
+        "mbti_taxonomy_terms_pct": 0.08,
+        "ocean_taxonomy_terms": 27,
+        "ocean_taxonomy_terms_pct": 1.09,
+        "url_leftovers": 0,
+        "url_leftovers_pct": 0.0,
+        "mention_leftovers": 5,
+        "mention_leftovers_pct": 0.2,
+        "examples": {
+          "own_mbti": [],
+          "any_mbti": [
+            {
+              "id": "essays_9b2e2c6f",
+              "hits": [
+                "ESTP"
+              ]
+            }
+          ],
+          "ocean_taxonomy": [
+            {
+              "id": "essays_c1332182",
+              "hit": "ocean"
+            },
+            {
+              "id": "essays_ac9ffc90",
+              "hit": "ocean"
+            },
+            {
+              "id": "essays_9d88384f",
+              "hit": "ocean"
+            },
+            {
+              "id": "essays_e828ca7f",
+              "hit": "ocean"
+            },
+            {
+              "id": "essays_f1deb8c5",
+              "hit": "ocean"
+            }
+          ]
+        }
+      },
+      "duplicates": {
+        "unique_ids": 2467,
+        "duplicate_id_values": 0,
+        "duplicate_id_records": 0,
+        "unique_texts": 2467,
+        "duplicate_text_values": 0,
+        "duplicate_text_records": 0
+      },
+      "evidence": {
+        "records_with_evidence": 0,
+        "records_with_evidence_pct": 0.0,
+        "total_evidence_items": 0,
+        "evidence_items_per_record": 0,
+        "trait_distribution": {},
+        "level_distribution": {},
+        "nonempty_quote_items": 0,
+        "nonempty_quote_items_pct": 0.0,
+        "quote_found_in_processed_text": 0,
+        "quote_found_in_processed_text_pct": 0.0,
+        "items_with_utterance_ids": 0,
+        "items_with_utterance_ids_pct": 0.0,
+        "evidence_record_label_disagreements": {}
+      }
+    },
+    "pandora": {
+      "dataset": "pandora",
+      "total_records": 8951,
+      "split_counts": {
+        "train": 7180,
+        "val": 1539,
+        "test": 232
+      },
+      "text": {
+        "words": {
+          "min": 7,
+          "p25": 2000,
+          "median": 2000,
+          "mean": 1925.63,
+          "p75": 2000,
+          "p90": 2000,
+          "p95": 2000,
+          "p99": 2000,
+          "max": 2000
+        },
+        "chars": {
+          "min": 42,
+          "p25": 10655,
+          "median": 10954,
+          "mean": 10632.6,
+          "p75": 11240,
+          "p90": 11536,
+          "p95": 11730,
+          "p99": 12191,
+          "max": 27571
+        },
+        "empty_text": 0,
+        "over_512_words": 8792,
+        "over_512_words_pct": 98.22,
+        "over_2000_words": 0,
+        "over_2000_words_pct": 0.0
+      },
+      "labels_mbti": {
+        "full_type": {
+          "total": 7760,
+          "classes": {
+            "INTP": 1995,
+            "INTJ": 1577,
+            "INFP": 920,
+            "INFJ": 898,
+            "ENTP": 546,
+            "ENFP": 528,
+            "ISTP": 348,
+            "ENTJ": 275,
+            "ISTJ": 168,
+            "ENFJ": 140,
+            "ISFP": 106,
+            "ISFJ": 94,
+            "ESTP": 61,
+            "ESFP": 42,
+            "ESTJ": 37,
+            "ESFJ": 25
+          },
+          "majority": {
+            "label": "INTP",
+            "count": 1995,
+            "pct": 25.71
+          },
+          "minority": {
+            "label": "ESFJ",
+            "count": 25,
+            "pct": 0.32
+          },
+          "imbalance_ratio": 79.8
+        },
+        "dimensions": {
+          "IE": {
+            "total": 7760,
+            "classes": {
+              "I": 6106,
+              "E": 1654
+            },
+            "majority": {
+              "label": "I",
+              "count": 6106,
+              "pct": 78.69
+            },
+            "minority": {
+              "label": "E",
+              "count": 1654,
+              "pct": 21.31
+            },
+            "imbalance_ratio": 3.69
+          },
+          "SN": {
+            "total": 7760,
+            "classes": {
+              "N": 6879,
+              "S": 881
+            },
+            "majority": {
+              "label": "N",
+              "count": 6879,
+              "pct": 88.65
+            },
+            "minority": {
+              "label": "S",
+              "count": 881,
+              "pct": 11.35
+            },
+            "imbalance_ratio": 7.81
+          },
+          "TF": {
+            "total": 7760,
+            "classes": {
+              "T": 5007,
+              "F": 2753
+            },
+            "majority": {
+              "label": "T",
+              "count": 5007,
+              "pct": 64.52
+            },
+            "minority": {
+              "label": "F",
+              "count": 2753,
+              "pct": 35.48
+            },
+            "imbalance_ratio": 1.82
+          },
+          "JP": {
+            "total": 7760,
+            "classes": {
+              "P": 4546,
+              "J": 3214
+            },
+            "majority": {
+              "label": "P",
+              "count": 4546,
+              "pct": 58.58
+            },
+            "minority": {
+              "label": "J",
+              "count": 3214,
+              "pct": 41.42
+            },
+            "imbalance_ratio": 1.41
+          }
+        }
+      },
+      "labels_ocean": {
+        "complete_ocean_labels": 1568,
+        "partial_ocean_labels": 0,
+        "missing_ocean_labels": 7383,
+        "traits": {
+          "O": {
+            "total": 8951,
+            "classes": {
+              "MISSING": 7383,
+              "HIGH": 1038,
+              "LOW": 530
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 7383,
+              "pct": 82.48
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 530,
+              "pct": 5.92
+            },
+            "imbalance_ratio": 13.93
+          },
+          "C": {
+            "total": 8951,
+            "classes": {
+              "MISSING": 7383,
+              "LOW": 1023,
+              "HIGH": 545
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 7383,
+              "pct": 82.48
+            },
+            "minority": {
+              "label": "HIGH",
+              "count": 545,
+              "pct": 6.09
+            },
+            "imbalance_ratio": 13.55
+          },
+          "E": {
+            "total": 8951,
+            "classes": {
+              "MISSING": 7383,
+              "LOW": 1083,
+              "HIGH": 485
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 7383,
+              "pct": 82.48
+            },
+            "minority": {
+              "label": "HIGH",
+              "count": 485,
+              "pct": 5.42
+            },
+            "imbalance_ratio": 15.22
+          },
+          "A": {
+            "total": 8951,
+            "classes": {
+              "MISSING": 7383,
+              "LOW": 960,
+              "HIGH": 608
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 7383,
+              "pct": 82.48
+            },
+            "minority": {
+              "label": "HIGH",
+              "count": 608,
+              "pct": 6.79
+            },
+            "imbalance_ratio": 12.14
+          },
+          "N": {
+            "total": 8951,
+            "classes": {
+              "MISSING": 7383,
+              "LOW": 822,
+              "HIGH": 746
+            },
+            "majority": {
+              "label": "MISSING",
+              "count": 7383,
+              "pct": 82.48
+            },
+            "minority": {
+              "label": "HIGH",
+              "count": 746,
+              "pct": 8.33
+            },
+            "imbalance_ratio": 9.9
+          }
+        }
+      },
+      "leakage": {
+        "any_mbti_type_mention": 0,
+        "any_mbti_type_mention_pct": 0.0,
+        "own_mbti_type_mention": 0,
+        "own_mbti_type_mention_pct": 0.0,
+        "mbti_taxonomy_terms": 2119,
+        "mbti_taxonomy_terms_pct": 23.67,
+        "ocean_taxonomy_terms": 943,
+        "ocean_taxonomy_terms_pct": 10.54,
+        "url_leftovers": 5,
+        "url_leftovers_pct": 0.06,
+        "mention_leftovers": 0,
+        "mention_leftovers_pct": 0.0,
+        "examples": {
+          "own_mbti": [],
+          "any_mbti": [],
+          "ocean_taxonomy": [
+            {
+              "id": "pandora_3170476b",
+              "hit": "ocean"
+            },
+            {
+              "id": "pandora_797c69c9",
+              "hit": "extroversion"
+            },
+            {
+              "id": "pandora_07a2c8bf",
+              "hit": "Openness"
+            },
+            {
+              "id": "pandora_28593104",
+              "hit": "ocean"
+            },
+            {
+              "id": "pandora_40166ae2",
+              "hit": "Neuroticism"
+            }
+          ]
+        }
+      },
+      "duplicates": {
+        "unique_ids": 8951,
+        "duplicate_id_values": 0,
+        "duplicate_id_records": 0,
+        "unique_texts": 8951,
+        "duplicate_text_values": 0,
+        "duplicate_text_records": 0
+      },
+      "evidence": {
+        "records_with_evidence": 0,
+        "records_with_evidence_pct": 0.0,
+        "total_evidence_items": 0,
+        "evidence_items_per_record": 0,
+        "trait_distribution": {},
+        "level_distribution": {},
+        "nonempty_quote_items": 0,
+        "nonempty_quote_items_pct": 0.0,
+        "quote_found_in_processed_text": 0,
+        "quote_found_in_processed_text_pct": 0.0,
+        "items_with_utterance_ids": 0,
+        "items_with_utterance_ids_pct": 0.0,
+        "evidence_record_label_disagreements": {}
+      },
+      "pandora_specific": {
+        "records_with_mbti": 7760,
+        "records_with_mbti_pct": 86.69,
+        "records_with_ocean": 1568,
+        "records_with_ocean_pct": 17.52,
+        "sampled_comments_per_user": {
+          "min": 1,
+          "p25": 100,
+          "median": 100,
+          "mean": 93.3,
+          "p75": 100,
+          "p90": 100,
+          "p95": 100,
+          "p99": 100,
+          "max": 100
+        },
+        "total_available_comments_per_user": {
+          "min": 1,
+          "p25": 173,
+          "median": 487,
+          "mean": 1448.23,
+          "p75": 1394,
+          "p90": 3536,
+          "p95": 5990,
+          "p99": 14302,
+          "max": 72635
+        },
+        "records_capped_at_100_comments": 7685,
+        "records_capped_at_100_comments_pct": 85.86
+      }
+    },
+    "personality_evd": {
+      "dataset": "personality_evd",
+      "total_records": 1846,
+      "split_counts": {
+        "train": 1292,
+        "val": 277,
+        "test": 277
+      },
+      "text": {
+        "words": {
+          "min": 8,
+          "p25": 34,
+          "median": 50,
+          "mean": 56.53,
+          "p75": 72,
+          "p90": 100,
+          "p95": 120,
+          "p99": 150,
+          "max": 259
+        },
+        "chars": {
+          "min": 37,
+          "p25": 180,
+          "median": 261,
+          "mean": 299.91,
+          "p75": 379,
+          "p90": 522,
+          "p95": 628,
+          "p99": 826,
+          "max": 1475
+        },
+        "empty_text": 0,
+        "over_512_words": 0,
+        "over_512_words_pct": 0.0,
+        "over_2000_words": 0,
+        "over_2000_words_pct": 0.0
+      },
+      "labels_mbti": {
+        "full_type": {
+          "total": 0,
+          "classes": {},
+          "majority": null,
+          "minority": null
+        },
+        "dimensions": {
+          "IE": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          },
+          "SN": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          },
+          "TF": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          },
+          "JP": {
+            "total": 0,
+            "classes": {},
+            "majority": null,
+            "minority": null
+          }
+        }
+      },
+      "labels_ocean": {
+        "complete_ocean_labels": 1846,
+        "partial_ocean_labels": 0,
+        "missing_ocean_labels": 0,
+        "traits": {
+          "O": {
+            "total": 1846,
+            "classes": {
+              "HIGH": 1652,
+              "LOW": 194
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1652,
+              "pct": 89.49
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 194,
+              "pct": 10.51
+            },
+            "imbalance_ratio": 8.52
+          },
+          "C": {
+            "total": 1846,
+            "classes": {
+              "HIGH": 1603,
+              "LOW": 243
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1603,
+              "pct": 86.84
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 243,
+              "pct": 13.16
+            },
+            "imbalance_ratio": 6.6
+          },
+          "E": {
+            "total": 1846,
+            "classes": {
+              "HIGH": 1803,
+              "LOW": 43
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1803,
+              "pct": 97.67
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 43,
+              "pct": 2.33
+            },
+            "imbalance_ratio": 41.93
+          },
+          "A": {
+            "total": 1846,
+            "classes": {
+              "HIGH": 1267,
+              "LOW": 579
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1267,
+              "pct": 68.63
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 579,
+              "pct": 31.37
+            },
+            "imbalance_ratio": 2.19
+          },
+          "N": {
+            "total": 1846,
+            "classes": {
+              "HIGH": 1136,
+              "LOW": 710
+            },
+            "majority": {
+              "label": "HIGH",
+              "count": 1136,
+              "pct": 61.54
+            },
+            "minority": {
+              "label": "LOW",
+              "count": 710,
+              "pct": 38.46
+            },
+            "imbalance_ratio": 1.6
+          }
+        }
+      },
+      "leakage": {
+        "any_mbti_type_mention": 0,
+        "any_mbti_type_mention_pct": 0.0,
+        "own_mbti_type_mention": 0,
+        "own_mbti_type_mention_pct": 0.0,
+        "mbti_taxonomy_terms": 0,
+        "mbti_taxonomy_terms_pct": 0.0,
+        "ocean_taxonomy_terms": 2,
+        "ocean_taxonomy_terms_pct": 0.11,
+        "url_leftovers": 0,
+        "url_leftovers_pct": 0.0,
+        "mention_leftovers": 0,
+        "mention_leftovers_pct": 0.0,
+        "examples": {
+          "own_mbti": [],
+          "any_mbti": [],
+          "ocean_taxonomy": [
+            {
+              "id": "evd_b8a83884_Chen Meijia",
+              "hit": "ocean"
+            },
+            {
+              "id": "evd_081c4cb5_Tong Xiaojī",
+              "hit": "Ocean"
+            }
+          ]
+        }
+      },
+      "duplicates": {
+        "unique_ids": 1846,
+        "duplicate_id_values": 0,
+        "duplicate_id_records": 0,
+        "unique_texts": 1846,
+        "duplicate_text_values": 0,
+        "duplicate_text_records": 0
+      },
+      "evidence": {
+        "records_with_evidence": 1846,
+        "records_with_evidence_pct": 100.0,
+        "total_evidence_items": 9230,
+        "evidence_items_per_record": 5.0,
+        "trait_distribution": {
+          "A": 1846,
+          "C": 1846,
+          "E": 1846,
+          "N": 1846,
+          "O": 1846
+        },
+        "level_distribution": {
+          "UNKNOWN": 5147,
+          "HIGH": 3023,
+          "LOW": 1060
+        },
+        "nonempty_quote_items": 4137,
+        "nonempty_quote_items_pct": 44.82,
+        "quote_found_in_processed_text": 2900,
+        "quote_found_in_processed_text_pct": 70.1,
+        "items_with_utterance_ids": 4137,
+        "items_with_utterance_ids_pct": 44.82,
+        "evidence_record_label_disagreements": {
+          "A": 385,
+          "N": 321,
+          "C": 95,
+          "O": 63,
+          "E": 40
+        }
+      },
+      "personality_evd_specific": {
+        "unique_speakers": 69,
+        "unique_dialogue_ids": 1846,
+        "utterances_per_speaker_record": {
+          "min": 3,
+          "p25": 5,
+          "median": 7,
+          "mean": 8.4,
+          "p75": 10,
+          "p90": 14,
+          "p95": 16,
+          "p99": 21,
+          "max": 36
+        }
+      }
+    }
+  },
+  "raw_sources": {
+    "mbti": {
+      "raw_rows_users": 8675,
+      "raw_post_snippets": 422845,
+      "posts_per_user": {
+        "min": 1,
+        "p25": 50,
+        "median": 50,
+        "mean": 48.74,
+        "p75": 50,
+        "p90": 50,
+        "p95": 50,
+        "p99": 53,
+        "max": 89
+      },
+      "raw_label_distribution": {
+        "total": 8675,
+        "classes": {
+          "INFP": 1832,
+          "INFJ": 1470,
+          "INTP": 1304,
+          "INTJ": 1091,
+          "ENTP": 685,
+          "ENFP": 675,
+          "ISTP": 337,
+          "ISFP": 271,
+          "ENTJ": 231,
+          "ISTJ": 205,
+          "ENFJ": 190,
+          "ISFJ": 166,
+          "ESTP": 89,
+          "ESFP": 48,
+          "ESFJ": 42,
+          "ESTJ": 39
+        },
+        "majority": {
+          "label": "INFP",
+          "count": 1832,
+          "pct": 21.12
+        },
+        "minority": {
+          "label": "ESTJ",
+          "count": 39,
+          "pct": 0.45
+        },
+        "imbalance_ratio": 46.97
+      },
+      "users_with_any_mbti_mention": 8319,
+      "users_with_any_mbti_mention_pct": 95.9,
+      "users_with_own_type_mention": 7803,
+      "users_with_own_type_mention_pct": 89.95,
+      "post_snippets_with_any_mbti_mention": 80147,
+      "post_snippets_with_any_mbti_mention_pct": 18.95,
+      "post_snippets_with_own_type_mention": 40520,
+      "post_snippets_with_own_type_mention_pct": 9.58
+    },
+    "essays": {
+      "raw_rows": 2467,
+      "raw_columns": [
+        "#AUTHID",
+        "TEXT",
+        "cEXT",
+        "cNEU",
+        "cAGR",
+        "cCON",
+        "cOPN"
+      ],
+      "raw_trait_label_distribution": {
+        "O": {
+          "total": 2467,
+          "classes": {
+            "y": 1271,
+            "n": 1196
+          },
+          "majority": {
+            "label": "y",
+            "count": 1271,
+            "pct": 51.52
+          },
+          "minority": {
+            "label": "n",
+            "count": 1196,
+            "pct": 48.48
+          },
+          "imbalance_ratio": 1.06
+        },
+        "C": {
+          "total": 2467,
+          "classes": {
+            "y": 1253,
+            "n": 1214
+          },
+          "majority": {
+            "label": "y",
+            "count": 1253,
+            "pct": 50.79
+          },
+          "minority": {
+            "label": "n",
+            "count": 1214,
+            "pct": 49.21
+          },
+          "imbalance_ratio": 1.03
+        },
+        "E": {
+          "total": 2467,
+          "classes": {
+            "y": 1276,
+            "n": 1191
+          },
+          "majority": {
+            "label": "y",
+            "count": 1276,
+            "pct": 51.72
+          },
+          "minority": {
+            "label": "n",
+            "count": 1191,
+            "pct": 48.28
+          },
+          "imbalance_ratio": 1.07
+        },
+        "A": {
+          "total": 2467,
+          "classes": {
+            "y": 1310,
+            "n": 1157
+          },
+          "majority": {
+            "label": "y",
+            "count": 1310,
+            "pct": 53.1
+          },
+          "minority": {
+            "label": "n",
+            "count": 1157,
+            "pct": 46.9
+          },
+          "imbalance_ratio": 1.13
+        },
+        "N": {
+          "total": 2467,
+          "classes": {
+            "n": 1234,
+            "y": 1233
+          },
+          "majority": {
+            "label": "n",
+            "count": 1234,
+            "pct": 50.02
+          },
+          "minority": {
+            "label": "y",
+            "count": 1233,
+            "pct": 49.98
+          },
+          "imbalance_ratio": 1.0
+        }
+      },
+      "unique_authors": 2467
+    },
+    "pandora": {
+      "raw_author_profiles": 10295,
+      "raw_comment_rows_including_header": 17640979,
+      "raw_comment_rows_excluding_header": 17640978,
+      "profiles_with_valid_mbti": 9067,
+      "profiles_with_valid_mbti_pct": 88.07,
+      "profiles_with_complete_ocean": 1568,
+      "profiles_with_complete_ocean_pct": 15.23
+    },
+    "personality_evd": {
+      "raw_dialogue_rows_by_split": {
+        "train": 1380,
+        "val": 181,
+        "test": 363
+      },
+      "raw_dialogue_rows_total": 1924,
+      "speakers_per_dialogue_row": {
+        "min": 1,
+        "p25": 1,
+        "median": 1,
+        "mean": 1,
+        "p75": 1,
+        "p90": 1,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "turns_per_dialogue_row": {
+        "min": 3,
+        "p25": 5,
+        "median": 7,
+        "mean": 8.42,
+        "p75": 10,
+        "p90": 14,
+        "p95": 16,
+        "p99": 21,
+        "max": 36
+      },
+      "raw_evidence_items": 9620
+    }
+  }
+}
