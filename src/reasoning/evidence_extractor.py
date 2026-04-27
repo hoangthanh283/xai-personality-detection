@@ -1,4 +1,5 @@
 """Step 1: Extract behavioral evidence from input text using LLM."""
+
 import json
 import re
 from dataclasses import dataclass
@@ -90,9 +91,7 @@ class EvidenceExtractor:
         last_response = ""
         for attempt in range(max_retries + 1):
             try:
-                messages = base_messages if attempt == 0 else [
-                    {"role": "user", "content": prompt + repair_suffix}
-                ]
+                messages = base_messages if attempt == 0 else [{"role": "user", "content": prompt + repair_suffix}]
                 response = self.llm.generate(messages)
                 last_response = response
                 evidence_list = self._salvage_json_candidates(response)
@@ -112,9 +111,7 @@ class EvidenceExtractor:
                 if attempt == max_retries:
                     salvaged = self._salvage_json_candidates(last_response)
                     if salvaged:
-                        logger.warning(
-                            f"Recovered {len(salvaged)} evidence items from malformed JSON response"
-                        )
+                        logger.warning(f"Recovered {len(salvaged)} evidence items from malformed JSON response")
                         return [
                             ExtractedEvidence(
                                 quote=item.get("quote", ""),

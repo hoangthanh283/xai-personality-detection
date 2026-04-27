@@ -17,6 +17,7 @@ Usage:
     $UV_RUN python scripts/detailed_classification_report.py
     $UV_RUN python scripts/detailed_classification_report.py --filter roberta_mlp
 """
+
 import argparse
 import json
 from collections import defaultdict
@@ -28,7 +29,8 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
 
 
 def load_predictions(path: Path) -> tuple[list[str], list[str]]:
-    rs = [json.loads(l) for l in open(path)]
+    with path.open(encoding="utf-8") as f:
+        rs = [json.loads(line) for line in f]
     y_true = [r.get("gold_label", "") for r in rs]
     y_pred = [r.get("predicted_label", "") for r in rs]
     valid = [(t, p) for t, p in zip(y_true, y_pred) if t and p]
@@ -93,9 +95,7 @@ def main():
             "report": report_dict,
         }
 
-    (out_dir / "detailed_classification.json").write_text(
-        json.dumps(structured, indent=2, default=str)
-    )
+    (out_dir / "detailed_classification.json").write_text(json.dumps(structured, indent=2, default=str))
     print(f"Wrote {len(structured)} reports to {out_dir}/detailed_classification.json")
 
     # Build human-readable markdown grouped by (dataset, task) → one table per task,
@@ -148,22 +148,38 @@ def main():
         # ---- Summary table (averaging variants) ---------------------------
         md_lines.append("### Summary — averaging variants (sorted by Macro F1, desc)")
         md_lines.append("")
-        header_s = ["Model", "N", "Accuracy", "Micro F1", "Macro F1 ⭐", "Weighted F1", "Bal Acc", "Macro P", "Macro R"]
+        header_s = [
+            "Model",
+            "N",
+            "Accuracy",
+            "Micro F1",
+            "Macro F1 ⭐",
+            "Weighted F1",
+            "Bal Acc",
+            "Macro P",
+            "Macro R",
+        ]
         md_lines.append("| " + " | ".join(header_s) + " |")
         md_lines.append("|" + "|".join(["---"] * len(header_s)) + "|")
         sorted_rows = sorted(rows, key=lambda r: -r[1]["f1_macro"])
         for model, entry in sorted_rows:
-            md_lines.append("| " + " | ".join([
-                model,
-                str(entry["n_samples"]),
-                f"{entry['accuracy']:.3f}",
-                f"{entry['f1_micro']:.3f}",
-                f"**{entry['f1_macro']:.3f}**",
-                f"{entry['f1_weighted']:.3f}",
-                f"{entry['balanced_accuracy']:.3f}",
-                f"{entry['precision_macro']:.3f}",
-                f"{entry['recall_macro']:.3f}",
-            ]) + " |")
+            md_lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        model,
+                        str(entry["n_samples"]),
+                        f"{entry['accuracy']:.3f}",
+                        f"{entry['f1_micro']:.3f}",
+                        f"**{entry['f1_macro']:.3f}**",
+                        f"{entry['f1_weighted']:.3f}",
+                        f"{entry['balanced_accuracy']:.3f}",
+                        f"{entry['precision_macro']:.3f}",
+                        f"{entry['recall_macro']:.3f}",
+                    ]
+                )
+                + " |"
+            )
         md_lines.append("")
 
         # ---- Drill-down table (per-class) ---------------------------------

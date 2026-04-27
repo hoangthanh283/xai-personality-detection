@@ -4,6 +4,8 @@ from uuid import NAMESPACE_URL, uuid5
 
 import numpy as np
 from loguru import logger
+from qdrant_client.models import (CreateAlias, CreateAliasOperation,
+                                  DeleteAlias, DeleteAliasOperation)
 
 from src.knowledge_base.builder import KBChunk
 
@@ -81,20 +83,11 @@ class KBIndexer:
         if not alias_name or alias_name == collection_name:
             return
         try:
-            from qdrant_client.models import (
-                CreateAlias,
-                CreateAliasOperation,
-                DeleteAlias,
-                DeleteAliasOperation,
-            )
-
             aliases = self.client.get_aliases().aliases
             existing = [a.alias_name for a in aliases if a.alias_name == alias_name]
             actions = []
             if existing:
-                actions.append(
-                    DeleteAliasOperation(delete_alias=DeleteAlias(alias_name=alias_name))
-                )
+                actions.append(DeleteAliasOperation(delete_alias=DeleteAlias(alias_name=alias_name)))
             actions.append(
                 CreateAliasOperation(
                     create_alias=CreateAlias(

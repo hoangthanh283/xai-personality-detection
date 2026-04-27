@@ -4,6 +4,7 @@ Uses the real MBTI checkpoints from outputs/models/frozen_bert_svm_mbti_*/model.
 All 4 tests run in < 30 s on a warm HF cache because the SVM is trivially fast
 and the encoder is shared across dims.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -19,6 +20,7 @@ def _ckpt_paths() -> dict[str, str]:
 def _skip_if_missing():
     """Skip if any MBTI checkpoint is absent (e.g. CI without model files)."""
     from pathlib import Path
+
     missing = [p for p in _ckpt_paths().values() if not Path(p).exists()]
     return pytest.mark.skipif(bool(missing), reason=f"Missing checkpoints: {missing}")
 
@@ -31,6 +33,7 @@ def _skip_if_missing():
 @_skip_if_missing()
 def test_frozen_svm_scorer_loads():
     from src.retrieval.frozen_svm_scorer import FrozenSvmEvidenceScorer
+
     scorer = FrozenSvmEvidenceScorer(_ckpt_paths())
     assert set(scorer.baselines.keys()) == set(DIMS)
     # All dims share the same encoder object
@@ -46,6 +49,7 @@ def test_frozen_svm_scorer_loads():
 @_skip_if_missing()
 def test_score_sentences_shape_and_bounds():
     from src.retrieval.frozen_svm_scorer import FrozenSvmEvidenceScorer
+
     scorer = FrozenSvmEvidenceScorer(_ckpt_paths())
 
     sentences = [
@@ -75,6 +79,7 @@ def test_score_sentences_shape_and_bounds():
 @_skip_if_missing()
 def test_predict_doc_level_matches_label_set():
     from src.retrieval.frozen_svm_scorer import FrozenSvmEvidenceScorer
+
     scorer = FrozenSvmEvidenceScorer(_ckpt_paths())
 
     doc = (
@@ -105,6 +110,7 @@ def test_balanced_predictions_on_balanced_input():
     all 'I' or all 'E' the balanced training has failed.
     """
     from src.retrieval.frozen_svm_scorer import FrozenSvmEvidenceScorer
+
     scorer = FrozenSvmEvidenceScorer(_ckpt_paths())
 
     introverted = [

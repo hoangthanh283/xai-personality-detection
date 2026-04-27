@@ -22,9 +22,7 @@ import numpy as np
 from loguru import logger
 
 from src.baselines.frozen_transformer_baselines import (
-    FrozenBertSvmBaseline,
-    FrozenTransformerEncoder,
-)
+    FrozenBertSvmBaseline, FrozenTransformerEncoder)
 from src.retrieval.roberta_scorer import ScoredSentence
 
 
@@ -124,15 +122,11 @@ class FrozenSvmEvidenceScorer:
         if not sentences:
             return []
 
-        valid_idxs = [
-            i for i, s in enumerate(sentences) if len(s.split()) >= self.MIN_SENTENCE_TOKENS
-        ]
+        valid_idxs = [i for i, s in enumerate(sentences) if len(s.split()) >= self.MIN_SENTENCE_TOKENS]
         valid_sents = [sentences[i] for i in valid_idxs]
 
         if not valid_sents:
-            return [
-                ScoredSentence(text=s, sentence_idx=i, score=0.0) for i, s in enumerate(sentences)
-            ]
+            return [ScoredSentence(text=s, sentence_idx=i, score=0.0) for i, s in enumerate(sentences)]
 
         # Encode once — shared encoder, all valid sentences.
         shared_encoder = next(iter(self.baselines.values())).encoder
@@ -181,9 +175,7 @@ def default_mbti_svm_checkpoints(models_dir: str = "outputs/models") -> dict[str
     }
 
 
-def default_ocean_svm_checkpoints(
-    models_dir: str = "outputs/models", dataset: str = "essays"
-) -> dict[str, str]:
+def default_ocean_svm_checkpoints(models_dir: str = "outputs/models", dataset: str = "essays") -> dict[str, str]:
     dims = ["O", "C", "E", "A", "N"]
     ckpts: dict[str, str] = {}
     for d in dims:

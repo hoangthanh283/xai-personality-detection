@@ -53,10 +53,10 @@ def download_glove(dim: int = 300) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download GloVe word embeddings")
-    parser.add_argument("--dim", type=int, choices=[50, 100, 200, 300], default=300,
-                        help="Embedding dimension (default: 300)")
-    parser.add_argument("--keep_zip", action="store_true",
-                        help="Keep the zip file after extraction")
+    parser.add_argument(
+        "--dim", type=int, choices=[50, 100, 200, 300], default=300, help="Embedding dimension (default: 300)"
+    )
+    parser.add_argument("--keep_zip", action="store_true", help="Keep the zip file after extraction")
     args = parser.parse_args()
 
     path = download_glove(args.dim)

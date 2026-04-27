@@ -50,9 +50,7 @@ def audit_records(records: list[dict]) -> dict:
             "min_words": min(token_like_lengths) if token_like_lengths else 0,
             "max_words": max(token_like_lengths) if token_like_lengths else 0,
         },
-        "ocean_trait_category_coverage": {
-            trait: dict(counts) for trait, counts in sorted(trait_category.items())
-        },
+        "ocean_trait_category_coverage": {trait: dict(counts) for trait, counts in sorted(trait_category.items())},
     }
 
 

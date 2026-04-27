@@ -269,11 +269,7 @@ def analyze_evidence(records: list[dict[str, Any]]) -> dict[str, Any]:
         trait = str(ev.get("trait", "")).upper()
         ev_level = str(ev.get("level", "")).upper()
         record_level = str((rec.get("label_ocean") or {}).get(trait, "")).upper()
-        if (
-            trait in OCEAN_TRAITS
-            and ev_level in {"HIGH", "LOW"}
-            and record_level in {"HIGH", "LOW"}
-        ):
+        if trait in OCEAN_TRAITS and ev_level in {"HIGH", "LOW"} and record_level in {"HIGH", "LOW"}:
             if ev_level != record_level:
                 disagreements[trait] += 1
 
@@ -281,9 +277,7 @@ def analyze_evidence(records: list[dict[str, Any]]) -> dict[str, Any]:
         "records_with_evidence": len(with_evidence),
         "records_with_evidence_pct": pct(len(with_evidence), len(records)),
         "total_evidence_items": len(evidence_items),
-        "evidence_items_per_record": round(len(evidence_items) / len(with_evidence), 2)
-        if with_evidence
-        else 0,
+        "evidence_items_per_record": round(len(evidence_items) / len(with_evidence), 2) if with_evidence else 0,
         "trait_distribution": counter_to_sorted_dict(trait_counts),
         "level_distribution": counter_to_sorted_dict(level_counts),
         "nonempty_quote_items": nonempty_quote,
@@ -408,21 +402,15 @@ def analyze_raw_pandora(raw_root: Path) -> dict[str, Any]:
     df = pd.read_csv(profile_path)
     valid_mbti = df.get("mbti", pd.Series(dtype=object)).astype(str).str.upper().isin(MBTI_TYPES)
     ocean_cols = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]
-    has_ocean = (
-        df[ocean_cols].notna().all(axis=1) if all(c in df for c in ocean_cols) else pd.Series()
-    )
+    has_ocean = df[ocean_cols].notna().all(axis=1) if all(c in df for c in ocean_cols) else pd.Series()
     return {
         "raw_author_profiles": len(df),
         "raw_comment_rows_including_header": count_lines(comments_path),
-        "raw_comment_rows_excluding_header": (count_lines(comments_path) - 1)
-        if comments_path.exists()
-        else None,
+        "raw_comment_rows_excluding_header": (count_lines(comments_path) - 1) if comments_path.exists() else None,
         "profiles_with_valid_mbti": int(valid_mbti.sum()),
         "profiles_with_valid_mbti_pct": pct(int(valid_mbti.sum()), len(df)),
         "profiles_with_complete_ocean": int(has_ocean.sum()) if len(has_ocean) else None,
-        "profiles_with_complete_ocean_pct": pct(int(has_ocean.sum()), len(df))
-        if len(has_ocean)
-        else None,
+        "profiles_with_complete_ocean_pct": pct(int(has_ocean.sum()), len(df)) if len(has_ocean) else None,
     }
 
 
@@ -453,9 +441,7 @@ def analyze_raw_personality_evd(raw_root: Path) -> dict[str, Any]:
     }
 
 
-def add_dataset_specific_stats(
-    dataset: str, records: list[dict[str, Any]], stats: dict[str, Any]
-) -> None:
+def add_dataset_specific_stats(dataset: str, records: list[dict[str, Any]], stats: dict[str, Any]) -> None:
     if dataset == "mbti":
         num_posts = [
             int((r.get("metadata") or {}).get("num_posts", 0))
@@ -493,9 +479,7 @@ def add_dataset_specific_stats(
             "sampled_comments_per_user": describe_numbers(sampled),
             "total_available_comments_per_user": describe_numbers(total_comments),
             "records_capped_at_100_comments": sum(1 for n in sampled if n >= 100),
-            "records_capped_at_100_comments_pct": pct(
-                sum(1 for n in sampled if n >= 100), len(sampled)
-            ),
+            "records_capped_at_100_comments_pct": pct(sum(1 for n in sampled if n >= 100), len(sampled)),
         }
 
     if dataset == "personality_evd":
@@ -521,8 +505,7 @@ def build_report(analysis: dict[str, Any]) -> str:
         "",
         "## Dataset Overview",
         "",
-        "| Dataset | Records | Train | Val | Test | Median words | >512 words | "
-        "Primary labels | Evidence records |",
+        "| Dataset | Records | Train | Val | Test | Median words | >512 words | Primary labels | Evidence records |",
         "|---|---:|---:|---:|---:|---:|---:|---|---:|",
     ]
     for name, stats in analysis["datasets"].items():
@@ -623,10 +606,7 @@ def build_report(analysis: dict[str, Any]) -> str:
         if not ev["records_with_evidence"]:
             continue
         lines.append(f"### {name}")
-        lines.append(
-            f"- Records with evidence: {ev['records_with_evidence']} "
-            f"({ev['records_with_evidence_pct']}%)."
-        )
+        lines.append(f"- Records with evidence: {ev['records_with_evidence']} ({ev['records_with_evidence_pct']}%).")
         lines.append(
             f"- Evidence items: {ev['total_evidence_items']}; nonempty quotes: "
             f"{ev['nonempty_quote_items']} ({ev['nonempty_quote_items_pct']}%); quote found "

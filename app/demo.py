@@ -1,4 +1,5 @@
 """RAG-XPR Streamlit Demo App."""
+
 import json
 import os
 import sys
@@ -10,7 +11,7 @@ from dotenv import load_dotenv
 
 from src.rag_pipeline.pipeline import RAGXPRPipeline
 
-# ────────── Setup ──────────
+# Setup
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -19,8 +20,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 @st.cache_resource(show_spinner="🤖 Loading model... (first time only)")
-def load_pipeline(provider, model, framework, num_evidence, num_kb_chunks,
-                  api_key=None, base_url=None, save_intermediate=True):
+def load_pipeline(
+    provider,
+    model,
+    framework,
+    num_evidence,
+    num_kb_chunks,
+    api_key=None,
+    base_url=None,
+    save_intermediate=True,
+):
     """Build and cache the RAG-XPR pipeline. Reused across all Streamlit reruns."""
     config = {
         "llm": {
@@ -45,9 +54,7 @@ def load_pipeline(provider, model, framework, num_evidence, num_kb_chunks,
     return RAGXPRPipeline(config)
 
 
-# ────────────────────────────────────────────────────────────────────────────
 # Page config
-# ────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="RAG-XPR | Explainable Personality Recognition",
     page_icon="🧠",
@@ -56,45 +63,74 @@ st.set_page_config(
 )
 
 
-# ────────────────────────────────────────────────────────────────────────────
 # Custom CSS
-# ────────────────────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .main-header { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
     .subheader { color: #64748b; font-size: 1rem; margin-bottom: 1.5rem; }
-    .evidence-card { background: #f1f5f9; border-left: 4px solid #6366f1; padding: 12px; border-radius: 6px; margin: 8px 0; }
-    .state-card { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 6px; margin: 8px 0; }
-    .prediction-box { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 24px; border-radius: 12px; text-align: center; }
-    .metric-box { background: white; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; text-align: center; }
+    .evidence-card {
+        background: #f1f5f9;
+        border-left: 4px solid #6366f1;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 8px 0;
+    }
+    .state-card {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 8px 0;
+    }
+    .prediction-box {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        padding: 24px;
+        border-radius: 12px;
+        text-align: center;
+    }
+    .metric-box {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        border-radius: 8px;
+        text-align: center;
+    }
     .step-header { color: #6366f1; font-weight: 600; font-size: 1.1rem; margin-top: 1rem; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# ────────────────────────────────────────────────────────────────────────────
 # Header
-# ────────────────────────────────────────────────────────────────────────────
 st.markdown('<p class="main-header">🧠 RAG-XPR</p>', unsafe_allow_html=True)
-st.markdown('<p class="subheader">Explainable Personality Recognition via Retrieval-Augmented Generation & Chain-of-Personality-Evidence</p>', unsafe_allow_html=True)
+st.markdown(
+    '<p class="subheader">Explainable Personality Recognition via '
+    "Retrieval-Augmented Generation & Chain-of-Personality-Evidence</p>",
+    unsafe_allow_html=True,
+)
 
-# ────────────────────────────────────────────────────────────────────────────
 # Sidebar: Configuration
-# ────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("⚙️ Configuration")
     llm_provider = st.selectbox("LLM Provider", ["local", "openrouter", "openai", "ollama", "vllm"])
     default_model = (
         "microsoft/Phi-3.5-mini-instruct"
         if llm_provider == "local"
-        else "qwen/qwen3.6-plus:free" if llm_provider == "openrouter" else "gpt-4o-mini"
+        else "qwen/qwen3.6-plus:free"
+        if llm_provider == "openrouter"
+        else "gpt-4o-mini"
     )
-    llm_model = st.text_input(
-        "Model",
-        value=default_model,
-        key="model_input"
-    )
+    llm_model = st.text_input("Model", value=default_model, key="model_input")
     framework = st.selectbox("Personality Framework", ["mbti", "ocean"])
     num_evidence = st.slider("Max Evidence Sentences", 3, 10, 6)
     num_kb_chunks = st.slider("KB Chunks per Evidence", 1, 5, 3)
@@ -116,10 +152,10 @@ with st.sidebar:
     4. 🎯 Personality Prediction + Explanation
     """)
 
-# ────────────────────────────────────────────────────────────────────────────
 # Eager pipeline warm-up: runs once on app start, cached for all future reruns
-# ────────────────────────────────────────────────────────────────────────────
-resolved_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+resolved_key = (
+    api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+)
 base_url = "https://openrouter.ai/api/v1" if llm_provider == "openrouter" else None
 pipeline = load_pipeline(
     provider=llm_provider,
@@ -132,9 +168,7 @@ pipeline = load_pipeline(
     save_intermediate=save_intermediate,
 )
 
-# ────────────────────────────────────────────────────────────────────────────
 # Main content
-# ────────────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3 = st.tabs(["🔍 Analyze Text", "📊 Compare Methods", "ℹ️ About"])
 
 with tab1:
@@ -143,9 +177,19 @@ with tab1:
     with col1:
         st.subheader("Input Text")
         sample_texts = {
-            "INTJ Example": "I often find myself planning weeks ahead, analyzing every possible scenario. Social events drain me, and I prefer deep one-on-one conversations over small talk. I value efficiency and have little patience for inefficiency.",
-            "ENFP Example": "Meeting new people is one of my greatest joys! I love brainstorming ideas and jumping from one exciting project to another. I'm a passionate advocate for causes I believe in.",
-            "INFP Example": "I spend a lot of time in my own head, daydreaming and imagining. Authenticity matters deeply to me — I can't stand pretense. I feel others' emotions as if they were my own.",
+            "INTJ Example": (
+                "I often find myself planning weeks ahead, analyzing every possible scenario. "
+                "Social events drain me, and I prefer deep one-on-one conversations over small talk. "
+                "I value efficiency and have little patience for inefficiency."
+            ),
+            "ENFP Example": (
+                "Meeting new people is one of my greatest joys! I love brainstorming ideas and jumping "
+                "from one exciting project to another. I'm a passionate advocate for causes I believe in."
+            ),
+            "INFP Example": (
+                "I spend a lot of time in my own head, daydreaming and imagining. Authenticity matters "
+                "deeply to me — I can't stand pretense. I feel others' emotions as if they were my own."
+            ),
             "Custom Text": "",
         }
         example_choice = st.selectbox("Load Example", list(sample_texts.keys()))
@@ -157,7 +201,11 @@ with tab1:
             placeholder="Enter posts, messages, or essays here...",
         )
 
-        analyze_button = st.button("🔍 Analyze Personality", type="primary", disabled=not input_text.strip())
+        analyze_button = st.button(
+            "🔍 Analyze Personality",
+            type="primary",
+            disabled=not input_text.strip(),
+        )
 
     with col2:
         st.subheader("Expected MBTI Types")
@@ -175,7 +223,12 @@ with tab1:
         with st.spinner("🔄 Running RAG-XPR pipeline..."):
             try:
                 # Validate API key proactively
-                resolved_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+                resolved_key = (
+                    api_key
+                    or os.environ.get("LLM_API_KEY")
+                    or os.environ.get("OPENAI_API_KEY")
+                    or os.environ.get("OPENROUTER_API_KEY")
+                )
                 if not resolved_key and llm_provider in ("openai", "openrouter"):
                     st.error("Missing API Key! Please enter your API key in the sidebar or check your .env file.")
                     st.stop()
@@ -204,18 +257,21 @@ with tab1:
 
                 status_box.empty()
 
-                # ── Analysis Summary ──────────────────────────────────────────
+                # Analysis Summary
                 st.divider()
                 st.subheader("🏁 Final Prediction")
                 col_pred, col_conf = st.columns([1, 2])
 
                 with col_pred:
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                     <div class="prediction-box">
-                        <h1 style="font-size:2.5rem;margin:0">{result.get('predicted_label', 'N/A')}</h1>
+                        <h1 style="font-size:2.5rem;margin:0">{result.get("predicted_label", "N/A")}</h1>
                         <p style="margin:0;opacity:0.8">Personality Type ({framework.upper()})</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """,
+                        unsafe_allow_html=True,
+                    )
 
                 with col_conf:
                     details = result.get("prediction_details", {})
@@ -226,12 +282,12 @@ with tab1:
                             label = info.get("label", "?")
                             st.progress(confidence, text=f"{dim}: **{label}** ({confidence:.0%})")
 
-                # ── Explanation ──────────────────────────────────────────────
+                # Explanation
                 st.subheader("📝 Summary Explanation")
                 explanation = result.get("explanation", "No explanation generated.")
                 st.info(explanation)
 
-                # ── Step-by-Step Details ──────────────────────────────────────
+                # Step-by-Step Details
                 st.divider()
                 st.subheader("🧬 Chain-of-Personality-Evidence (CoPE)")
 
@@ -242,42 +298,52 @@ with tab1:
                     with st.expander("📌 Step 1: Extracted Evidence", expanded=True):
                         st.write("Quotes from the input text that reveal personality-relevant behaviors:")
                         for i, ev in enumerate(intermediate.get("step1_evidence", [])):
-                            st.markdown(f"""
+                            st.markdown(
+                                f"""
                             <div class="evidence-card" style="border-left: 4px solid #3498db;">
-                                <strong>{i+1}. [{ev.get('behavior_type', 'Behavior')}]</strong><br>
-                                <em>"{ev.get('quote', '')}"</em><br>
-                                <small style="opacity:0.7">Insight: {ev.get('description', '')}</small>
+                                <strong>{i + 1}. [{ev.get("behavior_type", "Behavior")}]</strong><br>
+                                <em>"{ev.get("quote", "")}"</em><br>
+                                <small style="opacity:0.7">Insight: {ev.get("description", "")}</small>
                             </div>
-                            """, unsafe_allow_html=True)
+                            """,
+                                unsafe_allow_html=True,
+                            )
 
                     # Step 2: States
                     with st.expander("💡 Step 2: Psychological States", expanded=True):
                         st.write("Mapping behaviors to psychological states using the Knowledge Base:")
                         for state in intermediate.get("step2_states", []):
-                            st.markdown(f"""
-                            <div class="state-card" style="border-left: 4px solid #e67e22; padding: 10px; margin-bottom: 5px; background: rgba(230,126,34,0.1); border-radius: 4px;">
-                                <strong>{state.get('state_label', '')}</strong> (Confidence: {state.get('confidence', 0):.0%})<br>
-                                <small style="opacity:0.8">Source Quote: "{state.get('quote', '')}"</small><br>
-                                <p style="margin-top:5px; font-size:0.9em;">Reasoning: {state.get('reasoning', '')}</p>
+                            st.markdown(
+                                f"""
+                            <div class="state-card" style="border-left: 4px solid #e67e22;">
+                                <strong>{state.get("state_label", "")}</strong>
+                                (Confidence: {state.get("confidence", 0):.0%})<br>
+                                <small style="opacity:0.8">Source Quote: "{state.get("quote", "")}"</small><br>
+                                <p style="margin-top:5px; font-size:0.9em;">Reasoning: {state.get("reasoning", "")}</p>
                             </div>
-                            """, unsafe_allow_html=True)
+                            """,
+                                unsafe_allow_html=True,
+                            )
 
                     # Step 3: Combined Prediction Chain
                     with st.expander("📊 Step 3: Trait Contribution", expanded=False):
                         evidence_chain = result.get("evidence_chain", [])
                         if evidence_chain:
                             for ev in evidence_chain:
-                                st.write(f"• **{ev.get('state', 'State')}** supports **{ev.get('trait_contribution', 'Trait')}**")
+                                st.write(
+                                    f"• **{ev.get('state', 'State')}** supports "
+                                    f"**{ev.get('trait_contribution', 'Trait')}**"
+                                )
                         else:
                             st.write("Aggregating all identified states for the final prediction...")
                 else:
                     st.warning("Run analysis with 'Save Intermediate' enabled to see step-by-step details.")
 
-            except ImportError as e:
-                st.error(f"Missing dependency: {e}. Please install requirements: `pip install -r requirements.txt`")
             except Exception as e:
                 st.error(f"Pipeline error: {e}")
-                if not any(k in os.environ for k in ("LLM_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "VLLM_API_KEY")):
+                if not any(
+                    k in os.environ for k in ("LLM_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "VLLM_API_KEY")
+                ):
                     st.warning("💡 Set your LLM API key in the sidebar or in the .env file.")
 
 with tab2:
@@ -296,6 +362,7 @@ with tab2:
 
         from src.evaluation.classification_metrics import \
             compute_classification_metrics
+
         baseline_y = [p.get("gold_label", "") for p in baseline_preds]
         baseline_pred = [p.get("predicted_label", "") for p in baseline_preds]
         ragxpr_y = [p.get("gold_label", "") for p in ragxpr_preds]
@@ -310,10 +377,16 @@ with tab2:
                 st.metric("Baseline Accuracy", f"{baseline_metrics['accuracy']:.2%}")
                 st.metric("Baseline F1 (macro)", f"{baseline_metrics['f1_macro']:.4f}")
             with col_r:
-                st.metric("RAG-XPR Accuracy", f"{ragxpr_metrics['accuracy']:.2%}",
-                          delta=f"{ragxpr_metrics['accuracy'] - baseline_metrics['accuracy']:+.2%}")
-                st.metric("RAG-XPR F1 (macro)", f"{ragxpr_metrics['f1_macro']:.4f}",
-                          delta=f"{ragxpr_metrics['f1_macro'] - baseline_metrics['f1_macro']:+.4f}")
+                st.metric(
+                    "RAG-XPR Accuracy",
+                    f"{ragxpr_metrics['accuracy']:.2%}",
+                    delta=f"{ragxpr_metrics['accuracy'] - baseline_metrics['accuracy']:+.2%}",
+                )
+                st.metric(
+                    "RAG-XPR F1 (macro)",
+                    f"{ragxpr_metrics['f1_macro']:.4f}",
+                    delta=f"{ragxpr_metrics['f1_macro'] - baseline_metrics['f1_macro']:+.4f}",
+                )
 
 with tab3:
     st.subheader("ℹ️ About RAG-XPR")

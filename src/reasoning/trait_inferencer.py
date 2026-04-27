@@ -1,4 +1,5 @@
 """Step 3: Aggregate psychological states → personality trait labels."""
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,6 +18,7 @@ PROMPTS_DIR = Path(__file__).parent / "prompts"
 @dataclass
 class PredictionResult:
     """Final output of the CoPE pipeline."""
+
     predicted_label: str
     prediction_details: dict = field(default_factory=dict)
     explanation: str = ""
@@ -65,9 +67,7 @@ class TraitInferencer:
             return normalized
         return prior_label or "HIGH"
 
-    def _extract_ocean_label(
-        self, prediction_details: dict, roberta_prior: dict | None = None
-    ) -> str:
+    def _extract_ocean_label(self, prediction_details: dict, roberta_prior: dict | None = None) -> str:
         """Extract a combined OCEAN label string, normalizing invalid values."""
         traits = prediction_details.get("traits", {})
         parts = []

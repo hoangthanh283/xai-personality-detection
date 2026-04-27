@@ -8,21 +8,18 @@ Unlike the keyword-based EvidenceRetriever, this scorer uses supervised
 features learned from the training data — sentences the fine-tuned model
 classifies confidently are the ones with strongest personality signal.
 """
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import torch
 from loguru import logger
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import logging as hf_logging
 
-try:
-    import torch
-    from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
-                              logging as hf_logging)
-    hf_logging.set_verbosity_error()
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+hf_logging.set_verbosity_error()
 
 
 @dataclass
@@ -46,9 +43,6 @@ class RoBERTaEvidenceScorer:
         batch_size: int = 32,
         max_length: int = 256,
     ):
-        if not HAS_TORCH:
-            raise ImportError("torch/transformers required for RoBERTaEvidenceScorer")
-
         # Prefer CPU to avoid VRAM contention with the LLM — inference is fast enough.
         self.device = device or ("cuda" if torch.cuda.is_available() and _has_free_vram() else "cpu")
         self.batch_size = batch_size
@@ -68,7 +62,7 @@ class RoBERTaEvidenceScorer:
                 id2label = json.load(open(lmap_path))["id2label"]
                 id2label = {int(k): v for k, v in id2label.items()}
             else:
-                id2label = {i: l for i, l in model.config.id2label.items()}
+                id2label = {idx: label for idx, label in model.config.id2label.items()}
             self.classifiers[dim] = {"tokenizer": tok, "model": model, "id2label": id2label}
 
         if not self.classifiers:
@@ -103,9 +97,7 @@ class RoBERTaEvidenceScorer:
             return []
 
         # Filter too-short sentences (keep index mapping)
-        valid_idxs = [
-            i for i, s in enumerate(sentences) if len(s.split()) >= self.MIN_SENTENCE_TOKENS
-        ]
+        valid_idxs = [i for i, s in enumerate(sentences) if len(s.split()) >= self.MIN_SENTENCE_TOKENS]
         valid_sents = [sentences[i] for i in valid_idxs]
         if not valid_sents:
             # All too short — return all with zero score rather than dropping
@@ -148,7 +140,7 @@ class RoBERTaEvidenceScorer:
 
 def _has_free_vram(threshold_gb: float = 1.0) -> bool:
     """Check if GPU has at least threshold_gb free (heuristic)."""
-    if not HAS_TORCH or not torch.cuda.is_available():
+    if not torch.cuda.is_available():
         return False
     try:
         free, _ = torch.cuda.mem_get_info(0)

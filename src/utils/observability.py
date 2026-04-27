@@ -8,27 +8,21 @@ Key features:
 - `MultiBackendLogger.log_scalar / log_dict / log_histogram / log_image / log_table`
 - `.with_prefix(prefix)` returns a child logger that prefixes every key (used to
   namespace per-trait metrics into a single parent W&B run).
-- Both backends fail gracefully: if W&B init fails or tensorboard import is
-  unavailable, the other backend keeps working and a warning is logged.
+- Both backends fail gracefully: if W&B or TensorBoard initialization fails,
+  the other backend keeps working and a warning is logged.
 - `tensorboard_dir` is created automatically and reused if already exists.
 """
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
+from torch.utils.tensorboard import SummaryWriter
 
-try:
-    import wandb
-except ImportError:  # pragma: no cover
-    wandb = None
-
-try:
-    from torch.utils.tensorboard import SummaryWriter
-except ImportError:  # pragma: no cover - graceful degrade
-    SummaryWriter = None
+import wandb
 
 
 class MultiBackendLogger:
@@ -74,7 +68,7 @@ class MultiBackendLogger:
         wandb_run = None
         tb_writer = None
 
-        if project and wandb is not None:
+        if project:
             try:
                 wandb_run = wandb.init(
                     project=project,
@@ -89,7 +83,7 @@ class MultiBackendLogger:
             except Exception as exc:  # pragma: no cover
                 logger.warning(f"W&B init failed for {name}: {exc}")
 
-        if tensorboard_dir and SummaryWriter is not None:
+        if tensorboard_dir:
             try:
                 tb_path = Path(tensorboard_dir)
                 tb_path.mkdir(parents=True, exist_ok=True)
@@ -109,7 +103,9 @@ class MultiBackendLogger:
         """
         new_prefix = f"{self.prefix}/{prefix}".strip("/") if self.prefix else prefix
         return MultiBackendLogger(
-            self.wandb_run, self.tb_writer, prefix=new_prefix,
+            self.wandb_run,
+            self.tb_writer,
+            prefix=new_prefix,
             _step_counter=self._step_counter,
         )
 
@@ -147,10 +143,7 @@ class MultiBackendLogger:
     def log_dict(self, metrics: dict[str, float], step: int | None = None) -> None:
         if not metrics:
             return
-        scalar_metrics = {
-            self._full_key(k): v for k, v in metrics.items()
-            if isinstance(v, (int, float))
-        }
+        scalar_metrics = {self._full_key(k): v for k, v in metrics.items() if isinstance(v, (int, float))}
         if not scalar_metrics:
             return
         effective_step = step if step is not None else self._next_step()
@@ -213,11 +206,9 @@ class MultiBackendLogger:
         full_key = self._full_key(key)
         if self.wandb_run is not None and wandb is not None:
             try:
-                self.wandb_run.log({
-                    full_key: wandb.plot.confusion_matrix(
-                        y_true=y_true, preds=y_pred, class_names=class_names
-                    )
-                })
+                self.wandb_run.log(
+                    {full_key: wandb.plot.confusion_matrix(y_true=y_true, preds=y_pred, class_names=class_names)}
+                )
             except Exception as exc:  # pragma: no cover
                 logger.debug(f"wandb confusion_matrix({full_key}) failed: {exc}")
 
@@ -235,11 +226,22 @@ class MultiBackendLogger:
     @staticmethod
     def aggregate_per_trait(
         per_trait_metrics: dict[str, dict[str, float]],
+        test_only: bool = True,
     ) -> dict[str, float]:
-        """Compute mean / min / max across traits for each metric key.
+        """Compute mean / min / max across traits for final scalar summaries.
 
-        Returns dict like `{"mean/test_macro_f1": 0.62, "min/test_macro_f1": 0.41}`.
-        Skips non-numeric values silently.
+        With `test_only=True` (default), only `test_*` metric keys are
+        aggregated and emitted under `summary/test_{stat}/{metric}`. The
+        train/eval namespaces are intentionally skipped because per-epoch
+        curves under `agg_{mean,min,max}/{train,eval}/{metric}` already
+        cover that progression — emitting a single-dot duplicate is
+        misleading.
+
+        With `test_only=False`, all metric keys are aggregated under
+        `summary/{stat}/{metric}` (legacy behaviour, no split routing).
+
+        Returns e.g. `{"summary/test_mean/f1_macro": 0.62}`. Skips
+        non-numeric values silently.
         """
         if not per_trait_metrics:
             return {}
@@ -253,15 +255,23 @@ class MultiBackendLogger:
 
         aggregates: dict[str, float] = {}
         for metric in metric_keys:
-            values = [
-                m[metric] for m in per_trait_metrics.values()
-                if isinstance(m.get(metric), (int, float))
-            ]
+            values = [m[metric] for m in per_trait_metrics.values() if isinstance(m.get(metric), (int, float))]
             if not values:
                 continue
-            aggregates[f"mean/{metric}"] = sum(values) / len(values)
-            aggregates[f"min/{metric}"] = min(values)
-            aggregates[f"max/{metric}"] = max(values)
+            if test_only:
+                # Only surface test_* keys; strip the prefix so downstream
+                # charts read `summary/test_mean/f1_macro` (clean grouping).
+                if not metric.startswith("test_"):
+                    continue
+                short = metric[len("test_") :]
+                prefix = "summary/test"
+                aggregates[f"{prefix}_mean/{short}"] = sum(values) / len(values)
+                aggregates[f"{prefix}_min/{short}"] = min(values)
+                aggregates[f"{prefix}_max/{short}"] = max(values)
+            else:
+                aggregates[f"summary/mean/{metric}"] = sum(values) / len(values)
+                aggregates[f"summary/min/{metric}"] = min(values)
+                aggregates[f"summary/max/{metric}"] = max(values)
         return aggregates
 
     # ---- finish -------------------------------------------------------------

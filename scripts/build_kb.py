@@ -21,7 +21,8 @@ from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.knowledge_base.schema import stable_json_hash, summarize_records, validate_chunk_record
+from src.knowledge_base.schema import (stable_json_hash, summarize_records,
+                                       validate_chunk_record)
 from src.utils.logging_config import setup_logging
 
 
@@ -42,9 +43,7 @@ def _config_hash(config: dict) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def write_manifest(
-    config: dict, output_dir: Path, *, embeddings_shape: tuple | None = None
-) -> None:
+def write_manifest(config: dict, output_dir: Path, *, embeddings_shape: tuple | None = None) -> None:
     """Write reproducibility metadata for the current built KB."""
     chunks_path = output_dir / "chunks.jsonl"
     records = _read_jsonl(chunks_path)
@@ -323,9 +322,7 @@ def step_verify(config: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Build and index psychology knowledge base")
     parser.add_argument("--config", default="configs/kb_config.yaml")
-    parser.add_argument(
-        "--step", choices=["parse", "embed", "index", "verify", "all"], required=True
-    )
+    parser.add_argument("--step", choices=["parse", "embed", "index", "verify", "all"], required=True)
     args = parser.parse_args()
 
     setup_logging()

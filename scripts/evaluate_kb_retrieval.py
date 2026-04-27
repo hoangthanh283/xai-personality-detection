@@ -112,9 +112,7 @@ def evaluate(retriever, queries: list[dict], top_k: int) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate KB retrieval gold queries")
     parser.add_argument("--chunks", default="data/knowledge_base/chunks.jsonl")
-    parser.add_argument(
-        "--queries", default="data/knowledge_base/eval_queries/ocean_retrieval_gold.jsonl"
-    )
+    parser.add_argument("--queries", default="data/knowledge_base/eval_queries/ocean_retrieval_gold.jsonl")
     parser.add_argument("--method", choices=["bm25", "hybrid"], default="bm25")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--output", default="data/knowledge_base/reports/retrieval_eval.json")

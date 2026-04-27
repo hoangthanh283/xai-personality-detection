@@ -39,9 +39,7 @@ class KBRetriever:
             or qdrant_cfg.get("collection_name")
             or "psych_kb"
         )
-        self.qdrant_url = (
-            self.config.get("qdrant_url") or qdrant_cfg.get("url") or "http://localhost:6333"
-        )
+        self.qdrant_url = self.config.get("qdrant_url") or qdrant_cfg.get("url") or "http://localhost:6333"
 
     @property
     def qdrant(self):
@@ -65,7 +63,8 @@ class KBRetriever:
         category: str | Iterable[str] | None = None,
     ):
         """Build Qdrant payload filter."""
-        from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
+        from qdrant_client.models import (FieldCondition, Filter, MatchAny,
+                                          MatchValue)
 
         conditions = []
         if framework and framework != "both":
@@ -77,11 +76,7 @@ class KBRetriever:
             )
         categories = self._normalize_categories(category)
         if categories:
-            matcher = (
-                MatchValue(value=categories[0])
-                if len(categories) == 1
-                else MatchAny(any=categories)
-            )
+            matcher = MatchValue(value=categories[0]) if len(categories) == 1 else MatchAny(any=categories)
             conditions.append(FieldCondition(key="category", match=matcher))
         if conditions:
             return Filter(must=conditions)
@@ -114,8 +109,7 @@ class KBRetriever:
             return MockResponse(points=res)
         else:
             raise AttributeError(
-                "QdrantClient object has no attribute 'query_points' or 'search'. "
-                f"Available: {dir(client)}"
+                f"QdrantClient object has no attribute 'query_points' or 'search'. Available: {dir(client)}"
             )
 
     def search(
@@ -183,9 +177,7 @@ class KBRetriever:
                         chunk_id=r.payload.get("chunk_id", ""),
                         text=r.payload.get("text", ""),
                         score=r.score,
-                        metadata={
-                            k: v for k, v in r.payload.items() if k not in ("chunk_id", "text")
-                        },
+                        metadata={k: v for k, v in r.payload.items() if k not in ("chunk_id", "text")},
                     )
                     for r in response.points
                 ]

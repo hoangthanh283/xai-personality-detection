@@ -22,6 +22,7 @@ Designed to integrate cleanly with `run_rag_xpr.py`'s sample loop:
         )
     final = inf_logger.finalize()
 """
+
 from __future__ import annotations
 
 import math
@@ -29,6 +30,7 @@ from collections import defaultdict
 from typing import Iterable, Optional
 
 from loguru import logger as loguru_logger
+from rapidfuzz import fuzz
 
 from src.utils.observability import MultiBackendLogger
 
@@ -45,19 +47,14 @@ def _running_quantile(values: list[float], q: float) -> float:
 def _fuzzy_quote_match(quote: str, source_text: str, threshold: float = 0.85) -> bool:
     """Return True if quote substring fuzzy-matches source_text.
 
-    Used to detect hallucinated evidence quotes in CoPE outputs. We rely on
-    rapidfuzz when available; degrade to substring containment otherwise.
+    Used to detect hallucinated evidence quotes in CoPE outputs.
     """
     if not quote or not source_text:
         return False
     if quote.strip() in source_text:
         return True
-    try:
-        from rapidfuzz import fuzz
-        score = fuzz.partial_ratio(quote.lower(), source_text.lower()) / 100.0
-        return score >= threshold
-    except ImportError:  # pragma: no cover
-        return False
+    score = fuzz.partial_ratio(quote.lower(), source_text.lower()) / 100.0
+    return score >= threshold
 
 
 # ---------------------------------------------------------------------------
@@ -81,9 +78,7 @@ class InferenceLogger:
         self._n_correct_per_trait: dict[str, int] = defaultdict(int)
         self._n_seen_per_trait: dict[str, int] = defaultdict(int)
         self._tp_per_trait: dict[str, dict] = {  # for macro_f1 per trait
-            t: {"tp_high": 0, "fp_high": 0, "fn_high": 0,
-                "tp_low": 0, "fp_low": 0, "fn_low": 0}
-            for t in self._traits
+            t: {"tp_high": 0, "fp_high": 0, "fn_high": 0, "tp_low": 0, "fp_low": 0, "fn_low": 0} for t in self._traits
         }
         self._latencies: list[float] = []
         self._n_parse_fail = 0
@@ -94,8 +89,14 @@ class InferenceLogger:
         self._n_evidence_total = 0
         self._table_rows: list[list] = []
         self._table_columns = [
-            "idx", "gold", "pred", "latency_s", "parse_ok",
-            "n_evidence", "halluc_rate", "kb_cited",
+            "idx",
+            "gold",
+            "pred",
+            "latency_s",
+            "parse_ok",
+            "n_evidence",
+            "halluc_rate",
+            "kb_cited",
         ]
 
     # ----- public API --------------------------------------------------------
@@ -161,16 +162,18 @@ class InferenceLogger:
 
         # Sample-level table for debugging (cap to first 200 to avoid bloat)
         if len(self._table_rows) < 200:
-            self._table_rows.append([
-                self._n_seen,
-                _fmt_label(gold),
-                _fmt_label(pred),
-                round(latency, 3),
-                json_parsed,
-                n_evidence,
-                round(sample_halluc_rate, 3),
-                bool(kb_chunks_cited) if kb_eligible else None,
-            ])
+            self._table_rows.append(
+                [
+                    self._n_seen,
+                    _fmt_label(gold),
+                    _fmt_label(pred),
+                    round(latency, 3),
+                    json_parsed,
+                    n_evidence,
+                    round(sample_halluc_rate, 3),
+                    bool(kb_chunks_cited) if kb_eligible else None,
+                ]
+            )
 
         # Periodic flush
         if self._n_seen % self._log_every == 0:
@@ -192,18 +195,12 @@ class InferenceLogger:
             if seen:
                 final[f"final/test/accuracy_{t}"] = self._n_correct_per_trait[t] / seen
         final["final/test/samples"] = self._n_seen
-        final["final/test/json_parse_failure_rate"] = (
-            self._n_parse_fail / max(1, self._n_seen)
-        )
+        final["final/test/json_parse_failure_rate"] = self._n_parse_fail / max(1, self._n_seen)
         final["final/test/latency_p50_seconds"] = _running_quantile(self._latencies, 0.50)
         final["final/test/latency_p95_seconds"] = _running_quantile(self._latencies, 0.95)
         if self._n_quote_total:
-            final["final/test/hallucination_rate"] = (
-                self._n_quote_hallucinated / self._n_quote_total
-            )
-            final["final/test/avg_evidence_per_sample"] = (
-                self._n_evidence_total / max(1, self._n_seen)
-            )
+            final["final/test/hallucination_rate"] = self._n_quote_hallucinated / self._n_quote_total
+            final["final/test/avg_evidence_per_sample"] = self._n_evidence_total / max(1, self._n_seen)
         if self._n_kb_eligible:
             final["final/test/kb_citation_rate"] = self._n_kb_cited / self._n_kb_eligible
 
@@ -246,15 +243,11 @@ class InferenceLogger:
             if seen_t:
                 metrics[f"inference/running_accuracy_{t}"] = self._n_correct_per_trait[t] / seen_t
         if self._n_quote_total:
-            metrics["inference/running_hallucination_rate"] = (
-                self._n_quote_hallucinated / self._n_quote_total
-            )
+            metrics["inference/running_hallucination_rate"] = self._n_quote_hallucinated / self._n_quote_total
         if self._n_kb_eligible:
             metrics["inference/running_kb_citation_rate"] = self._n_kb_cited / self._n_kb_eligible
         if self._n_evidence_total and self._n_seen:
-            metrics["inference/running_mean_evidence_per_sample"] = (
-                self._n_evidence_total / self._n_seen
-            )
+            metrics["inference/running_mean_evidence_per_sample"] = self._n_evidence_total / self._n_seen
         return metrics
 
     def _per_trait_f1(self) -> dict[str, float]:

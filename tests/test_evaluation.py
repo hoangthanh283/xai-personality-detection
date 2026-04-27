@@ -1,4 +1,5 @@
 """Tests for evaluation modules."""
+
 import numpy as np
 
 from src.evaluation.classification_metrics import \
@@ -73,6 +74,7 @@ class TestStatisticalTests:
         y_true = np.array([1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
         y_pred = np.array([1, 0, 1, 1, 0, 0, 1, 0, 1, 1])
         from sklearn.metrics import accuracy_score
+
         ci = bootstrap_confidence_interval(y_true, y_pred, lambda a, b: accuracy_score(a, b), n_bootstrap=100)
         assert "mean" in ci
         assert "ci_lower" in ci

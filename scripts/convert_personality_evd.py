@@ -30,21 +30,22 @@ TRAIT_SHORT = {
     "neuroticism": "N",
 }
 
-TURN_RE = re.compile(r"^第(?P<utt_id>\d+)句(?P<speaker>.+?)说[：:](?P<utterance>.*)$")
+TURN_RE_ZH = re.compile(r"^第(?P<utt_id>\d+)句(?P<speaker>.+?)说[：:](?P<utterance>.*)$")
+TURN_RE_EN = re.compile(r"^Utterance\s+(?P<utt_id>\d+)\s+(?P<speaker>.+?)\s+said:\s*(?P<utterance>.*)$")
 
 
 def normalize_level(level: str) -> str:
-    text = str(level).strip()
-    if "高" in text:
+    text = str(level).strip().lower()
+    if "高" in text or "high" in text:
         return "HIGH"
-    if "低" in text:
+    if "低" in text or "low" in text:
         return "LOW"
     return "UNKNOWN"
 
 
 def parse_turn(line: str) -> dict:
     line = str(line).strip()
-    match = TURN_RE.match(line)
+    match = TURN_RE_EN.match(line) or TURN_RE_ZH.match(line)
     if not match:
         return {"utt_id": None, "speaker": "UNKNOWN", "utterance": line}
     return {
@@ -143,8 +144,16 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Convert PersonalityEvd raw format to parser-compatible JSONL")
-    parser.add_argument("--input_dir", default="data/raw/personality_evd")
-    parser.add_argument("--output_dir", default="data/raw/personality_evd")
+    parser.add_argument(
+        "--input_dir",
+        default="data/raw/personality_evd_en",
+        help="Root containing 'Dataset/' subdir. Defaults to English version.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        default="data/raw/personality_evd",
+        help="Where to write {train,val,test}.jsonl. Defaults overwrite existing.",
+    )
     args = parser.parse_args()
 
     input_root = Path(args.input_dir)

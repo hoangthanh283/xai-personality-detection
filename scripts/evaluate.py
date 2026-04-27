@@ -6,6 +6,7 @@ Usage:
     python scripts/evaluate.py --mode baseline_predictions --models_dir outputs/models/
     python scripts/evaluate.py --mode generate_human_eval --n_samples 50
 """
+
 import argparse
 import json
 import os
@@ -18,13 +19,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import matplotlib.pyplot as plt  # noqa: E402
 import seaborn as sns  # noqa: E402
 import yaml  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
 from loguru import logger  # noqa: E402
 
-try:
-    from dotenv import load_dotenv  # noqa: E402
-    load_dotenv()
-except ImportError:
-    pass  # python-dotenv not installed; rely on shell env vars
+load_dotenv()
 
 import wandb  # noqa: E402
 from src.utils.logging_config import setup_logging  # noqa: E402
@@ -33,8 +31,10 @@ from src.utils.seed import set_seed  # noqa: E402
 
 def _decompose_ocean_predictions(predictions: list[dict]) -> dict[str, dict]:
     """Split 'O:HIGH,C:LOW,...' labels into per-trait y_true/y_pred lists."""
+
     def parse(s: str) -> dict:
         return {p.split(":")[0].strip(): p.split(":")[1].strip() for p in str(s).split(",") if ":" in p}
+
     trait_data: dict[str, dict] = {t: {"y_true": [], "y_pred": []} for t in "OCEAN"}
     for p in predictions:
         gold = parse(p.get("gold_label", ""))
@@ -60,13 +60,14 @@ def load_predictions(path: str) -> list[dict]:
 def plot_confusion_matrix(y_true, y_pred, labels, output_path: Path, method_name: str) -> None:
     """Generate and save a confusion matrix PNG."""
     from sklearn.metrics import confusion_matrix
+
     cm = confusion_matrix(y_true, y_pred, labels=labels)
 
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
-    plt.title(f'Confusion Matrix - {method_name}')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=labels, yticklabels=labels)
+    plt.title(f"Confusion Matrix - {method_name}")
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
     plt.tight_layout()
     plt.savefig(output_path)
     plt.close()
@@ -142,11 +143,14 @@ def run_full_evaluation(args, config: dict) -> None:
                     t_m = compute_classification_metrics(data["y_true"], data["y_pred"])
                     per_trait[trait] = {"accuracy": t_m["accuracy"], "f1_macro": t_m["f1_macro"]}
             if per_trait:
-                import numpy as np
                 metrics["ocean_per_trait"] = per_trait
                 metrics["ocean_avg_f1_macro"] = float(np.mean([v["f1_macro"] for v in per_trait.values()]))
                 metrics["ocean_avg_accuracy"] = float(np.mean([v["accuracy"] for v in per_trait.values()]))
-                logger.info(f"  OCEAN avg F1: {metrics['ocean_avg_f1_macro']:.4f} | avg acc: {metrics['ocean_avg_accuracy']:.4f}")
+                logger.info(
+                    "  OCEAN avg F1: "
+                    f"{metrics['ocean_avg_f1_macro']:.4f} | "
+                    f"avg acc: {metrics['ocean_avg_accuracy']:.4f}"
+                )
                 for t, tm in per_trait.items():
                     logger.info(f"    {t}: acc={tm['accuracy']:.4f}  f1_macro={tm['f1_macro']:.4f}")
 
@@ -158,25 +162,33 @@ def run_full_evaluation(args, config: dict) -> None:
         gold_evidences = [p.get("gold_evidence") for p in predictions]
         if any(gold_evidences):
             from src.evaluation.xai_metrics import evidence_relevance_f1
+
             pred_evs, gold_evs = [], []
             for p in predictions:
                 if "gold_evidence" in p:
                     pred_ev = " ".join([e.get("evidence", "") for e in p.get("evidence_chain", [])])
-                    gold_ev = " ".join(p["gold_evidence"]) if isinstance(p["gold_evidence"], list) else str(p["gold_evidence"])
+                    gold_ev = (
+                        " ".join(p["gold_evidence"])
+                        if isinstance(p["gold_evidence"], list)
+                        else str(p["gold_evidence"])
+                    )
                     pred_evs.append(pred_ev)
                     gold_evs.append(gold_ev)
             xai["evidence_relevance_f1"] = evidence_relevance_f1(pred_evs, gold_evs)
 
         # Explanation Consistency & Faithfulness (both call LLM — can be slow)
         if not getattr(args, "skip_llm_xai", False):
-            try:
-                from src.evaluation.xai_metrics import (explanation_consistency,
-                                                        faithfulness_score)
-                from src.rag_pipeline.llm_client import build_llm_client
-                from src.rag_pipeline.pipeline import RAGXPRPipeline
+            from src.evaluation.xai_metrics import (explanation_consistency,
+                                                    faithfulness_score)
+            from src.rag_pipeline.llm_client import build_llm_client
+            from src.rag_pipeline.pipeline import RAGXPRPipeline
 
+            try:
                 # Try to build LLM for consistency checking
-                llm_config = config.get("llm", {"provider": "openrouter", "model": "qwen/qwen3.6-plus-preview:free"})
+                llm_config = config.get(
+                    "llm",
+                    {"provider": "openrouter", "model": "qwen/qwen3.6-plus-preview:free"},
+                )
                 llm_client = build_llm_client(llm_config)
 
                 # Check consistency
@@ -187,7 +199,9 @@ def run_full_evaluation(args, config: dict) -> None:
                     rag_cfg_path = "configs/rag_xpr_config.yaml"
                     if Path(rag_cfg_path).exists():
                         pipeline = RAGXPRPipeline.from_config_file(rag_cfg_path)
-                        xai["faithfulness"] = faithfulness_score(pipeline, predictions, n_samples=min(20, len(predictions)))
+                        xai["faithfulness"] = faithfulness_score(
+                            pipeline, predictions, n_samples=min(20, len(predictions))
+                        )
             except Exception as e:
                 logger.warning(f"Could not compute LLM-based XAI metrics for {pred_file.stem}: {e}")
 
@@ -199,7 +213,8 @@ def run_full_evaluation(args, config: dict) -> None:
         # Bootstrap CI for accuracy
         y_true_arr = (np.array(y_true) == np.array(y_pred)).astype(int)  # correctness mask
         ci = bootstrap_confidence_interval(
-            y_true_arr, y_true_arr,  # dummy — compute from correctness
+            y_true_arr,
+            y_true_arr,  # dummy — compute from correctness
             metric_fn=lambda a, b: float(a.mean()),
             n_bootstrap=config.get("statistical_tests", {}).get("n_bootstrap", 1000),
         )
@@ -216,11 +231,7 @@ def run_full_evaluation(args, config: dict) -> None:
         if wb_run:
             method = pred_file.stem
             prefix = f"{method}/"
-            scalar_metrics = {
-                f"{prefix}{k}": v
-                for k, v in metrics.items()
-                if isinstance(v, (int, float))
-            }
+            scalar_metrics = {f"{prefix}{k}": v for k, v in metrics.items() if isinstance(v, (int, float))}
             wandb.log(scalar_metrics)
 
             # Per-class metrics table
@@ -232,7 +243,9 @@ def run_full_evaluation(args, config: dict) -> None:
                     parts = line.split()
                     if len(parts) >= 5 and parts[0] not in ("accuracy", "macro", "weighted"):
                         try:
-                            per_class_table.add_data(parts[0], float(parts[1]), float(parts[2]), float(parts[3]), int(parts[4]))
+                            per_class_table.add_data(
+                                parts[0], float(parts[1]), float(parts[2]), float(parts[3]), int(parts[4])
+                            )
                         except (ValueError, IndexError):
                             pass
                 if per_class_table.data:
@@ -355,15 +368,27 @@ def run_statistical_tests(args, config: dict) -> None:
                 return f1_score(y_t, y_p, average="macro", zero_division=0)
 
             n_boot = config.get("statistical_tests", {}).get("n_bootstrap", 1000)
-            boot_res = paired_bootstrap_test(y_true, pred_a, pred_b, metric_fn=f1_macro_fn, n_bootstrap=n_boot)
-            logger.info(f"  Bootstrap p-val: {boot_res['p_value']:.4f} (significant: {boot_res['significant']}) | Δ F1: {boot_res['delta']:.4f}")
+            boot_res = paired_bootstrap_test(
+                y_true,
+                pred_a,
+                pred_b,
+                metric_fn=f1_macro_fn,
+                n_bootstrap=n_boot,
+            )
+            logger.info(
+                f"  Bootstrap p-val: {boot_res['p_value']:.4f} "
+                f"(significant: {boot_res['significant']}) | "
+                f"Δ F1: {boot_res['delta']:.4f}"
+            )
 
-            results.append({
-                "method_a": method_a,
-                "method_b": method_b,
-                "mcnemar": mcn_res,
-                "bootstrap_f1": boot_res,
-            })
+            results.append(
+                {
+                    "method_a": method_a,
+                    "method_b": method_b,
+                    "mcnemar": mcn_res,
+                    "bootstrap_f1": boot_res,
+                }
+            )
 
     results_file = output_dir / "statistical_tests.json"
     with open(results_file, "w") as f:
@@ -413,15 +438,22 @@ def generate_baseline_predictions(args, config: dict) -> None:
 
     for path in models_dir.glob("*"):
         if path.is_file() and path.suffix == ".pkl":
-            continue  # Needs dataset info. Better to run baseline predictions using the script provided in `train_baseline.py` actually.
+            # Needs dataset info. Better to run baseline predictions using train_baseline.py.
+            continue
 
     logger.error("Generating predictions iteratively across unknown PKL/checkpoints is not fully self-contained.")
-    logger.info("Please use 'scripts/train_baseline.py' which automatically outputs .jsonl test predictions upon completion.")
+    logger.info(
+        "Please use 'scripts/train_baseline.py' which automatically outputs .jsonl test predictions upon completion."
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run evaluation suite")
-    parser.add_argument("--mode", choices=["full", "baseline_predictions", "generate_human_eval", "statistical_tests"], required=True)
+    parser.add_argument(
+        "--mode",
+        choices=["full", "baseline_predictions", "generate_human_eval", "statistical_tests"],
+        required=True,
+    )
     parser.add_argument("--config", default="configs/eval_config.yaml")
     parser.add_argument("--predictions_dir", default="outputs/predictions/")
     parser.add_argument("--models_dir", default="outputs/models/")
@@ -429,8 +461,11 @@ def main():
     parser.add_argument("--n_samples", type=int, default=50)
     parser.add_argument("--methods", help="Comma-separated method names for human eval")
     parser.add_argument("--wandb_project", help="W&B project name (overrides WANDB_PROJECT env var)")
-    parser.add_argument("--skip_llm_xai", action="store_true",
-                        help="Skip slow LLM-based XAI metrics (explanation_consistency, faithfulness)")
+    parser.add_argument(
+        "--skip_llm_xai",
+        action="store_true",
+        help="Skip slow LLM-based XAI metrics (explanation_consistency, faithfulness)",
+    )
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 

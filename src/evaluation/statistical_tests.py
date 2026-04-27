@@ -1,4 +1,5 @@
 """Statistical significance tests: McNemar, bootstrap CI, paired bootstrap."""
+
 import numpy as np
 
 
@@ -14,6 +15,7 @@ def mcnemar_test(
     Returns: {statistic, p_value}
     """
     from statsmodels.stats.contingency_tables import mcnemar
+
     y_true = np.array(y_true)
     pred_a = np.array(pred_a)
     pred_b = np.array(pred_b)
@@ -114,6 +116,7 @@ def wilcoxon_test(scores_a: list[float], scores_b: list[float]) -> dict:
     Tests if two methods produce significantly different ratings.
     """
     from scipy.stats import wilcoxon
+
     stat, p = wilcoxon(scores_a, scores_b)
     return {
         "statistic": float(stat),

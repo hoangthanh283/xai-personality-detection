@@ -1,4 +1,5 @@
 """SHAP explainer for transformer-based baselines."""
+
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -20,23 +21,13 @@ def compute_shap_explanations(
     Generate SHAP token-level attributions for transformer baselines.
     These are compared qualitatively against RAG-XPR evidence chains.
     """
-    if shap is None:
-        logger.error("shap library is not installed. Run: pip install shap")
-        return []
-
     # Prepare model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     model.eval()
 
     def predict_proba(texts_list):
-        inputs = tokenizer(
-            texts_list,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        ).to(device)
+        inputs = tokenizer(texts_list, padding=True, truncation=True, max_length=512, return_tensors="pt").to(device)
         with torch.no_grad():
             outputs = model(**inputs)
             scores = torch.nn.functional.softmax(outputs.logits, dim=-1)
@@ -69,13 +60,15 @@ def compute_shap_explanations(
                 continue
             token_attributions.append({"token": token, "attribution": float(val)})
         token_attributions.sort(key=lambda x: abs(x["attribution"]), reverse=True)
-        results.append({
-            "text": texts[i],
-            "predicted_label": pred_class_name,
-            "predicted_prob": float(probs[pred_class_idx]),
-            "shap_attributions": token_attributions[:20],  # top 20 most important tokens
-            "explanation": f"Top influential tokens: {', '.join([t['token'] for t in token_attributions[:10]])}"
-        })
+        results.append(
+            {
+                "text": texts[i],
+                "predicted_label": pred_class_name,
+                "predicted_prob": float(probs[pred_class_idx]),
+                "shap_attributions": token_attributions[:20],  # top 20 most important tokens
+                "explanation": f"Top influential tokens: {', '.join([t['token'] for t in token_attributions[:10]])}",
+            }
+        )
     return results
 
 

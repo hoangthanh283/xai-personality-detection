@@ -1,10 +1,12 @@
 """Unified LLM interface supporting OpenRouter/OpenAI, vLLM, and Ollama backends."""
+
 import json
 import os
 import re
 import time
 from abc import ABC, abstractmethod
 
+import bitsandbytes  # noqa: F401
 from loguru import logger
 
 
@@ -82,26 +84,23 @@ class LocalTransformersClient(LLMClient):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.debug(f"Loading local LLM [{model}] on {device}...")
 
-        # Configure quantization if bitsandbytes is available and on GPU
+        # Configure quantization when running on GPU.
         model_kwargs = {
             "torch_dtype": torch.float16 if device == "cuda" else torch.float32,
             "device_map": "auto" if device == "cuda" else None,
             "trust_remote_code": True,
         }
 
-        try:
-            import bitsandbytes  # noqa
-            if device == "cuda":
-                logger.info("Enabling 4-bit quantization for local model")
-                from transformers import BitsAndBytesConfig
-                model_kwargs["quantization_config"] = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_use_double_quant=True,
-                )
-        except ImportError:
-            logger.debug("bitsandbytes not found, skipping quantization")
+        if device == "cuda":
+            logger.info("Enabling 4-bit quantization for local model")
+            from transformers import BitsAndBytesConfig
+
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+            )
 
         self.tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
         self.model_obj = AutoModelForCausalLM.from_pretrained(model, **model_kwargs)
@@ -114,9 +113,7 @@ class LocalTransformersClient(LLMClient):
 
     def generate(self, messages: list[dict], **kwargs) -> str:
         # Use tokenizer.apply_chat_template for robustness (Phi-3, Qwen, etc.)
-        prompt = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
         start_time = time.perf_counter()
         outputs = self.pipe(
@@ -132,7 +129,7 @@ class LocalTransformersClient(LLMClient):
         generated_text = outputs[0]["generated_text"]
         # Extract response from the end of the prompt
         if prompt in generated_text:
-            return generated_text[len(prompt):].strip()
+            return generated_text[len(prompt) :].strip()
         return generated_text
 
 
@@ -150,6 +147,7 @@ class OpenAIClient(LLMClient):
         base_url: str | None = None,
     ):
         import openai
+
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -239,6 +237,7 @@ class VLLMClient(LLMClient):
         max_tokens: int = 2048,
     ):
         import openai
+
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -267,6 +266,7 @@ class OllamaClient(LLMClient):
         seed: int | None = None,
     ):
         import requests
+
         self.model = model
         self.base_url = base_url
         self.temperature = temperature

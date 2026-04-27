@@ -30,11 +30,7 @@ class KBEmbedder:
             model_name = self.config["model"]
             device = "cuda" if torch.cuda.is_available() else "cpu"
             # Support Apple Silicon (MPS)
-            if (
-                device == "cpu"
-                and hasattr(torch.backends, "mps")
-                and torch.backends.mps.is_available()
-            ):
+            if device == "cpu" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
                 device = "mps"
 
             logger.info(f"Loading embedding model: {model_name} on {device}")

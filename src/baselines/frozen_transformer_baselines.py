@@ -18,33 +18,34 @@ document-level embeddings to ``outputs/embeddings/{model}/{dataset}_{split}.npy`
 so the same split isn't re-encoded across 4 MBTI binary tasks + 16-class (a
 single encode of 6K MBTI docs takes ~6 min on CPU).
 """
+
 from __future__ import annotations
 
 import hashlib
 import pickle
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+import torch
 from loguru import logger
 from sklearn.ensemble import BaggingClassifier
 from sklearn.metrics import (accuracy_score, classification_report, f1_score,
                              precision_score, recall_score)
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
+from torch import nn
+from torch.nn import functional as F
+from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
+from transformers import logging as hf_logging
 
-try:
-    import torch
-    from torch import nn
-    from torch.utils.data import DataLoader, TensorDataset
-    from transformers import AutoModel, AutoTokenizer, logging as hf_logging
+import wandb
 
-    hf_logging.set_verbosity_error()
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+hf_logging.set_verbosity_error()
 
 
 # ---------------------------------------------------------------------------
@@ -67,17 +68,15 @@ class FrozenTransformerEncoder:
     """Encode texts with a frozen transformer, returning doc-level vectors."""
 
     def __init__(self, config: EncoderConfig | Mapping[str, Any] | None = None):
-        if not HAS_TORCH:
-            raise ImportError("torch/transformers required for FrozenTransformerEncoder")
         cfg = EncoderConfig(**dict(config or {})) if not isinstance(config, EncoderConfig) else config
         self.config = cfg
         self.device = cfg.device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         logger.info(f"Loading frozen encoder [{cfg.model_name}] on {self.device}")
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
-        self.model = AutoModel.from_pretrained(
-            cfg.model_name, output_hidden_states=(cfg.pooling == "mean_last4")
-        ).to(self.device)
+        self.model = AutoModel.from_pretrained(cfg.model_name, output_hidden_states=(cfg.pooling == "mean_last4")).to(
+            self.device
+        )
         self.model.eval()
         for p in self.model.parameters():
             p.requires_grad = False
@@ -99,15 +98,20 @@ class FrozenTransformerEncoder:
 
     # ---- encoding ----------------------------------------------------------
 
-    def _pool_chunk(self, last_hidden: "torch.Tensor", hidden_states: list, attn_mask: "torch.Tensor") -> "torch.Tensor":
+    def _pool_chunk(
+        self,
+        last_hidden: "torch.Tensor",
+        hidden_states: list,
+        attn_mask: "torch.Tensor",
+    ) -> "torch.Tensor":
         """Pool one batch of chunks → (B, hidden_dim). attn_mask shape (B, L)."""
         if self.config.pooling == "cls":
             return last_hidden[:, 0, :]
         # mean_last4: average last 4 hidden-state layers, then mean over non-pad tokens
         last4 = torch.stack(hidden_states[-4:], dim=0).mean(dim=0)  # (B, L, H)
-        mask = attn_mask.unsqueeze(-1).float()                       # (B, L, 1)
-        summed = (last4 * mask).sum(dim=1)                           # (B, H)
-        counts = mask.sum(dim=1).clamp(min=1e-6)                     # (B, 1)
+        mask = attn_mask.unsqueeze(-1).float()  # (B, L, 1)
+        summed = (last4 * mask).sum(dim=1)  # (B, H)
+        counts = mask.sum(dim=1).clamp(min=1e-6)  # (B, 1)
         return summed / counts
 
     def _encode_one(self, text: str) -> np.ndarray:
@@ -134,7 +138,7 @@ class FrozenTransformerEncoder:
             pooled = self._pool_chunk(out.last_hidden_state, hs, b_attn)  # (B, H)
             chunk_embs.append(pooled.cpu().numpy())
         chunks = np.concatenate(chunk_embs, axis=0)  # (n_chunks, H)
-        return chunks.mean(axis=0)                   # (H,)
+        return chunks.mean(axis=0)  # (H,)
 
     def encode(self, texts: list[str], cache_key: str | None = None) -> np.ndarray:
         """Encode a list of texts. If cache_key provided, hit/save the cache."""
@@ -149,11 +153,7 @@ class FrozenTransformerEncoder:
             path.parent.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Encoding {len(texts)} texts with {self.config.model_name} (pooling={self.config.pooling})")
-        try:
-            from tqdm import tqdm
-            iterator = tqdm(texts, desc="encode", ncols=80)
-        except ImportError:
-            iterator = texts
+        iterator = tqdm(texts, desc="encode", ncols=80)
 
         out = np.zeros((len(texts), self.hidden_dim), dtype=np.float32)
         for i, t in enumerate(iterator):
@@ -245,31 +245,27 @@ class FrozenBertSvmBaseline:
 # ---------------------------------------------------------------------------
 
 
-if HAS_TORCH:
+class _MlpHead(nn.Module):
+    """2-layer MLP classifier head: hidden_dim → num_classes."""
 
-    class _MlpHead(nn.Module):
-        """2-layer MLP classifier head: hidden_dim → num_classes."""
+    def __init__(self, input_dim: int, hidden_dim: int, num_classes: int, dropout: float = 0.3):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, num_classes),
+        )
 
-        def __init__(self, input_dim: int, hidden_dim: int, num_classes: int, dropout: float = 0.3):
-            super().__init__()
-            self.net = nn.Sequential(
-                nn.Linear(input_dim, hidden_dim),
-                nn.GELU(),
-                nn.Dropout(dropout),
-                nn.LayerNorm(hidden_dim),
-                nn.Linear(hidden_dim, num_classes),
-            )
-
-        def forward(self, x: "torch.Tensor") -> "torch.Tensor":
-            return self.net(x)
+    def forward(self, x: "torch.Tensor") -> "torch.Tensor":
+        return self.net(x)
 
 
 class RobertaMlpBaseline:
     """Frozen RoBERTa + 2-layer MLP head trained with AdamW + early stopping."""
 
     def __init__(self, config: Mapping[str, Any] | None = None, model_name: str = "roberta_mlp"):
-        if not HAS_TORCH:
-            raise ImportError("torch required for RobertaMlpBaseline")
         cfg = dict(config or {})
         self.config = cfg
         self.model_name = model_name
@@ -357,64 +353,52 @@ class RobertaMlpBaseline:
                 # to global wandb.log so legacy paths still log somewhere.
                 if mb_logger is not None:
                     mb_logger.log_dict(
-                        {"train/loss_step": float(loss.item()),
-                         "train/global_step": float(global_step)},
+                        {"train/loss_step": float(loss.item()), "train/global_step": float(global_step)},
                         step=global_step,
                     )
-                else:
-                    try:
-                        import wandb as _wandb
-                        if _wandb.run:
-                            _wandb.log({"train/loss_step": loss.item(), "train/global_step": global_step}, step=global_step)
-                    except Exception:
-                        pass
-            train_loss = total_loss / len(ds)
+                elif wandb.run:
+                    wandb.log(
+                        {"train/loss_step": loss.item(), "train/global_step": global_step},
+                        step=global_step,
+                    )
+            train_running_loss = total_loss / len(ds)  # noqa: F841 (kept for legacy log)
 
-            # Compute train metrics (from cached X_train to avoid re-encoding)
-            with torch.no_grad():
-                train_logits = self.head(torch.from_numpy(X_train).to(self.device))
-                train_preds = train_logits.argmax(dim=-1).cpu().numpy()
-            train_acc = float((train_preds == y_train).mean())
-            train_f1 = float(f1_score(y_train, train_preds, average="macro", zero_division=0))
-
+            # Full train + val metric dicts (avoid re-encoding via cached X_*)
+            train_metrics = self._eval_on_encoded_full(X_train, y_train)
             val_metrics = self._eval_on_encoded_full(X_val, y_val) if X_val is not None else {}
-            val_acc = val_metrics.get("accuracy")
             current_lr = optimizer.param_groups[0]["lr"]
 
-            msg = f"epoch {epoch:02d} | lr={current_lr:.2e} | train_loss={train_loss:.4f} | train_acc={train_acc:.4f} | train_f1={train_f1:.4f}"
+            msg = (
+                f"epoch {epoch:02d} | lr={current_lr:.2e} | "
+                f"train_loss={train_metrics['loss']:.4f} | "
+                f"train_acc={train_metrics['accuracy']:.4f} | "
+                f"train_f1={train_metrics['f1_macro']:.4f}"
+            )
             if val_metrics:
-                msg += f" | val_acc={val_acc:.4f} | val_f1={val_metrics.get('f1_macro', 0):.4f}"
+                msg += (
+                    f" | val_loss={val_metrics['loss']:.4f} | "
+                    f"val_acc={val_metrics['accuracy']:.4f} | "
+                    f"val_f1={val_metrics['f1_macro']:.4f}"
+                )
             logger.info(msg)
 
             epoch_log: dict[str, float] = {
                 "epoch": float(epoch),
-                "train/loss": float(train_loss),
-                "train/accuracy": float(train_acc),
-                "train/f1_macro": float(train_f1),
                 "train/learning_rate": float(current_lr),
+                **{f"train/{k}": float(v) for k, v in train_metrics.items()},
+                **{f"eval/{k}": float(v) for k, v in val_metrics.items()},
             }
-            if val_metrics:
-                epoch_log.update({
-                    "eval/accuracy": float(val_metrics.get("accuracy", 0)),
-                    "eval/f1_macro": float(val_metrics.get("f1_macro", 0)),
-                    "eval/f1_weighted": float(val_metrics.get("f1_weighted", 0)),
-                    "eval/precision_macro": float(val_metrics.get("precision_macro", 0)),
-                    "eval/recall_macro": float(val_metrics.get("recall_macro", 0)),
-                    "eval/recall_weighted": float(val_metrics.get("recall_weighted", 0)),
-                    "eval/precision_weighted": float(val_metrics.get("precision_weighted", 0)),
-                })
             if mb_logger is not None:
                 mb_logger.log_dict(epoch_log, step=global_step)
-            else:
-                try:
-                    import wandb as _wandb
-                    if _wandb.run:
-                        _wandb.log(epoch_log, step=global_step)
-                except Exception:
-                    pass
+            elif wandb.run:
+                wandb.log(epoch_log, step=global_step)
 
-            # Early stop on val acc if provided, else train loss (negated)
-            metric = val_acc if val_acc is not None else -train_loss
+            # Early stop on val_loss (consistent with Tier 1 + Tier 2a). Lower
+            # is better, so negate for the max-better comparison below.
+            if val_metrics:
+                metric = -val_metrics["loss"]
+            else:
+                metric = -train_metrics["loss"]
             if metric > best_metric + 1e-6:
                 best_metric = metric
                 best_state = {k: v.detach().cpu().clone() for k, v in self.head.state_dict().items()}
@@ -437,13 +421,17 @@ class RobertaMlpBaseline:
         self.head.eval()
         with torch.no_grad():
             logits = self.head(torch.from_numpy(X).to(self.device))
+            ce_loss = float(F.cross_entropy(logits, torch.from_numpy(y).long().to(self.device)).item())
             preds = logits.argmax(dim=-1).cpu().numpy()
         return {
+            "loss": ce_loss,
             "accuracy": float((preds == y).mean()),
             "f1_macro": float(f1_score(y, preds, average="macro", zero_division=0)),
             "f1_weighted": float(f1_score(y, preds, average="weighted", zero_division=0)),
             "precision_macro": float(precision_score(y, preds, average="macro", zero_division=0)),
+            "precision_weighted": float(precision_score(y, preds, average="weighted", zero_division=0)),
             "recall_macro": float(recall_score(y, preds, average="macro", zero_division=0)),
+            "recall_weighted": float(recall_score(y, preds, average="weighted", zero_division=0)),
         }
 
     # ---- inference --------------------------------------------------------

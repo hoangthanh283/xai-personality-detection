@@ -121,13 +121,9 @@ class PandoraParser:
 
         df["author"] = df["author"].astype(str).str.strip()
 
-        mbti_valid = df["mbti"].apply(
-            lambda x: isinstance(x, str) and x.strip().upper() in VALID_MBTI_TYPES
-        )
+        mbti_valid = df["mbti"].apply(lambda x: isinstance(x, str) and x.strip().upper() in VALID_MBTI_TYPES)
         has_ocean = (
-            df[["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]]
-            .notna()
-            .all(axis=1)
+            df[["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]].notna().all(axis=1)
         )
 
         logger.info(f"Authors with valid MBTI: {mbti_valid.sum()}")
@@ -149,9 +145,7 @@ class PandoraParser:
             logger.error(f"Comments file not found: {comments_path}")
             return {}
 
-        logger.info(
-            f"Streaming comments from {comments_path} (target: {len(target_authors)} authors)"
-        )
+        logger.info(f"Streaming comments from {comments_path} (target: {len(target_authors)} authors)")
 
         author_comments: dict[str, list[str]] = defaultdict(list)
         total_raw = 0
@@ -193,13 +187,11 @@ class PandoraParser:
 
             if total_raw % (self.chunk_size * 5) == 0:
                 logger.info(
-                    f"  Progress: {total_kept} comments kept "
-                    f"from {total_raw} raw rows, {len(author_comments)} authors"
+                    f"  Progress: {total_kept} comments kept from {total_raw} raw rows, {len(author_comments)} authors"
                 )
 
         logger.info(
-            f"Finished streaming: {total_kept} comments from {total_raw} raw rows, "
-            f"{len(author_comments)} authors"
+            f"Finished streaming: {total_kept} comments from {total_raw} raw rows, {len(author_comments)} authors"
         )
         return dict(author_comments)
 
@@ -245,11 +237,7 @@ class PandoraParser:
                     val = row.get(col)
                     if pd.notna(val):
                         ocean_labels[short] = binarize_ocean_percentile(val, self.ocean_threshold)
-                bigfive_raw = {
-                    short: float(row[col])
-                    for col, short in OCEAN_COLS.items()
-                    if pd.notna(row.get(col))
-                }
+                bigfive_raw = {short: float(row[col]) for col, short in OCEAN_COLS.items() if pd.notna(row.get(col))}
 
             sampled = random.sample(comments, min(len(comments), self.max_comments))
             combined_text = " ".join(sampled)

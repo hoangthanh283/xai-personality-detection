@@ -27,9 +27,7 @@ TRAIT_NAME = {
     "N": "Neuroticism",
 }
 
-TURN_RE_EN = re.compile(
-    r"^Utterance\s+(?P<utt_id>\d+)\s+(?P<speaker>.+?)\s+said:\s*(?P<utterance>.*)$"
-)
+TURN_RE_EN = re.compile(r"^Utterance\s+(?P<utt_id>\d+)\s+(?P<speaker>.+?)\s+said:\s*(?P<utterance>.*)$")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -75,9 +73,7 @@ def load_leakage_strings(path: Path | None) -> list[str]:
     return heldout_strings
 
 
-def filter_exact_leakage(
-    records: list[dict[str, Any]], heldout_strings: list[str]
-) -> tuple[list[dict[str, Any]], int]:
+def filter_exact_leakage(records: list[dict[str, Any]], heldout_strings: list[str]) -> tuple[list[dict[str, Any]], int]:
     if not heldout_strings:
         return records, 0
 
@@ -127,11 +123,7 @@ def reconstruct_quote(
     raw_turns = dialogues.get(speaker, {}).get("dialogue", {}).get(str(dialogue_id), [])
     turns = [parse_turn(line) for line in raw_turns]
     id_set = set(utt_ids)
-    target_turns = [
-        turn["utterance"]
-        for turn in turns
-        if turn["utt_id"] in id_set and turn["speaker"] == speaker
-    ]
+    target_turns = [turn["utterance"] for turn in turns if turn["utt_id"] in id_set and turn["speaker"] == speaker]
     if not target_turns:
         target_turns = [turn["utterance"] for turn in turns if turn["utt_id"] in id_set]
     return " ".join(text for text in target_turns if text).strip()
@@ -566,10 +558,7 @@ def bfi2_anchor_records() -> list[dict[str, Any]]:
     records = []
     for idx, (trait, pole, facet, marker) in enumerate(BFI2_FACET_ANCHORS, start=1):
         trait_name = TRAIT_NAME[trait]
-        text = (
-            f"BFI-2 paraphrased behavioral anchor for {trait_name} {pole}, facet {facet}: "
-            f"the person {marker}."
-        )
+        text = f"BFI-2 paraphrased behavioral anchor for {trait_name} {pole}, facet {facet}: the person {marker}."
         records.append(
             {
                 "chunk_id": f"bfi2_item_anchor_{idx:03d}_{trait}_{pole}_{facet}",

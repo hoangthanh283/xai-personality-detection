@@ -111,8 +111,7 @@ class MBTIParser:
                 "split": None,
                 "metadata": {
                     "num_posts": len(cleaned_posts),
-                    "avg_post_length": sum(len(p.split()) for p in cleaned_posts)
-                    / max(len(cleaned_posts), 1),
+                    "avg_post_length": sum(len(p.split()) for p in cleaned_posts) / max(len(cleaned_posts), 1),
                 },
                 "evidence_gold": None,
             }

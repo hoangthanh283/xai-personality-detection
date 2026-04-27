@@ -6,16 +6,24 @@ Ties together:
 3. KB retrieval (psychology definitions)
 4. CoPE reasoning (3-step LLM chain)
 """
+
 from typing import Any
 
 from loguru import logger
+from tqdm import tqdm
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor
 from src.rag_pipeline.llm_client import LLMClient, build_llm_client
 from src.reasoning.cope_pipeline import CoPEPipeline
 from src.retrieval.evidence_retriever import EvidenceRetriever
+from src.retrieval.frozen_svm_scorer import (FrozenSvmEvidenceScorer,
+                                             default_mbti_svm_checkpoints,
+                                             default_ocean_svm_checkpoints)
 from src.retrieval.hybrid_search import HybridRetriever
 from src.retrieval.kb_retriever import KBRetriever
+from src.retrieval.roberta_scorer import (RoBERTaEvidenceScorer,
+                                          default_mbti_checkpoints,
+                                          default_ocean_checkpoints)
 
 
 class RAGXPRPipeline:
@@ -40,9 +48,7 @@ class RAGXPRPipeline:
         self.preprocessor = TextPreprocessor(PreprocessorConfig())
 
         # Optional RoBERTa scorer for supervised evidence selection + Step-3 prior.
-        self.roberta_scorer = self._build_roberta_scorer(
-            evidence_config, cope_config.get("framework", "mbti")
-        )
+        self.roberta_scorer = self._build_roberta_scorer(evidence_config, cope_config.get("framework", "mbti"))
         self.use_roberta_prior = evidence_config.get("use_roberta_prior", False) and self.roberta_scorer is not None
 
         self.evidence_retriever = EvidenceRetriever(evidence_config, roberta_scorer=self.roberta_scorer)
@@ -61,6 +67,7 @@ class RAGXPRPipeline:
             elif method == "keyword":
                 chunks_path = config.get("kb_chunks_path", "data/knowledge_base/chunks.jsonl")
                 from src.retrieval.hybrid_search import BM25Retriever
+
                 self.kb_retriever = BM25Retriever(chunks_path)
 
         # LLM client
@@ -96,19 +103,14 @@ class RAGXPRPipeline:
 
     def _build_frozen_svm_scorer(self, evidence_config: dict, framework: str):
         """Load FrozenSvmEvidenceScorer with pre-trained MBTI or OCEAN checkpoints."""
-        try:
-            from src.retrieval.frozen_svm_scorer import (FrozenSvmEvidenceScorer,
-                                                          default_mbti_svm_checkpoints,
-                                                          default_ocean_svm_checkpoints)
-        except ImportError as e:
-            logger.warning(f"FrozenSvmEvidenceScorer unavailable ({e}); falling back to keyword")
-            return None
-
         ckpts = evidence_config.get("frozen_svm_checkpoints")
         if not ckpts:
             dataset_hint = evidence_config.get("roberta_dataset", "essays")
-            ckpts = (default_mbti_svm_checkpoints() if framework == "mbti"
-                     else default_ocean_svm_checkpoints(dataset=dataset_hint))
+            ckpts = (
+                default_mbti_svm_checkpoints()
+                if framework == "mbti"
+                else default_ocean_svm_checkpoints(dataset=dataset_hint)
+            )
         device = evidence_config.get("roberta_device", "cpu")
         encoder_cfg = {"device": device} if device else None
         try:
@@ -123,19 +125,12 @@ class RAGXPRPipeline:
 
     def _build_finetuned_roberta_scorer(self, evidence_config: dict, framework: str):
         """Load RoBERTaEvidenceScorer (fine-tuned checkpoints, legacy backbone)."""
-        try:
-            from src.retrieval.roberta_scorer import (RoBERTaEvidenceScorer,
-                                                      default_mbti_checkpoints,
-                                                      default_ocean_checkpoints)
-        except ImportError as e:
-            logger.warning(f"RoBERTa scorer unavailable ({e}); falling back to keyword")
-            return None
-
         ckpts = evidence_config.get("roberta_checkpoints")
         if not ckpts:
             dataset_hint = evidence_config.get("roberta_dataset", "essays")
-            ckpts = (default_mbti_checkpoints() if framework == "mbti"
-                     else default_ocean_checkpoints(dataset=dataset_hint))
+            ckpts = (
+                default_mbti_checkpoints() if framework == "mbti" else default_ocean_checkpoints(dataset=dataset_hint)
+            )
         try:
             return RoBERTaEvidenceScorer(
                 checkpoint_dirs=ckpts,
@@ -151,7 +146,7 @@ class RAGXPRPipeline:
         """Return True if text is predominantly non-Latin (e.g., Chinese, Japanese, Korean)."""
         if not text:
             return False
-        cjk = sum(1 for c in text if '一' <= c <= '鿿' or '぀' <= c <= 'ヿ' or '가' <= c <= '힯')
+        cjk = sum(1 for c in text if "一" <= c <= "鿿" or "぀" <= c <= "ヿ" or "가" <= c <= "힯")
         return cjk / len(text) > threshold
 
     def predict(self, text: str, yield_steps: bool = False) -> dict | Any:
@@ -191,6 +186,7 @@ class RAGXPRPipeline:
             logger.debug(f"Found {len(candidate_evidence)} candidate evidence sentences")
         else:
             from src.retrieval.evidence_retriever import EvidenceSentence
+
             candidate_evidence = [EvidenceSentence(text=clean_text[:2000], sentence_idx=0, score=1.0)]
             logger.debug("Skipping evidence pre-filter (ablation)")
 
@@ -227,11 +223,7 @@ class RAGXPRPipeline:
 
     def predict_batch(self, texts: list[str], show_progress: bool = True) -> list[dict]:
         """Run the pipeline on a batch of texts."""
-        try:
-            from tqdm import tqdm
-            iterator = tqdm(texts, desc="RAG-XPR inference") if show_progress else texts
-        except ImportError:
-            iterator = texts
+        iterator = tqdm(texts, desc="RAG-XPR inference") if show_progress else texts
 
         results = []
         for text in iterator:
@@ -247,6 +239,7 @@ class RAGXPRPipeline:
     def from_config_file(cls, config_path: str) -> "RAGXPRPipeline":
         """Build pipeline from a YAML config file."""
         import yaml
+
         with open(config_path) as f:
             config = yaml.safe_load(f)
         return cls(config)

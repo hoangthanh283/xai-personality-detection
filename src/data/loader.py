@@ -1,4 +1,5 @@
 """Unified DataLoader for all datasets."""
+
 import json
 from pathlib import Path
 
@@ -32,10 +33,7 @@ class DataLoader:
 
     def load_all_splits(self, dataset: str) -> dict[str, list[dict]]:
         """Load all splits of a dataset."""
-        return {
-            split: self.load_split(dataset, split)
-            for split in ["train", "val", "test"]
-        }
+        return {split: self.load_split(dataset, split) for split in ["train", "val", "test"]}
 
     def get_texts_and_labels(
         self,
@@ -80,6 +78,7 @@ class DataLoader:
     def get_statistics(self, records: list[dict]) -> dict:
         """Compute basic statistics about a dataset split."""
         from collections import Counter
+
         stats = {
             "total": len(records),
             "sources": Counter(r.get("source") for r in records),

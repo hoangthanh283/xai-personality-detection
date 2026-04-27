@@ -14,22 +14,19 @@ Usage:
 import argparse
 from pathlib import Path
 
+import requests
+from dotenv import load_dotenv
 from loguru import logger
 
 ESSAYS_URL = (
-    "https://raw.githubusercontent.com/"
-    "jkwieser/personality-prediction-from-text/master/data/training/essays.csv"
+    "https://raw.githubusercontent.com/jkwieser/personality-prediction-from-text/master/data/training/essays.csv"
 )
 
 
 def maybe_load_env(env_file: str) -> None:
-    try:
-        from dotenv import load_dotenv
-        if Path(env_file).exists():
-            load_dotenv(env_file)
-            logger.info(f"Loaded environment variables from {env_file}")
-    except ImportError:
-        logger.warning("python-dotenv not installed; skipping .env loading")
+    if Path(env_file).exists():
+        load_dotenv(env_file)
+        logger.info(f"Loaded environment variables from {env_file}")
 
 
 def ensure_dir(path: Path) -> None:
@@ -37,17 +34,14 @@ def ensure_dir(path: Path) -> None:
 
 
 def download_mbti(raw_root: Path, force: bool = False) -> None:
+    from kaggle.api.kaggle_api_extended import KaggleApi
+
     mbti_dir = raw_root / "mbti"
     ensure_dir(mbti_dir)
     target_csv = mbti_dir / "mbti_1.csv"
     if target_csv.exists() and not force:
         logger.info(f"MBTI already exists: {target_csv} (skip)")
         return
-
-    try:
-        from kaggle.api.kaggle_api_extended import KaggleApi
-    except ImportError as e:
-        raise RuntimeError("Kaggle package is required. Install with `uv pip install kaggle`.") from e
 
     logger.info("Downloading MBTI dataset from Kaggle: datasnaek/mbti-type")
     api = KaggleApi()
@@ -66,11 +60,6 @@ def download_essays(raw_root: Path, force: bool = False) -> None:
     if target_csv.exists() and not force:
         logger.info(f"Essays already exists: {target_csv} (skip)")
         return
-
-    try:
-        import requests
-    except ImportError as e:
-        raise RuntimeError("requests package is required.") from e
 
     logger.info(f"Downloading Essays CSV from: {ESSAYS_URL}")
     with requests.get(ESSAYS_URL, stream=True, timeout=120) as resp:

@@ -86,8 +86,7 @@ def write_summary_md(manifest: dict, audit: dict, retrieval: dict, output_path: 
             "",
             "## Audit Details",
             "",
-            "See `data/knowledge_base/reports/kb_audit.md` and "
-            "`data/knowledge_base/reports/retrieval_eval.json`.",
+            "See `data/knowledge_base/reports/kb_audit.md` and `data/knowledge_base/reports/retrieval_eval.json`.",
         ]
     )
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -166,40 +165,41 @@ def write_dashboard_html(manifest: dict, audit: dict, retrieval: dict, output_pa
   <section class="grid">
     <div class="card"><div class="metric">{num_chunks}</div><div class="label">chunks</div></div>
     <div class="card"><div class="metric">{pct(quality_ab_pct)}</div><div class="label">quality tier A/B</div></div>
-    <div class="card"><div class="metric">{pct(retrieval.get('recall_at_5', 0))}</div><div class="label">retrieval Recall@5</div></div>
-    <div class="card"><div class="metric">{retrieval.get('mrr', 0):.3f}</div><div class="label">MRR</div></div>
+    <div class="card"><div class="metric">{pct(retrieval.get("recall_at_5", 0))}</div>
+      <div class="label">retrieval Recall@5</div></div>
+    <div class="card"><div class="metric">{retrieval.get("mrr", 0):.3f}</div><div class="label">MRR</div></div>
     <div class="card wide">
       <h2>Build Identity</h2>
-      <p><b>KB version:</b> <code>{html.escape(str(manifest.get('kb_version', 'unknown')))}</code></p>
-      <p><b>Qdrant collection:</b> <code>{html.escape(str(manifest.get('collection_name', 'unknown')))}</code></p>
-      <p><b>Embedding:</b> <code>{html.escape(str(manifest.get('embedding', {}).get('model', 'unknown')))}</code></p>
-      <p><b>Shape:</b> <code>{html.escape(str(manifest.get('embeddings_shape', 'not built')))}</code></p>
+      <p><b>KB version:</b> <code>{html.escape(str(manifest.get("kb_version", "unknown")))}</code></p>
+      <p><b>Qdrant collection:</b> <code>{html.escape(str(manifest.get("collection_name", "unknown")))}</code></p>
+      <p><b>Embedding:</b> <code>{html.escape(str(manifest.get("embedding", {}).get("model", "unknown")))}</code></p>
+      <p><b>Shape:</b> <code>{html.escape(str(manifest.get("embeddings_shape", "not built")))}</code></p>
     </div>
     <div class="card wide">
       <h2>Validation</h2>
-      <p class="status-ok">Invalid chunks: {validation.get('num_invalid', 'unknown')}</p>
-      <p class="status-ok">Duplicate chunk IDs: {validation.get('num_duplicate_chunk_ids', 'unknown')}</p>
-      <p class="{ 'status-ok' if len(leakage.get('matches', [])) == 0 else 'status-warn' }">
-        Held-out exact leakage matches: {len(leakage.get('matches', []))}
+      <p class="status-ok">Invalid chunks: {validation.get("num_invalid", "unknown")}</p>
+      <p class="status-ok">Duplicate chunk IDs: {validation.get("num_duplicate_chunk_ids", "unknown")}</p>
+      <p class="{"status-ok" if len(leakage.get("matches", [])) == 0 else "status-warn"}">
+        Held-out exact leakage matches: {len(leakage.get("matches", []))}
       </p>
-      <p><b>Chunks hash:</b> <code>{html.escape(str(manifest.get('chunks_hash', 'unknown'))[:16])}</code></p>
+      <p><b>Chunks hash:</b> <code>{html.escape(str(manifest.get("chunks_hash", "unknown"))[:16])}</code></p>
     </div>
     <div class="card wide">
       <h2>Quality Tier</h2>
       <table><tr><th>Tier</th><th>N</th><th>Bar</th><th>%</th></tr>
-      {bar_rows(summary.get('quality_tier', {}), total=num_chunks)}
+      {bar_rows(summary.get("quality_tier", {}), total=num_chunks)}
       </table>
     </div>
     <div class="card wide">
       <h2>Category Coverage</h2>
       <table><tr><th>Category</th><th>N</th><th>Bar</th><th>%</th></tr>
-      {bar_rows(summary.get('category', {}), total=num_chunks)}
+      {bar_rows(summary.get("category", {}), total=num_chunks)}
       </table>
     </div>
     <div class="card full">
       <h2>OCEAN Retrieval Recall@5</h2>
       <table><tr><th>Trait</th><th>Queries</th><th>Recall</th><th>Value</th></tr>
-      {recall_rows(retrieval.get('by_trait', {}))}
+      {recall_rows(retrieval.get("by_trait", {}))}
       </table>
     </div>
   </section>

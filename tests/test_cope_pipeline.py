@@ -3,7 +3,8 @@
 import json
 from unittest.mock import MagicMock
 
-from src.reasoning.evidence_extractor import EvidenceExtractor, ExtractedEvidence
+from src.reasoning.evidence_extractor import (EvidenceExtractor,
+                                              ExtractedEvidence)
 from src.reasoning.state_identifier import IdentifiedState, StateIdentifier
 from src.reasoning.trait_inferencer import TraitInferencer
 from src.retrieval.evidence_retriever import EvidenceSentence
@@ -28,9 +29,7 @@ class TestEvidenceExtractor:
         ]
         llm = make_mock_llm(evidence_response)
         extractor = EvidenceExtractor(llm)
-        candidate = [
-            EvidenceSentence(text="I love spending time alone thinking", sentence_idx=0, score=0.8)
-        ]
+        candidate = [EvidenceSentence(text="I love spending time alone thinking", sentence_idx=0, score=0.8)]
         result = extractor.extract("I love spending time alone thinking", candidate)
         assert len(result) == 1
         assert result[0].quote == "I love spending time alone thinking"
@@ -65,11 +64,7 @@ class TestStateIdentifier:
         ]
         llm = make_mock_llm(state_response)
         identifier = StateIdentifier(llm)
-        evidence = [
-            ExtractedEvidence(
-                "I love spending time alone", 0, "lifestyle_preference", "Prefers solitude"
-            )
-        ]
+        evidence = [ExtractedEvidence("I love spending time alone", 0, "lifestyle_preference", "Prefers solitude")]
         result = identifier.identify(evidence, kb_chunks=[])
         assert len(result) == 1
         assert result[0].state_label == "Social Withdrawal"
@@ -105,9 +100,7 @@ class TestTraitInferencer:
         }
         llm = make_mock_llm(prediction_response)
         inferencer = TraitInferencer(llm)
-        state = IdentifiedState(
-            1, "I love alone time", "Social Withdrawal", "def", "ref", 0.9, "reasoning"
-        )
+        state = IdentifiedState(1, "I love alone time", "Social Withdrawal", "def", "ref", 0.9, "reasoning")
         result = inferencer.infer([state], trait_kb_chunks=[])
         assert result.predicted_label == "INTP"
         assert "introversion" in result.explanation.lower()
@@ -185,9 +178,7 @@ class TestCoPEPipeline:
 
         pipeline = CoPEPipeline(mock_llm, kb_retriever=None)
         candidate = [EvidenceSentence("I prefer thinking alone", 0, 0.8)]
-        result = pipeline.run(
-            "I prefer thinking alone and analyzing ideas.", candidate, framework="mbti"
-        )
+        result = pipeline.run("I prefer thinking alone and analyzing ideas.", candidate, framework="mbti")
 
         assert result["predicted_label"] == "INTP"
         assert "evidence_chain" in result

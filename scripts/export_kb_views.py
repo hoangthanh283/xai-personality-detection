@@ -74,21 +74,14 @@ def main() -> None:
 
     ocean_rows = [r for r in rows if r["metadata"].get("framework") in {"ocean", "both"}]
     mbti_rows = [r for r in rows if r["metadata"].get("framework") in {"mbti", "both"}]
-    cope_rows = [
-        r
-        for r in rows
-        if r["metadata"].get("category") in {"few_shot_example", "evidence_mapping_example"}
-    ]
+    cope_rows = [r for r in rows if r["metadata"].get("category") in {"few_shot_example", "evidence_mapping_example"}]
 
     write_jsonl(output_dir / "psychology_kb_source_dump_v1.jsonl", rows)
     write_jsonl(output_dir / "ocean_knowledge_v1.jsonl", ocean_rows)
     write_jsonl(output_dir / "mbti_knowledge_v1.jsonl", mbti_rows)
     write_jsonl(output_dir / "cope_examples_v1.jsonl", cope_rows)
 
-    print(
-        "Exported KB views:"
-        f" full={len(rows)} ocean={len(ocean_rows)} mbti={len(mbti_rows)} cope={len(cope_rows)}"
-    )
+    print(f"Exported KB views: full={len(rows)} ocean={len(ocean_rows)} mbti={len(mbti_rows)} cope={len(cope_rows)}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 """XAI evaluation metrics: grounding, relevance, faithfulness, consistency."""
+
 import random
 import re
 
@@ -139,10 +140,11 @@ def explanation_consistency(predictions: list[dict], llm_client) -> float:
             judge_prompt = (
                 f"Based on this personality analysis explanation, what MBTI type "
                 f"would you predict?\n\nExplanation: {explanation}\n\n"
-                f"Reply with just the 4-letter MBTI type in JSON format: {{\"mbti\": \"XXXX\"}}"
+                f'Reply with just the 4-letter MBTI type in JSON format: {{"mbti": "XXXX"}}'
             )
             response = llm_client.generate([{"role": "user", "content": judge_prompt}])
             import json
+
             data = json.loads(response.strip())
             judge_pred = data.get("mbti", "").strip().upper()
             if judge_pred == predicted_label.upper():

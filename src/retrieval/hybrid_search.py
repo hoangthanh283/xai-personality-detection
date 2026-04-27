@@ -6,6 +6,7 @@ Score = alpha * semantic_score + (1 - alpha) * bm25_score
 from collections.abc import Iterable
 
 from loguru import logger
+from rank_bm25 import BM25Okapi
 
 from src.retrieval.kb_retriever import KBChunkResult, KBRetriever
 
@@ -28,14 +29,9 @@ class BM25Retriever:
         self._build_index()
 
     def _build_index(self) -> None:
-        try:
-            from rank_bm25 import BM25Okapi
-
-            tokenized = [doc["text"].lower().split() for doc in self._corpus]
-            self._bm25 = BM25Okapi(tokenized)
-            logger.info("BM25 index built")
-        except ImportError:
-            logger.warning("rank_bm25 not installed, BM25 retrieval disabled")
+        tokenized = [doc["text"].lower().split() for doc in self._corpus]
+        self._bm25 = BM25Okapi(tokenized)
+        logger.info("BM25 index built")
 
     def search(
         self,
@@ -52,11 +48,7 @@ class BM25Retriever:
         candidate_indices = []
         for idx, doc in enumerate(self._corpus):
             meta = doc.get("metadata", {})
-            if (
-                framework
-                and framework != "both"
-                and meta.get("framework") not in {framework, "both"}
-            ):
+            if framework and framework != "both" and meta.get("framework") not in {framework, "both"}:
                 continue
             if categories and meta.get("category") not in set(categories):
                 continue
@@ -131,12 +123,8 @@ class HybridRetriever:
         category: str | Iterable[str] | None = None,
     ) -> list[KBChunkResult]:
         """Hybrid search combining semantic and BM25 results."""
-        dense_results = self.dense_retriever.search(
-            query, top_k=top_k * 2, framework=framework, category=category
-        )
-        sparse_results = self.sparse_retriever.search(
-            query, top_k=top_k * 2, framework=framework, category=category
-        )
+        dense_results = self.dense_retriever.search(query, top_k=top_k * 2, framework=framework, category=category)
+        sparse_results = self.sparse_retriever.search(query, top_k=top_k * 2, framework=framework, category=category)
         return self._reciprocal_rank_fusion(dense_results, sparse_results, top_k)
 
     def search_many(
@@ -161,7 +149,5 @@ class HybridRetriever:
             sparse_results = self.sparse_retriever.search(
                 query, top_k=top_k * 2, framework=framework, category=category
             )
-            results.append(
-                self._reciprocal_rank_fusion(dense_results_list[i], sparse_results, top_k)
-            )
+            results.append(self._reciprocal_rank_fusion(dense_results_list[i], sparse_results, top_k))
         return results

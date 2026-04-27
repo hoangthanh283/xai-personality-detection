@@ -55,9 +55,7 @@ def _make_personality_evd_fixture(root: Path) -> None:
 
 
 def _read_jsonl(path: Path) -> list[dict]:
-    return [
-        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
-    ]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def test_build_enrichment_sources_uses_train_valid_without_reading_test(tmp_path):
@@ -86,11 +84,7 @@ def test_positive_examples_require_reconstructed_quote(tmp_path):
     build_enrichment_sources(input_dir, output_dir, seed=42)
 
     records = _read_jsonl(output_dir / "personality_evd_evidence_mappings.jsonl")
-    positive = [
-        record
-        for record in records
-        if record["metadata"]["mapping_type"] == "gold_evidence_mapping"
-    ]
+    positive = [record for record in records if record["metadata"]["mapping_type"] == "gold_evidence_mapping"]
 
     assert len(positive) == 1
     assert "I planned the schedule carefully" in positive[0]["text"]
@@ -105,11 +99,7 @@ def test_unknown_examples_preserve_abstention_semantics(tmp_path):
     build_enrichment_sources(input_dir, output_dir, seed=42)
 
     records = _read_jsonl(output_dir / "personality_evd_evidence_mappings.jsonl")
-    unknown = [
-        record
-        for record in records
-        if record["metadata"]["mapping_type"] == "insufficient_evidence"
-    ]
+    unknown = [record for record in records if record["metadata"]["mapping_type"] == "insufficient_evidence"]
 
     assert len(unknown) == 1
     assert "cannot be determined" in unknown[0]["text"]
@@ -133,6 +123,4 @@ def test_enrichment_generation_is_deterministic(tmp_path):
         "bfi2_item_anchors.jsonl",
     ]
     for filename in files:
-        assert (output_a / filename).read_text(encoding="utf-8") == (output_b / filename).read_text(
-            encoding="utf-8"
-        )
+        assert (output_a / filename).read_text(encoding="utf-8") == (output_b / filename).read_text(encoding="utf-8")

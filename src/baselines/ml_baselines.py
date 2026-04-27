@@ -14,6 +14,7 @@ from typing import Any
 
 import numpy as np
 from loguru import logger
+from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -24,21 +25,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
-
-try:
-    from sklearn.decomposition import TruncatedSVD
-
-    HAS_SVD = True
-except ImportError:
-    HAS_SVD = False
-
-try:
-    from xgboost import XGBClassifier
-
-    HAS_XGBOOST = True
-except ImportError:
-    HAS_XGBOOST = False
-    logger.warning("XGBoost not installed, XGBClassifier will not be available")
+from xgboost import XGBClassifier
 
 TFIDF_PARAMS = {
     "max_features": 30000,
@@ -150,8 +137,6 @@ def build_model(model_name: str, config: dict | None = None) -> Any:
     elif model_name == "naive_bayes":
         return MultinomialNB(alpha=cfg.get("alpha", 1.0))
     elif model_name == "xgboost":
-        if not HAS_XGBOOST:
-            raise ImportError("XGBoost not installed")
         return XGBClassifier(
             n_estimators=cfg.get("n_estimators", 200),
             max_depth=cfg.get("max_depth", 6),
@@ -186,7 +171,7 @@ class MLBaselineTrainer:
         classifier = build_model(model_name, _get_ml_model_config(self.config, model_name))
 
         use_svd = self.config.get("dimensionality_reduction", {}).get("enabled", False)
-        use_svd = use_svd and model_name in MODELS_USING_SVD and HAS_SVD
+        use_svd = use_svd and model_name in MODELS_USING_SVD
 
         pipeline_steps = [("tfidf", self.tfidf)]
         if use_svd:
@@ -262,17 +247,18 @@ class MLBaselineTrainer:
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
             "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
-            "precision_weighted": precision_score(
-                labels, preds, average="weighted", zero_division=0
-            ),
+            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
             "classification_report": classification_report(labels, preds, zero_division=0),
         }
-        logger.info(
-            f"Accuracy: {metrics['accuracy']:.4f} | "
-            f"F1-macro: {metrics['f1_macro']:.4f} | "
-            f"F1-weighted: {metrics['f1_weighted']:.4f}"
+        # Per-split summary is rendered by callers via _pretty_log_split_metrics
+        # (see scripts/train_baseline.py). Logging here would print 3 indistinguishable
+        # one-liners per trait (train/eval/test) without split context.
+        logger.debug(
+            f"evaluate | acc={metrics['accuracy']:.4f} | "
+            f"f1_macro={metrics['f1_macro']:.4f} | "
+            f"f1_weighted={metrics['f1_weighted']:.4f}"
         )
         return metrics
 
@@ -305,9 +291,7 @@ class EnsembleClassifier:
         voting = "soft"
         for name, clf in estimators:
             if not hasattr(clf, "predict_proba"):
-                logger.warning(
-                    f"Model {name} does not support predict_proba. Falling back to 'hard' voting."
-                )
+                logger.warning(f"Model {name} does not support predict_proba. Falling back to 'hard' voting.")
                 voting = "hard"
                 break
 
@@ -324,15 +308,7 @@ class EnsembleClassifier:
         y = train_labels
         from sklearn.preprocessing import LabelEncoder
 
-        try:
-            from xgboost import XGBClassifier
-
-            has_xgb = any(
-                isinstance(clf, XGBClassifier)
-                for _, clf in self.pipeline.named_steps["clf"].estimators
-            )
-        except ImportError:
-            has_xgb = False
+        has_xgb = any(isinstance(clf, XGBClassifier) for _, clf in self.pipeline.named_steps["clf"].estimators)
 
         if has_xgb:
             self._label_encoder = LabelEncoder().fit(train_labels)
@@ -360,9 +336,7 @@ class EnsembleClassifier:
             "f1_macro": f1_score(labels, preds, average="macro", zero_division=0),
             "f1_weighted": f1_score(labels, preds, average="weighted", zero_division=0),
             "precision_macro": precision_score(labels, preds, average="macro", zero_division=0),
-            "precision_weighted": precision_score(
-                labels, preds, average="weighted", zero_division=0
-            ),
+            "precision_weighted": precision_score(labels, preds, average="weighted", zero_division=0),
             "recall_macro": recall_score(labels, preds, average="macro", zero_division=0),
             "recall_weighted": recall_score(labels, preds, average="weighted", zero_division=0),
             "classification_report": classification_report(labels, preds, zero_division=0),

@@ -6,6 +6,7 @@ Usage:
     python scripts/preprocess_data.py --dataset mbti
     python scripts/preprocess_data.py --verify
 """
+
 import argparse
 import json
 import sys
@@ -27,6 +28,7 @@ def load_config(config_path: str) -> dict:
 
 def preprocess_mbti(cfg: dict) -> None:
     from src.data.mbti_parser import MBTIParser
+
     parser = MBTIParser(cfg)
     raw_path = cfg["raw_path"]
     output_dir = cfg["output_dir"]
@@ -38,6 +40,7 @@ def preprocess_mbti(cfg: dict) -> None:
 
 def preprocess_essays(cfg: dict) -> None:
     from src.data.essays_parser import EssaysParser
+
     parser = EssaysParser(cfg)
     raw_path = cfg["raw_path"]
     output_dir = cfg["output_dir"]
@@ -49,6 +52,7 @@ def preprocess_essays(cfg: dict) -> None:
 
 def preprocess_pandora(cfg: dict) -> None:
     from src.data.pandora_parser import PandoraParser
+
     parser = PandoraParser(cfg)
     raw_path = cfg["raw_path"]
     output_dir = cfg["output_dir"]
@@ -60,6 +64,7 @@ def preprocess_pandora(cfg: dict) -> None:
 
 def preprocess_personality_evd(cfg: dict) -> None:
     from src.data.personality_evd_parser import PersonalityEvdParser
+
     parser = PersonalityEvdParser(cfg)
     raw_path = cfg["raw_path"]
     output_dir = cfg["output_dir"]
@@ -72,6 +77,7 @@ def preprocess_personality_evd(cfg: dict) -> None:
 def verify_outputs(config: dict) -> None:
     """Verify outputs: print row counts and sample records."""
     from src.data.loader import DataLoader
+
     loader = DataLoader("data/processed")
 
     for dataset_name, cfg in config["datasets"].items():
@@ -92,7 +98,10 @@ def verify_outputs(config: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Preprocess personality datasets")
     parser.add_argument("--config", default="configs/data_config.yaml")
-    parser.add_argument("--dataset", choices=["mbti", "essays", "pandora", "personality_evd"])
+    parser.add_argument(
+        "--dataset",
+        choices=["mbti", "mbti_uncleaned", "essays", "pandora", "personality_evd"],
+    )
     parser.add_argument("--all", action="store_true", help="Process all datasets")
     parser.add_argument("--verify", action="store_true", help="Verify outputs")
     parser.add_argument("--seed", type=int, default=42)
@@ -122,7 +131,7 @@ def main():
         cfg = config["datasets"][dataset_name]
         logger.info(f"\nProcessing {dataset_name}...")
         try:
-            if dataset_name == "mbti":
+            if dataset_name in ("mbti", "mbti_uncleaned"):
                 preprocess_mbti(cfg)
             elif dataset_name == "essays":
                 preprocess_essays(cfg)

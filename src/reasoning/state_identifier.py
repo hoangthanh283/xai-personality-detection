@@ -1,4 +1,5 @@
 """Step 2: Map behavioral evidence to psychological states using LLM + KB."""
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,9 +63,7 @@ class StateIdentifier:
                 if isinstance(parsed, list):
                     states_list = parsed
                 elif isinstance(parsed, dict):
-                    states_list = next(
-                        (v for v in parsed.values() if isinstance(v, list)), []
-                    )
+                    states_list = next((v for v in parsed.values() if isinstance(v, list)), [])
                 else:
                     states_list = []
 

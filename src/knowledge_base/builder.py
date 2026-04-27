@@ -6,17 +6,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
 
+import tiktoken
 from loguru import logger
 
 from src.knowledge_base.schema import normalize_metadata
-
-try:
-    import tiktoken
-
-    HAS_TIKTOKEN = True
-except ImportError:
-    HAS_TIKTOKEN = False
-    logger.warning("tiktoken not installed, falling back to word-based chunking")
 
 CHUNK_CONFIG = {
     "default": {
@@ -56,15 +49,10 @@ class TextChunker:
 
     def __init__(self, config: dict | None = None):
         self.config = {**CHUNK_CONFIG, **(config or {})}
-        if HAS_TIKTOKEN:
-            self.enc = tiktoken.get_encoding(self.config["tokenizer"])
-        else:
-            self.enc = None
+        self.enc = tiktoken.get_encoding(self.config["tokenizer"])
 
     def count_tokens(self, text: str) -> int:
-        if self.enc:
-            return len(self.enc.encode(text))
-        return len(text.split())  # word-based fallback
+        return len(self.enc.encode(text))
 
     def _has_legacy_config(self) -> bool:
         return "chunk_size" in self.config or "chunk_overlap" in self.config
@@ -121,9 +109,7 @@ class TextChunker:
 
         return chunks
 
-    def _split_structured_blocks(
-        self, text: str, block_split: list[str] | None = None
-    ) -> list[dict[str, Any]]:
+    def _split_structured_blocks(self, text: str, block_split: list[str] | None = None) -> list[dict[str, Any]]:
         headings = [heading.strip() for heading in (block_split or []) if heading.strip()]
         if not headings:
             return [{"text": text.strip(), "metadata": {}}]
@@ -135,9 +121,7 @@ class TextChunker:
 
         for line in lines:
             stripped = line.strip()
-            matched_heading = next(
-                (heading for heading in headings if stripped.startswith(heading)), None
-            )
+            matched_heading = next((heading for heading in headings if stripped.startswith(heading)), None)
             if matched_heading and current_lines:
                 sections.append((current_heading, current_lines))
                 current_lines = [line]
@@ -255,43 +239,25 @@ class KBBuilder:
         elif category == "behavioral_marker":
             domain = metadata.get("domain")
             domain_text = f" Domain: {domain}." if domain else ""
-            prefix = (
-                f"Behavioral marker. Framework: {framework}. "
-                f"Trait: {trait_signal or 'unspecified'}."
-                f"{domain_text}"
-            )
+            prefix = f"Behavioral marker. Framework: {framework}. Trait: {trait_signal or 'unspecified'}.{domain_text}"
         elif category == "linguistic_correlate":
-            prefix = (
-                f"Linguistic correlate. Framework: {framework}. "
-                f"Trait: {trait_signal or 'unspecified'}."
-            )
+            prefix = f"Linguistic correlate. Framework: {framework}. Trait: {trait_signal or 'unspecified'}."
         elif category == "trait_definition":
-            prefix = (
-                f"Trait definition. Framework: {framework}. "
-                f"Trait: {trait or type_label or 'unspecified'}."
-            )
+            prefix = f"Trait definition. Framework: {framework}. Trait: {trait or type_label or 'unspecified'}."
         elif category == "facet_definition":
             prefix = (
                 f"Facet definition. Trait: {trait or 'unspecified'}. "
                 f"Facet: {facet or 'unspecified'}. Pole: {pole or 'BOTH'}."
             )
         elif category == "type_description":
-            prefix = (
-                f"Type description. Framework: {framework}. Type: {type_label or 'unspecified'}."
-            )
+            prefix = f"Type description. Framework: {framework}. Type: {type_label or 'unspecified'}."
         elif category == "cognitive_function":
-            prefix = (
-                f"Cognitive function. Type: {type_label or 'unspecified'}. "
-                f"Function: {function or 'unspecified'}."
-            )
+            prefix = f"Cognitive function. Type: {type_label or 'unspecified'}. Function: {function or 'unspecified'}."
         elif category == "evidence_mapping_example":
             mapping_type = metadata.get("mapping_type", "evidence_mapping")
             if mapping_type == "abstention_rule":
                 condition = metadata.get("condition", "insufficient evidence")
-                prefix = (
-                    f"Abstention rule. Framework: {framework}. "
-                    f"Trait: {trait or 'any'}. Condition: {condition}."
-                )
+                prefix = f"Abstention rule. Framework: {framework}. Trait: {trait or 'any'}. Condition: {condition}."
             elif mapping_type == "aggregation_rule":
                 condition = metadata.get("condition", "state trait aggregation")
                 prefix = f"Aggregation rule. Framework: {framework}. Condition: {condition}."
@@ -337,9 +303,7 @@ class KBBuilder:
                         yield KBChunk(
                             chunk_id=chunk_id,
                             text=chunk_entries[0]["text"],
-                            embed_text=self._build_embed_text(
-                                chunk_entries[0]["text"], chunk_metadata
-                            ),
+                            embed_text=self._build_embed_text(chunk_entries[0]["text"], chunk_metadata),
                             metadata=chunk_metadata,
                         )
                         continue
@@ -359,9 +323,7 @@ class KBBuilder:
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.debug(f"Skipping malformed KB record at {file_path}:{i}: {e}")
 
-    def parse_markdown_source(
-        self, file_path: Path, metadata: dict | None = None
-    ) -> Iterator[KBChunk]:
+    def parse_markdown_source(self, file_path: Path, metadata: dict | None = None) -> Iterator[KBChunk]:
         """Parse a markdown file into chunks."""
         with open(file_path, encoding="utf-8") as f:
             content = f.read()

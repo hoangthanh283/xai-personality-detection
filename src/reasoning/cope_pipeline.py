@@ -4,7 +4,8 @@ from typing import Any
 
 from loguru import logger
 
-from src.reasoning.evidence_extractor import EvidenceExtractor, ExtractedEvidence
+from src.reasoning.evidence_extractor import (EvidenceExtractor,
+                                              ExtractedEvidence)
 from src.reasoning.state_identifier import IdentifiedState, StateIdentifier
 from src.reasoning.trait_inferencer import PredictionResult, TraitInferencer
 from src.retrieval.evidence_retriever import EvidenceSentence
@@ -60,12 +61,8 @@ class CoPEPipeline:
         Otherwise returns a dict directly.
         """
         if yield_steps:
-            return self._run_stream(
-                text, candidate_evidence, framework, save_intermediate, roberta_prior
-            )
-        return self._run_collect(
-            text, candidate_evidence, framework, save_intermediate, roberta_prior
-        )
+            return self._run_stream(text, candidate_evidence, framework, save_intermediate, roberta_prior)
+        return self._run_collect(text, candidate_evidence, framework, save_intermediate, roberta_prior)
 
     def _run_collect(
         self,
@@ -77,9 +74,7 @@ class CoPEPipeline:
     ) -> dict:
         """Non-streaming: run all steps and return final dict."""
         last: dict = {}
-        for _, payload in self._run_stream(
-            text, candidate_evidence, framework, save_intermediate, roberta_prior
-        ):
+        for _, payload in self._run_stream(text, candidate_evidence, framework, save_intermediate, roberta_prior):
             if isinstance(payload, dict) and "predicted_label" in payload:
                 last = payload
         return last
@@ -93,7 +88,7 @@ class CoPEPipeline:
         roberta_prior: dict | None = None,
     ):
         """Generator version — yields (step_name, payload) tuples."""
-        # ── Step 1: Evidence Extraction ──────────────────────────────────────
+        # Step 1: Evidence Extraction
         logger.info("Step 1: Extracting behavioral evidence")
         evidence: list[ExtractedEvidence] = self.evidence_extractor.extract(
             text,
@@ -104,7 +99,7 @@ class CoPEPipeline:
         logger.info(f"Extracted {len(evidence)} evidence items")
         yield "Step 1: Extracting Evidence", evidence
 
-        # ── Step 2: State Identification ─────────────────────────────────────
+        # Step 2: State Identification
         if 2 in self.skip_steps and 3 in self.skip_steps:
             logger.info("Skipping Steps 2 and 3 (Direct RAG ablation)")
             import json
@@ -119,15 +114,10 @@ class CoPEPipeline:
                 )
                 kb_texts = [c.text for c in trait_kb]
             evidence_text = "\n".join([e.quote for e in evidence])
-            prompt = (
-                f"Predict the {framework} personality type based on the text.\n\n"
-                f"Text:\n{evidence_text}\n"
-            )
+            prompt = f"Predict the {framework} personality type based on the text.\n\nText:\n{evidence_text}\n"
             if kb_texts:
                 prompt += "\nKnowledge Base Context:\n" + "\n".join(kb_texts) + "\n"
-            prompt += (
-                '\nProvide output as JSON: {"prediction": {"type": "XXXX"}, "explanation": "..."}'
-            )
+            prompt += '\nProvide output as JSON: {"prediction": {"type": "XXXX"}, "explanation": "..."}'
 
             response = self.llm.generate([{"role": "user", "content": prompt}])
             try:
@@ -173,10 +163,7 @@ class CoPEPipeline:
                 for chunks in results:
                     kb_chunks.extend(chunks)
                 kb_chunks = deduplicate_chunks(kb_chunks)
-                logger.info(
-                    "Retrieved "
-                    f"{len(kb_chunks)} KB chunks for state identification via batch search"
-                )
+                logger.info(f"Retrieved {len(kb_chunks)} KB chunks for state identification via batch search")
 
             states: list[IdentifiedState] = self.state_identifier.identify(
                 evidence, kb_chunks, max_retries=self.max_retries
@@ -184,7 +171,7 @@ class CoPEPipeline:
             logger.info(f"Identified {len(states)} states")
             yield "Step 2: Identifying Psychological States", states
 
-        # ── Step 3: Trait Inference ───────────────────────────────────────────
+        # Step 3: Trait Inference
         logger.info("Step 3: Inferring personality traits")
         trait_kb: list[KBChunkResult] = []
         if self.kb is not None:

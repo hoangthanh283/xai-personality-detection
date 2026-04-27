@@ -4,6 +4,7 @@ Covers FrozenTransformerEncoder + FrozenBertSvmBaseline + RobertaMlpBaseline.
 Uses `prajjwal1/bert-tiny` — a 4MB model — to keep tests fast. No network
 access needed after the first run (HF cache).
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -80,7 +81,9 @@ def _synthetic_binary_dataset(n: int = 50):
 
 
 def test_frozen_encoder_shape(tiny_encoder_cfg):
-    from src.baselines.frozen_transformer_baselines import FrozenTransformerEncoder
+    from src.baselines.frozen_transformer_baselines import \
+        FrozenTransformerEncoder
+
     enc = FrozenTransformerEncoder(tiny_encoder_cfg["encoder"])
     out = enc.encode(["hello world", "another short text", "third one here"])
     assert out.shape == (3, enc.hidden_dim)
@@ -88,7 +91,9 @@ def test_frozen_encoder_shape(tiny_encoder_cfg):
 
 
 def test_embedding_cache(tiny_encoder_cfg):
-    from src.baselines.frozen_transformer_baselines import FrozenTransformerEncoder
+    from src.baselines.frozen_transformer_baselines import \
+        FrozenTransformerEncoder
+
     enc = FrozenTransformerEncoder(tiny_encoder_cfg["encoder"])
     texts = ["cache this", "cache me too", "and me"]
     out1 = enc.encode(texts, cache_key="unit_test_split")
@@ -98,7 +103,8 @@ def test_embedding_cache(tiny_encoder_cfg):
     np.testing.assert_array_equal(out1, out2)
 
     # Sanity: cache file exists where we expected
-    expected_path = Path(tiny_encoder_cfg["encoder"]["cache_dir"]) / TINY_MODEL.replace("/", "__") / "unit_test_split.npy"
+    expected_path = Path(tiny_encoder_cfg["encoder"]["cache_dir"])
+    expected_path = expected_path / TINY_MODEL.replace("/", "__") / "unit_test_split.npy"
     assert expected_path.exists()
 
 
@@ -108,7 +114,9 @@ def test_embedding_cache(tiny_encoder_cfg):
 
 
 def test_frozen_bert_svm_fit_predict(tiny_encoder_cfg_mean4):
-    from src.baselines.frozen_transformer_baselines import FrozenBertSvmBaseline
+    from src.baselines.frozen_transformer_baselines import \
+        FrozenBertSvmBaseline
+
     texts, labels = _synthetic_binary_dataset(n=30)
 
     cfg = {**tiny_encoder_cfg_mean4, "classifier": {"n_estimators": 3, "max_samples": 0.8, "svc": {"C": 1.0}}}
@@ -137,6 +145,7 @@ def test_frozen_bert_svm_fit_predict(tiny_encoder_cfg_mean4):
 
 def test_roberta_mlp_fit_predict(tiny_encoder_cfg):
     from src.baselines.frozen_transformer_baselines import RobertaMlpBaseline
+
     texts, labels = _synthetic_binary_dataset(n=30)
     train_texts, train_labels = texts[:20], labels[:20]
     val_texts, val_labels = texts[20:], labels[20:]
@@ -145,8 +154,11 @@ def test_roberta_mlp_fit_predict(tiny_encoder_cfg):
         **tiny_encoder_cfg,
         "head": {"hidden_dim": 16, "dropout": 0.2},
         "training": {
-            "learning_rate": 5e-3, "weight_decay": 0.01,
-            "batch_size": 8, "num_epochs": 10, "early_stopping_patience": 3,
+            "learning_rate": 5e-3,
+            "weight_decay": 0.01,
+            "batch_size": 8,
+            "num_epochs": 10,
+            "early_stopping_patience": 3,
             "loss_weighting": "balanced",
         },
     }

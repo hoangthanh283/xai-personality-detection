@@ -3,11 +3,14 @@
 Generates evaluation forms comparing different methods (RAG-XPR, LLM+CoT, etc.)
 for 50 randomly sampled test examples.
 """
+
 import csv
 import json
 import random
 from pathlib import Path
 
+import krippendorff
+import numpy as np
 from loguru import logger
 
 EVAL_CRITERIA = [
@@ -79,9 +82,7 @@ class HumanEvalGenerator:
                     pred = {}
                 sample["methods"][method_name] = {
                     "predicted_label": pred.get("predicted_label", ""),
-                    "evidence": [
-                        ev.get("evidence", "") for ev in pred.get("evidence_chain", [])
-                    ],
+                    "evidence": [ev.get("evidence", "") for ev in pred.get("evidence_chain", [])],
                     "explanation": pred.get("explanation", ""),
                 }
             samples.append(sample)
@@ -92,8 +93,17 @@ class HumanEvalGenerator:
         """Generate a CSV evaluation form."""
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         fieldnames = (
-            ["sample_id", "text_snippet", "gold_label", "method", "predicted_label",
-             "evidence_1", "evidence_2", "evidence_3", "explanation"]
+            [
+                "sample_id",
+                "text_snippet",
+                "gold_label",
+                "method",
+                "predicted_label",
+                "evidence_1",
+                "evidence_2",
+                "evidence_3",
+                "explanation",
+            ]
             + [c["id"] for c in EVAL_CRITERIA]
             + ["free_text_comment"]
         )
@@ -191,27 +201,18 @@ def compute_agreement(annotations: list[list[list[int]]]) -> float:
     Compute Krippendorff's Alpha (all annotators, ordinal scale)
     annotations shape: [n_annotators, n_samples, n_criteria]
     """
-    try:
-        import krippendorff
-        import numpy as np
+    # krippendorff expects annotations in [n_annotators, n_items] shape.
+    # Since we have [n_samples, n_criteria], flatten to n_samples * n_criteria.
+    n_annotators = len(annotations)
+    if n_annotators < 2:
+        return 1.0
 
-        # krippendorff expects annotations in [n_annotators, n_items] shape.
-        # Since we have [n_samples, n_criteria], we can flatten them to view as n_items = n_samples * n_criteria
-        # or calculate individually and average.
-        n_annotators = len(annotations)
-        if n_annotators < 2:
-            return 1.0
+    flattened = []
+    for ann in annotations:
+        flat_ann = []
+        for sample in ann:
+            flat_ann.extend(sample)
+        flattened.append(flat_ann)
 
-        flattened = []
-        for ann in annotations:
-            flat_ann = []
-            for sample in ann:
-                flat_ann.extend(sample)
-            flattened.append(flat_ann)
-
-        data = np.array(flattened)
-        alpha = krippendorff.alpha(reliability_data=data, level_of_measurement="ordinal")
-        return alpha
-    except ImportError:
-        logger.warning("krippendorff package not installed. Cannot compute agreement. Run: pip install krippendorff")
-        return 0.0
+    data = np.array(flattened)
+    return krippendorff.alpha(reliability_data=data, level_of_measurement="ordinal")

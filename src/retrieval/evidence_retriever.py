@@ -7,9 +7,11 @@ Strategy:
    b. Sentence embedding similarity to trait-descriptive anchors
 3. Return top-k sentences ranked by score
 """
+
 import re
 from dataclasses import dataclass, field
 
+import spacy
 from loguru import logger
 
 # Personality-relevant keywords (LIWC-inspired categories)
@@ -55,11 +57,10 @@ class EvidenceRetriever:
         """Lazy-load spaCy for sentence splitting."""
         if self._nlp is None:
             try:
-                import spacy
                 self._nlp = spacy.load("en_core_web_sm")
                 logger.info("Loaded spaCy en_core_web_sm")
-            except (ImportError, OSError):
-                logger.warning("spaCy not available, using regex sentence splitting")
+            except OSError:
+                logger.warning("spaCy model unavailable, using regex sentence splitting")
                 self._nlp = None
         return self._nlp
 
@@ -82,12 +83,14 @@ class EvidenceRetriever:
             # Keyword score: fraction of matched keywords, capped
             keyword_score = min(len(matched) / max(len(words), 1) * 10.0, 1.0)
 
-            scored.append(EvidenceSentence(
-                text=sent,
-                sentence_idx=idx,
-                score=keyword_score,
-                matched_keywords=matched,
-            ))
+            scored.append(
+                EvidenceSentence(
+                    text=sent,
+                    sentence_idx=idx,
+                    score=keyword_score,
+                    matched_keywords=matched,
+                )
+            )
         return scored
 
     def extract(self, text: str, top_k: int | None = None) -> list["EvidenceSentence"]:

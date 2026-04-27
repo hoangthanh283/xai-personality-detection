@@ -4,7 +4,8 @@ import os
 import tempfile
 
 from src.data.preprocessor import PreprocessorConfig, TextPreprocessor
-from src.utils.text_utils import MBTI_TYPES, clean_text_pipeline, count_words, remove_mbti_mentions
+from src.utils.text_utils import (MBTI_TYPES, clean_text_pipeline, count_words,
+                                  remove_mbti_mentions)
 
 
 class TestTextUtils:
@@ -38,9 +39,7 @@ class TestTextPreprocessor:
     def test_min_words_filter(self):
         preprocessor = TextPreprocessor(PreprocessorConfig(min_words=10))
         assert not preprocessor.is_valid("Too short")
-        assert preprocessor.is_valid(
-            "This is a longer text with many words that should pass the filter check"
-        )
+        assert preprocessor.is_valid("This is a longer text with many words that should pass the filter check")
 
     def test_clean_and_validate_returns_none_for_short(self):
         preprocessor = TextPreprocessor(PreprocessorConfig(min_words=10))
@@ -67,9 +66,7 @@ class TestMBTIParser:
         from src.data.mbti_parser import MBTIParser
 
         # Create a minimal CSV
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False, encoding="utf-8"
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["type", "posts"])
             writer.writerow(

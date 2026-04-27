@@ -6,6 +6,7 @@ Usage:
     python scripts/run_rag_xpr.py --config configs/rag_xpr_config.yaml --dry_run 10
     python scripts/run_rag_xpr.py --config configs/rag_xpr_config.yaml --mode llm_direct --prompt zero_shot --sample 500
 """
+
 import argparse
 import json
 import os
@@ -14,19 +15,16 @@ import time
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-try:
-    from dotenv import load_dotenv  # noqa: E402
-    load_dotenv()
-except ImportError:
-    pass  # python-dotenv not installed; rely on shell env vars
+load_dotenv()
 
 from src.utils.logging_config import setup_logging  # noqa: E402
-from src.utils.seed import set_seed  # noqa: E402
 from src.utils.observability import MultiBackendLogger  # noqa: E402
+from src.utils.seed import set_seed  # noqa: E402
 from src.utils.wandb_inference import InferenceLogger  # noqa: E402
 
 
@@ -68,7 +66,8 @@ def _setup_wandb_logger(args, config: dict, run_name_suffix: str) -> MultiBacken
         name=run_name,
         tags=tags,
         group=group,
-        config={k: v for k, v in config.items() if k not in {"_base"}} | {
+        config={k: v for k, v in config.items() if k not in {"_base"}}
+        | {
             "dataset": args.dataset,
             "split": args.split,
             "seed": args.seed,
@@ -109,10 +108,11 @@ def run_full_pipeline(args, config: dict) -> None:
 
     # Optionally sample for dry run or cost saving
     if args.dry_run:
-        records = records[:args.dry_run]
+        records = records[: args.dry_run]
         logger.info(f"DRY RUN: processing only {args.dry_run} samples")
     elif args.sample:
         import random
+
         records = random.sample(records, min(args.sample, len(records)))
         logger.info(f"Sampling {len(records)} records")
 
@@ -189,12 +189,12 @@ def run_full_pipeline(args, config: dict) -> None:
                     gold_dict = _parse_label_dict(gold_label)
                     intermediate = result.get("intermediate", {}) or {}
                     quotes = [
-                        ev.get("quote", "") for ev in intermediate.get("step1_evidence", [])
+                        ev.get("quote", "")
+                        for ev in intermediate.get("step1_evidence", [])
                         if isinstance(ev, dict) and ev.get("quote")
                     ]
                     kb_chunks = [
-                        c.get("chunk_id") for c in intermediate.get("kb_chunks_used", [])
-                        if isinstance(c, dict)
+                        c.get("chunk_id") for c in intermediate.get("kb_chunks_used", []) if isinstance(c, dict)
                     ]
                     inf_logger.log_sample(
                         pred=pred_dict,
@@ -216,11 +216,10 @@ def run_full_pipeline(args, config: dict) -> None:
 
     # Quick accuracy estimate (legacy log)
     correct = sum(
-        1 for r in results
-        if str(r.get("predicted_label", "")).upper() == str(r.get("gold_label", "")).upper()
+        1 for r in results if str(r.get("predicted_label", "")).upper() == str(r.get("gold_label", "")).upper()
     )
     if results:
-        logger.info(f"Quick exact-match accuracy: {correct}/{len(results)} = {correct/len(results):.2%}")
+        logger.info(f"Quick exact-match accuracy: {correct}/{len(results)} = {correct / len(results):.2%}")
 
     # Finalize W&B + tensorboard
     if inf_logger is not None:
@@ -232,18 +231,18 @@ def run_full_pipeline(args, config: dict) -> None:
 _MBTI_PROMPTS = {
     "zero_shot": (
         "You are an expert psychologist. Based on the following text, predict the person's MBTI personality type. "
-        "Return strict JSON: {{\"mbti\": \"XXXX\"}}\n\nText: {text}"
+        'Return strict JSON: {{"mbti": "XXXX"}}\n\nText: {text}'
     ),
     "few_shot": (
         "You are an expert psychologist. Examples:\n"
         "- 'I love spending time alone reading' → INTJ\n"
         "- 'I get energy from social events and love meeting people' → ENFP\n\n"
-        "Now predict the MBTI type for:\nText: {text}\n\nReturn strict JSON: {{\"mbti\": \"XXXX\"}}"
+        'Now predict the MBTI type for:\nText: {text}\n\nReturn strict JSON: {{"mbti": "XXXX"}}'
     ),
     "cot_basic": (
         "You are an expert psychologist. Analyze this text for personality traits, "
         "reason step by step, then predict the MBTI type.\n\nText: {text}\n\n"
-        "Return strict JSON: {{\"reasoning\": \"...\", \"mbti\": \"XXXX\"}}"
+        'Return strict JSON: {{"reasoning": "...", "mbti": "XXXX"}}'
     ),
 }
 
@@ -252,19 +251,24 @@ _OCEAN_PROMPTS = {
         "You are an expert psychologist. Based on the following text, predict the person's Big Five (OCEAN) "
         "personality traits. For each trait output HIGH or LOW.\n\n"
         "Text: {text}\n\n"
-        "Return strict JSON only: {{\"O\": \"HIGH/LOW\", \"C\": \"HIGH/LOW\", \"E\": \"HIGH/LOW\", \"A\": \"HIGH/LOW\", \"N\": \"HIGH/LOW\"}}"
+        'Return strict JSON only: {{"O": "HIGH/LOW", "C": "HIGH/LOW", "E": "HIGH/LOW", '
+        '"A": "HIGH/LOW", "N": "HIGH/LOW"}}'
     ),
     "few_shot": (
         "You are an expert psychologist. Predict Big Five traits as HIGH or LOW. Examples:\n"
-        "- 'I love trying new ideas and exploring' → {{\"O\":\"HIGH\",\"C\":\"LOW\",\"E\":\"HIGH\",\"A\":\"HIGH\",\"N\":\"LOW\"}}\n"
-        "- 'I worry constantly and avoid social events' → {{\"O\":\"LOW\",\"C\":\"LOW\",\"E\":\"LOW\",\"A\":\"LOW\",\"N\":\"HIGH\"}}\n\n"
+        "- 'I love trying new ideas and exploring' → "
+        '{{"O":"HIGH","C":"LOW","E":"HIGH","A":"HIGH","N":"LOW"}}\n'
+        "- 'I worry constantly and avoid social events' → "
+        '{{"O":"LOW","C":"LOW","E":"LOW","A":"LOW","N":"HIGH"}}\n\n'
         "Text: {text}\n\n"
-        "Return strict JSON only: {{\"O\":\"HIGH/LOW\",\"C\":\"HIGH/LOW\",\"E\":\"HIGH/LOW\",\"A\":\"HIGH/LOW\",\"N\":\"HIGH/LOW\"}}"
+        'Return strict JSON only: {{"O":"HIGH/LOW","C":"HIGH/LOW","E":"HIGH/LOW",'
+        '"A":"HIGH/LOW","N":"HIGH/LOW"}}'
     ),
     "cot_basic": (
         "You are an expert psychologist. Reason step by step about the Big Five traits in this text, "
         "then output predictions.\n\nText: {text}\n\n"
-        "Return strict JSON: {{\"reasoning\": \"...\", \"O\":\"HIGH/LOW\",\"C\":\"HIGH/LOW\",\"E\":\"HIGH/LOW\",\"A\":\"HIGH/LOW\",\"N\":\"HIGH/LOW\"}}"
+        'Return strict JSON: {{"reasoning": "...", "O":"HIGH/LOW","C":"HIGH/LOW",'
+        '"E":"HIGH/LOW","A":"HIGH/LOW","N":"HIGH/LOW"}}'
     ),
 }
 
@@ -279,6 +283,7 @@ def _extract_json(response: str) -> dict | None:
         pass
     # Find the first {...} block
     import re
+
     match = re.search(r"\{[\s\S]*\}", response)
     if match:
         try:
@@ -298,6 +303,7 @@ def run_llm_direct(args, config: dict) -> None:
 
     if args.sample:
         import random
+
         records = random.sample(records, min(args.sample, len(records)))
 
     llm = build_llm_client(config["llm"])
@@ -315,10 +321,7 @@ def run_llm_direct(args, config: dict) -> None:
             "(MBTI records have no label_ocean). Pass --framework mbti."
         )
     if framework == "mbti" and dataset_name and dataset_name != "mbti":
-        raise ValueError(
-            f"framework='mbti' is incompatible with dataset='{dataset_name}'. "
-            "Pass --framework ocean."
-        )
+        raise ValueError(f"framework='mbti' is incompatible with dataset='{dataset_name}'. Pass --framework ocean.")
     logger.info(f"run_llm_direct: dataset={dataset_name} framework={framework} prompt={args.prompt or 'zero_shot'}")
 
     output_path = args.output or f"outputs/predictions/llm_direct_{args.prompt or 'zero_shot'}_{args.dataset}.jsonl"
@@ -376,7 +379,7 @@ def run_llm_direct(args, config: dict) -> None:
                         gold=_parse_label_dict(gold),
                         latency=latency,
                         json_parsed=parse_ok,
-                        evidence_quotes=None,        # zero-shot has no evidence
+                        evidence_quotes=None,  # zero-shot has no evidence
                         source_text=None,
                         kb_chunks_cited=None,
                         kb_eligible=False,
@@ -386,12 +389,15 @@ def run_llm_direct(args, config: dict) -> None:
                 logger.error(f"LLM call failed at {i}: {e}")
                 if inf_logger is not None:
                     inf_logger.log_sample(
-                        pred=None, gold=_parse_label_dict(gold), latency=latency,
-                        json_parsed=False, kb_eligible=False,
+                        pred=None,
+                        gold=_parse_label_dict(gold),
+                        latency=latency,
+                        json_parsed=False,
+                        kb_eligible=False,
                     )
 
     correct = sum(1 for r in results if r.get("predicted_label", "") == r.get("gold_label", ""))
-    logger.info(f"LLM Direct accuracy: {correct}/{len(results)} = {correct/max(len(results), 1):.2%}")
+    logger.info(f"LLM Direct accuracy: {correct}/{len(results)} = {correct / max(len(results), 1):.2%}")
     logger.info(f"Saved to {output_path}")
     if skipped_no_gold:
         logger.warning(
@@ -413,9 +419,7 @@ def run_llm_direct(args, config: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Run RAG-XPR inference pipeline")
     parser.add_argument("--config", default="configs/rag_xpr_config.yaml")
-    parser.add_argument(
-        "--dataset", default="mbti", choices=["mbti", "essays", "pandora", "personality_evd"]
-    )
+    parser.add_argument("--dataset", default="mbti", choices=["mbti", "essays", "pandora", "personality_evd"])
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
     parser.add_argument("--output", help="Output file path")
     parser.add_argument("--llm_provider", choices=["openrouter", "openai", "vllm", "ollama"])
@@ -423,7 +427,11 @@ def main():
     parser.add_argument("--framework", choices=["mbti", "ocean"])
     parser.add_argument("--dry_run", type=int, help="Process only N samples")
     parser.add_argument("--sample", type=int, help="Random sample N records")
-    parser.add_argument("--resume", action="store_true", help="Resume from an existing JSONL output file by skipping completed ids")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from an existing JSONL output file by skipping completed ids",
+    )
     parser.add_argument("--mode", choices=["full", "llm_direct"], default="full")
     parser.add_argument("--prompt", choices=["zero_shot", "few_shot", "cot_basic"])
     parser.add_argument("--ablation", help="Ablation config override name")
