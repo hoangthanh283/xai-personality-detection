@@ -10,6 +10,22 @@ datasets:
     split_ratio: [0.70, 0.15, 0.15]
     seed: 42
 
+  # Variant: keep type keywords for direct comparison with publication numbers
+  # (most papers don't strip MBTI type mentions; MbtiBench 2024 confirmed
+  # 31.21% of Kaggle posts contain type keywords → publication accuracy is
+  # inflated by leakage). Same split_ratio + seed so the only difference vs
+  # `mbti` is the type-keyword scrubbing step.
+  mbti_uncleaned:
+    raw_path: data/raw/mbti/mbti_1.csv
+    output_dir: data/processed/mbti_uncleaned
+    max_tokens: 512
+    max_words: 2000
+    max_total_words: 2000
+    min_words: 10
+    remove_type_mentions: false
+    split_ratio: [0.70, 0.15, 0.15]
+    seed: 42
+
   pandora:
     raw_path: data/raw/pandora/
     output_dir: data/processed/pandora

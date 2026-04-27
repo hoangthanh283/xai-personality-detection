@@ -14,11 +14,11 @@ test:
 	$(UV_RUN) pytest tests/ -v
 
 lint:
-	$(UV_RUN) ruff check src/ scripts/ tests/
-	$(UV_RUN) ruff format --check src/ scripts/ tests/
+	$(UV_RUN) ruff check app/ src/ scripts/ tests/
+	$(UV_RUN) ruff format --check app/ src/ scripts/ tests/
 
 format:
-	$(UV_RUN) ruff format src/ scripts/ tests/
+	$(UV_RUN) ruff format app/ src/ scripts/ tests/
 
 # Data pipeline
 data-download:

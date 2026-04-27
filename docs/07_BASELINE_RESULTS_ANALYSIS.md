@@ -781,6 +781,33 @@ This section compares our baselines against the latest published SOTA, including
 
 ---
 
+## Known observability limitations (post-audit 2026-04-27)
+
+After the metric-logging audit + refactor, the following limitations remain on **existing W&B/TB runs only**. New runs picked up via the updated code paths emit complete curves.
+
+### Existing Tier 2a (RoBERTa fine-tune) runs — `trait_*/train/{f1_macro, f1_weighted, accuracy, precision_*, recall_*}` are single-dot
+- **Cause**: HuggingFace `Trainer` does not run `compute_metrics` on the train set per logging step — only `train/{loss, learning_rate, grad_norm, epoch}` are streamed during training, while `eval/*` gets the full metric dict every `eval_steps`.
+- **Code fix shipped**: [`TrainSubsetMetricsCallback`](../src/utils/wandb_callbacks.py) now auto-attaches whenever `MultiBackendCallback` is in the callback list. It samples a fixed 500-row train subset (seed-stable) and runs `trainer.predict` on each `on_evaluate`, routing the resulting metrics to `train/{metric}`. Cost: ~5–10 s per eval cycle on RoBERTa-base.
+- **Existing runs**: deliberately not re-trained (≈14 h GPU). The single-dot panels still reflect the correct end-of-train scalar, just without progression. Future Tier 2a re-runs (any reason) will automatically gain the curves.
+
+### Aggregate keys renamed: `mean/test_*` → `summary/test_mean/*`
+- The old naming put per-epoch curves (`agg_mean/{train,eval}/{metric}`) and end-of-run scalars (`mean/test_{metric}`) in the same `mean/` namespace, making single-dot summary scalars look like broken curves.
+- Fix in [`MultiBackendLogger.aggregate_per_trait`](../src/utils/observability.py): `test_only=True` (default) now emits `summary/test_{mean,min,max}/{metric}` and drops the redundant `train_*`/`eval_*` aggregates entirely (those are already covered by the `agg_*/` epoch curves). Existing W&B runs keep the old `mean/test_*` keys; new runs use `summary/test_*`.
+
+### Tier 2b (RoBERTa frozen + MLP) — train weighted metrics + `eval/loss` were missing
+- Pre-audit `epoch_log` only included `train/{loss, accuracy, f1_macro}` and `eval/{accuracy, f1_macro, f1_weighted, precision_macro, recall_macro, recall_weighted, precision_weighted}`. The `eval/precision_weighted` and `eval/recall_weighted` keys silently fell back to `0` because `_eval_on_encoded_full` didn't compute them.
+- Fix shipped: [`_eval_on_encoded_full`](../src/baselines/frozen_transformer_baselines.py) now returns the full 8-metric dict (incl. cross-entropy `loss`); `fit()` reuses it for both train and val so every per-epoch scalar is a real curve. Early stopping now monitors `val_loss` (consistent with Tier 1 + 2a).
+- Existing Tier 2b runs: weighted curves stuck at 0 / single-dot. Re-train cost is ~5 min (frozen encoder cached) — a future re-run will pick up the fix.
+
+### Console log: pretty-printed split tables + sklearn `classification_report`
+- Per-trait final metrics are now rendered as a single ASCII table (rows = train/eval/test, cols = acc / f1_{macro,weighted} / p_{macro,weighted} / r_{macro,weighted}) followed by sklearn's `classification_report` for the test split. The 3 indistinguishable one-line dumps from `MLBaselineTrainer.evaluate()` were silenced (now `logger.debug`).
+- The end-of-run aggregate dump (previously a 60-key JSON one-liner) is now a `mean / min / max` table over test-set metrics. Markdown copies persist under `outputs/reports/run_summaries/{run_name}/{trait_*.md, _aggregates.md}`.
+
+### Confusion matrices saved as PNG
+- [`_log_test_confusion_matrix`](../scripts/train_baseline.py) and the post-hoc [`scripts/export_confusion_matrices.py`](../scripts/export_confusion_matrices.py) both render PNG via `sklearn.metrics.ConfusionMatrixDisplay` + matplotlib (added to `requirements.txt`). Output goes to `outputs/reports/confusion_matrices/{tier}_{model}_{dataset}_{trait}.png` plus inline as a `wandb.Image` on the active run. Backfill produced 61 PNGs across the 62 existing prediction JSONLs (one empty file skipped).
+
+---
+
 ## 10. References
 
 1. Gjurković M. & Šnajder J. (2021). *PANDORA Talks: Personality and Demographics on Reddit*. SocialNLP @ ACL 2021. arXiv:2004.04460.

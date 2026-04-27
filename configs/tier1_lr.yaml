@@ -28,10 +28,19 @@ model:
 # a real `train/loss`, `eval/loss`, `train/f1_macro`, `eval/f1_macro` etc.
 # series for each epoch — matches the user's "see how model learns" ask.
 # Use method="sweep" instead if you want the cheaper lbfgs max_iter sweep.
+#
+# Multi-trait lockstep: at each epoch, every trait's SGDClassifier takes one
+# partial_fit pass; per-trait + aggregate (`agg_mean/`, `agg_min/`, `agg_max/`)
+# scalars are logged with shared step axis so charts show progression curves.
+# Per-trait early stopping monitors validation loss; trait freezes at its
+# best-epoch coefficients when patience exhausted, others continue.
 learning_curve:
   enabled: true
   method: sgd                       # "sgd" (per-epoch partial_fit) | "sweep"
-  iter_checkpoints: [30]            # interpreted as num_epochs when method=sgd
+  iter_checkpoints: [200]           # max num_epochs for SGD; ES stops earlier on plateau
+  early_stopping_patience: 15       # epochs without eval_loss improvement
+  early_stopping_min_delta: 0.0001  # min absolute improvement to reset patience
+  early_stopping_monitor: eval_loss # eval_loss | eval_f1_macro
 
 dataset_overrides:
   personality_evd:

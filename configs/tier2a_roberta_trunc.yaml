@@ -20,7 +20,7 @@ training:
   gradient_accumulation_steps: 4      # effective batch = 16
   learning_rate: 2.0e-5               # was 1e-5; large datasets cần cao hơn
   weight_decay: 0.01
-  num_epochs: 100                     # max budget — early stopping sẽ catch
+  num_epochs: 200                     # max budget — early stopping sẽ catch
   warmup_ratio: 0.05                  # was 0.1; với 100 epochs warmup quá dài
   lr_scheduler: cosine
   fp16: true

@@ -68,3 +68,7 @@ assets/
 docs/BASELINE_RERUN_GUIDE.md
 .beads
 .claude
+data/embeddings
+docs/context
+scripts/*.sh
+.beads

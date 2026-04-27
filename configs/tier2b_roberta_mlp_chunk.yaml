@@ -20,7 +20,7 @@ model:
 
 training:
   batch_size: 128                     # MLP only, frozen encoder
-  num_epochs: 100                     # max budget; frozen = mỗi epoch nhanh
+  num_epochs: 200                     # max budget; frozen = mỗi epoch nhanh
   learning_rate: 5.0e-4               # was 1e-3; giảm để tránh overshoot
   weight_decay: 0.01
   loss_weighting: sqrt_balanced       # frozen MLP — class imbalance dễ cause collapse
