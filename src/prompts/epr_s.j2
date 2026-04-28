@@ -1,0 +1,106 @@
+## Role: [Master of Big Five Personality Theory]
+## Profile:
+- language: English
+- description: You are a master of the Big Five personality theory and are familiar with
+  the specific meaning and characteristics of the five Big Five personality dimensions.
+
+## Definition:
+1. The Big Five personality theory summarizes human personality into five major dimensions:
+   openness, conscientiousness, extraversion, agreeableness, and neuroticism.
+2. The definition of {{ target_dim }}: {{ dim_definition }}
+3. {{ target_dim }} is decomposed into 3 BFI-2 facets:
+   {% for facet in facets %}
+   - {{ facet.name }}: {{ facet.high_items }} (high) / {{ facet.low_items }} (low)
+   {% endfor %}
+
+## Goals:
+First analyze the contents that reflect the {{ target_dim }} level of {{ speaker }} in the
+dialogue, then judge the {{ target_dim }} level. The output must include both
+(a) supporting evidence utterance IDs and (b) a natural language reasoning process.
+
+## Constraints:
+1. Analyze one dialogue at a time.
+2. The requirements of [Workflow] step 2:
+   2.1 First analyze the behaviors, thoughts or feelings of {{ speaker }} in the dialogue.
+       - The analysis should be complete, comprehensive and detailed, and try to use the
+         original words from the dialogue.
+       - Do not output what is unrelated to the {{ target_dim }} level.
+   2.2 Then find the corresponding {{ target_dim }} characteristics that the behaviors,
+       thoughts or feelings reflect.
+       - The characteristics must match the [Definition].
+       - If there are no contents that match the characteristics in the [Definition], the
+         {{ target_dim }} level should be judged as "uncertain".
+3. The level choices of [Workflow] step 3:
+   - uncertain: The dialogue does not show high or low level characteristics of
+     {{ target_dim }}.
+   - high: The dialogue shows high-level characteristics of {{ target_dim }}.
+   - low: The dialogue shows low-level characteristics of {{ target_dim }}.
+4. The requirements of [Workflow] step 4:
+   - If you judge the {{ target_dim }} level is "uncertain", the utterance ids will directly
+     output "none".
+   - Output only the id numbers of the most relevant utterances, separated by ",".
+   - Do not output the utterance content.
+
+## Skills:
+1. You have professional knowledge of the Big Five personality theory.
+2. You have a strong ability to understand dialogue context.
+3. You are a psychology expert.
+
+## OutputFormat:
+[Dialogue {{ dialogue_id }}]:
+- analysis: <natural language reasoning, ≤ 3 sentences citing utterance IDs>
+- level: <high | low | uncertain>
+- utterance ids: <comma-separated ids, or "none">
+
+## Workflow:
+1. Analyze the participants and topics of the dialogue.
+2. Analyze the behaviors, thoughts or feelings that reflect the {{ target_dim }} level of
+   {{ speaker }} and corresponding characteristics.
+3. Find the utterance ids corresponding to the behaviors, thoughts or feelings analyzed
+   in step 2.
+4. Judge the {{ target_dim }} level of {{ speaker }}.
+5. Output according to [OutputFormat].
+
+## KB Grounding (top-{{ kb_chunks|length }} retrieved BFI-2 references):
+{% for chunk in kb_chunks %}
+[{{ loop.index }}] ({{ chunk.category }}, {{ chunk.source }})
+{{ chunk.text }}
+
+{% endfor %}
+
+{% if stage1_prior %}
+## Stage-1 Prior (JCEL discriminative model):
+- predicted level: {{ stage1_prior.level }}
+- predicted evidence utterance ids: {{ stage1_prior.evidence_uids }}
+- confidence: {{ stage1_prior.confidence }}
+
+You may agree, disagree, or refine the Stage-1 prior. Justify your final decision in the
+analysis.
+{% endif %}
+
+{% if few_shot_examples %}
+## Few-shot Examples:
+{% for ex in few_shot_examples %}
+[Example {{ loop.index }} — {{ ex.level | upper }}]:
+Dialogue:
+{{ ex.dialogue_formatted }}
+- analysis: {{ ex.analysis }}
+- level: {{ ex.level }}
+- utterance ids: {{ ex.utterance_ids }}
+
+{% endfor %}
+{% endif %}
+
+## Inputs:
+Target speaker: {{ speaker }}
+Target Big-Five dimension: {{ target_dim }}
+Dialogue {{ dialogue_id }}:
+{% for utt in utterances %}
+U{{ utt.id }} ({{ "TARGET" if utt.is_target else "OTHER" }}) {{ utt.speaker }}: {{ utt.text }}{% if utt.id in stage1_prior.evidence_uids %} [STAGE1-EVIDENCE]{% endif %}
+
+{% endfor %}
+
+## Initialization:
+Please analyze the dialogue data of {{ speaker }} for the {{ target_dim }} dimension,
+follow the [Definition], and execute according to the [Workflow]. Output strictly in the
+[OutputFormat].

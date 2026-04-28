@@ -1,0 +1,26 @@
+You are a psychology expert evaluating a personality-recognition rationale.
+
+Source text (excerpt):
+{{ text }}
+
+Predicted personality: {{ predicted_label }}
+
+Generated rationale:
+{{ explanation }}
+
+Evidence cited by the model:
+{% for ev in evidence_chain %}
+- {{ ev.evidence | default(ev) }}
+{% endfor %}
+
+Score the rationale from 1-5 (5=best) on three independent axes:
+
+1. **faithfulness**: Does the rationale rely strictly on the cited evidence, without
+   inventing or contradicting facts?
+2. **psych_accuracy**: Does the reasoning align with established personality
+   psychology (BFI-2, MBTI cognitive functions, Big Five trait definitions)?
+3. **coherence**: Is the reasoning chain internally consistent and logically structured?
+
+Respond with ONLY a JSON object — no preamble, no explanation:
+
+{"faithfulness": <int 1-5>, "psych_accuracy": <int 1-5>, "coherence": <int 1-5>}
